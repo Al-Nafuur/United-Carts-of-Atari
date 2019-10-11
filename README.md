@@ -26,5 +26,7 @@ The GPIOs of the STM32 board are connected similar to the Unocart-2600 except fo
 - ESP8266 
 
 Copyright:
+
 (c) Firmaplus(+) Ltd.
+
 Dipl.Ing.(FH) Wolfgang Stubig
