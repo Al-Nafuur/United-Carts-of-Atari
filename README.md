@@ -2,13 +2,13 @@
 
 ## Description
 the Atari 2600 PlucCart ist based upon Robin Edwards Unocart-2600 (https://github.com/robinhedwards/UnoCart-2600). The PlusCart has no SD-Card, but an ESP8266 to connect to a local WiFi Network and the Internet.
-The PlusCart downloads the ROM-files from an Server in the Internet called the "PlusStore". The way this is done is similar to the way the Unocart-2600 loads ROMs from the FAT filesystem on the SD-card.
+The PlusCart downloads the ROM-files from an Server in the Internet called the "PlusStore". The way this is done is similar to the way the Unocart-2600 loads ROMs from the FAT filesystem on the SD-card, while the VCS is performing a waitroutine in the his RAM.
 
 Additionally  the PlusCart has one more ROM emulator routine to emulate online ROMs called "PlusROM".
-In the first bytes of the PlusROM the backend hostname or IP-Adress has to be encoded (as string terminated by '\0'). Sending and receiving bytes to the host does not need a waitroutine in the VCS RAM!
+In the first bytes of the PlusROM the backend hostname or IP-Adress has to be encoded (as string terminated by '\0'). Sending and receiving bytes to the host **does not need** a waitroutine in the VCS RAM!
 At the moment the PlusROM is a normal 4K cartrige with 4 special adresses (before the bankswitching area):
 - $fff0 is for writing a byte to the send buffer (max 256 bytes)
-- $fff1 is for writing a byte to the send buffer and submit the buffer to the Backend API
+- $fff1 is for writing a byte to the send buffer and submit the buffer to the backend API
 - $fff2 contains the response from the host in a receive buffer (max 255 bytes !) 
 - $fff3 contains the receive buffer size
 
@@ -16,15 +16,15 @@ The bytes are send to the backend as content of an HTTP 1.0 POST request with "C
 
 These definitions may (or certainly will) change in the future. Especially bankswitching and RAM should be added to the PlusROM definition (depending on the suggestions of experienced VCS Programmer).
 
-## To-do and ..
+## To-do and Questions
 - clean up the code and publish under GPL v3
 - Where and who wants to host the PlusStore ?
-- Use STM UniqueDeviceID in Requests to PlusStore and PlusROM Backend (User-Agent header?)
+- Use STM UniqueDeviceID in requests to PlusStore and PlusROM backend to identify the User (User-Agent header?)
 - Fota ?
-- Test Uploadform for PlusROMs
-- switch to HTTP 1.1 and parse chunked responses..
+- install an uploadform for PlusROMs in PlusStore
+- switch to HTTP 1.1 and parse chunked responses?
 - switch to https ?
-- 
+- Use UDP for the commonication of PlusROMs ?
 
 ## Installation
 The GPIOs of the STM32 board are connected similar to the Unocart-2600 except for the SD card. The ESP8266 is connected to USART1 (PA9 TX and PA10 RX ) of the STM32 Board.
@@ -38,5 +38,7 @@ The GPIOs of the STM32 board are connected similar to the Unocart-2600 except fo
 - ESP8266 
 
 Copyright:
+
 (c) Firmaplus(+) Ltd.
+
 Dipl.Ing.(FH) Wolfgang Stubig
