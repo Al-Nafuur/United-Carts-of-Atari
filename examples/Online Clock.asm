@@ -6,7 +6,9 @@
 ;https://www.biglist.com/cgi-bin/wilma/wilma_hiliter/stella/199710/msg00071.html
 ;
 ;Added are just the PlusROM functionality of sending and receiving bytes from
-;an internet host 
+;an internet host.
+; The clock sends every minute a request to the backend API, and receives in the
+; response the actual hours and minutes (in the right format for HOURS and MINS)
 ;-----------------------------------------------------------------------------
 
 	processor 6502
