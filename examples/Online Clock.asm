@@ -56,7 +56,8 @@ RHOURS	=	$98	;real hours
 FRAMES	=	$99	;frames counter
 
 	org  $F000
-	.byte "pluscart.firmaplus.de\0"
+	.byte "PlusClock2API.php", #0
+	.byte "pluscart.firmaplus.de", #0
 
 start	SEI            
 	CLD
@@ -369,15 +370,15 @@ clear   LDA  #$24	;set timer for overscan
 			;not a swiss made olympic time piece, a little
 			;inaccuracy won't matter.
 joy
-	lda #2	               ; wait for 3 bytes response
-        cmp ReceiveBufferSize  ; in ReceiveBuffer
-        bne oldjoy
-        lda ReceiveBuffer
-        sta HOURS
-        lda ReceiveBuffer
-        sta MINS
-;        lda ReceiveBuffer
-;        sta SECS
+	lda #3	               ; wait for 3 bytes response
+	cmp ReceiveBufferSize  ; in ReceiveBuffer
+    bne oldjoy
+    lda ReceiveBuffer
+    sta HOURS
+    lda ReceiveBuffer
+    sta MINS
+    lda ReceiveBuffer
+    sta SECS
         
 
 
