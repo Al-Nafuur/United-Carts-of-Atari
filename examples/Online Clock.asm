@@ -1,11 +1,11 @@
-;Here's the source code for that first digital online clock programme.
+;Here's the source code for that first digital online clock PlusROM programme.
 ;Feel free to employ and distribute this code however you may wish.
 ;Both the source code and the binary are public domain.
 ;
 ;This Code is basically Chris "Crackers" Cracknell's code from:
 ;https://www.biglist.com/cgi-bin/wilma/wilma_hiliter/stella/199710/msg00071.html
 ;
-;Added are just the PlusROM functionality of Sending and receiving bytes from
+;Added are just the PlusROM functionality of sending and receiving bytes from
 ;an internet host 
 ;-----------------------------------------------------------------------------
 
