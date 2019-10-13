@@ -6,6 +6,7 @@ The PlusCart downloads the ROM-files from an Server in the Internet called the "
 
 Additionally the PlusCart has one more ROM emulator routine to emulate online ROMs called "PlusROM".
 In the first bytes of such a PlusROM the path and the backend hostname or IP address has to be encoded (as strings terminated by '\0'). Sending and receiving bytes to the host **does not need** a waitroutine in the VCS RAM!
+
 At the moment the PlusROM is a normal 4K cartrige with 4 special adresses (before the bankswitching area):
 - $fff0 is for writing a byte to the send buffer (max 256 bytes)
 - $fff1 is for writing a byte to the send buffer and submit the buffer to the backend API
