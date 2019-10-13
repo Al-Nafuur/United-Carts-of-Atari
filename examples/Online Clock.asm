@@ -7,8 +7,9 @@
 ;
 ;Added are just the PlusROM functionality of sending and receiving bytes from
 ;an internet host.
-; The clock sends every minute a request to the backend API, and receives in the
-; response the actual hours and minutes (in the right format for HOURS and MINS)
+;The clock sends every minute a request to the backend API, and receives in the
+;response the actual hours, minutes and seconds
+;(in the right format for HOURS, MINS and SECS)
 ;-----------------------------------------------------------------------------
 
 	processor 6502
