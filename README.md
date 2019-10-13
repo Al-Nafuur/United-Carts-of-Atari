@@ -1,11 +1,11 @@
 # Atari 2600 PlusCart
 
 ## Description
-the Atari 2600 PlucCart ist based on Robin Edwards Unocart-2600 (https://github.com/robinhedwards/UnoCart-2600). The PlusCart has no SD-Card, but an ESP8266 to connect to a local WiFi Network and the Internet.
+the Atari 2600 PlusCart ist based on Robin Edwards Unocart-2600 (https://github.com/robinhedwards/UnoCart-2600). The PlusCart has no SD-Card, but an ESP8266 to connect to a local WiFi Network and the Internet.
 The PlusCart downloads the ROM-files from an Server in the Internet called the "PlusStore". The way this is done is similar to the way the Unocart-2600 loads ROMs from the FAT filesystem on the SD-card, while the VCS is performing a waitroutine in the his RAM.
 
 Additionally the PlusCart has one more ROM emulator routine to emulate online ROMs called "PlusROM".
-In the first bytes of such a PlusROM the path and the backend hostname or IP address has to be encoded (as strings terminated by '\0'). Sending and receiving bytes to the host **does not need** a waitroutine in the VCS RAM!
+In the first bytes of such a PlusROM the path and the backend hostname or IP address has to be encoded (as strings both terminated by '\0'). Sending and receiving bytes to the host **does not need** a waitroutine in the VCS RAM!
 
 At the moment the PlusROM is a normal 4K cartrige with 4 special adresses (before the bankswitching area):
 - $fff0 is for writing a byte to the send buffer (max 256 bytes)
