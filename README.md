@@ -38,9 +38,9 @@ The GPIOs of the STM32 board are connected similar to the Unocart-2600 except fo
 - Where and who wants to host the PlusStore ?
 - Use STM UniqueDeviceID in requests to PlusStore and PlusROM backend to identify the User (User-Agent header?)
 - Fota ?
+- port plusROM into stella !
 - exit switch for all ROMs
 - Finish and use animated Waitroutine 
-- adapt plusROM for stella
 - Finish eagle Layout and BRD
 - build next Prototype without wires to fit in cartridge
 - use rest of 1mb flash for download ROMs and offline use
