@@ -5,7 +5,7 @@ the Atari 2600 PlucCart ist based on Robin Edwards Unocart-2600 (https://github.
 The PlusCart downloads the ROM-files from an Server in the Internet called the "PlusStore". The way this is done is similar to the way the Unocart-2600 loads ROMs from the FAT filesystem on the SD-card, while the VCS is performing a waitroutine in the his RAM.
 
 Additionally the PlusCart has one more ROM emulator routine to emulate online ROMs called "PlusROM".
-In the first bytes of such a PlusROM the path and the backend hostname or IP-Adress has to be encoded (as strings terminated by '\0'). Sending and receiving bytes to the host **does not need** a waitroutine in the VCS RAM!
+In the first bytes of such a PlusROM the path and the backend hostname or IP address has to be encoded (as strings terminated by '\0'). Sending and receiving bytes to the host **does not need** a waitroutine in the VCS RAM!
 At the moment the PlusROM is a normal 4K cartrige with 4 special adresses (before the bankswitching area):
 - $fff0 is for writing a byte to the send buffer (max 256 bytes)
 - $fff1 is for writing a byte to the send buffer and submit the buffer to the backend API
@@ -31,9 +31,9 @@ The GPIOs of the STM32 board are connected similar to the Unocart-2600 except fo
 - ESP8266 
 
 ## Todo's and issues
-- Upload firmware/PlusCart.elf
 - install an uploadform for PlusROMs in PlusStore
 - clean up the code and publish under GPL v3
+- use range requests for downloading ROMs > 4K
 - Where and who wants to host the PlusStore ?
 - Use STM UniqueDeviceID in requests to PlusStore and PlusROM backend to identify the User (User-Agent header?)
 - Fota ?
@@ -46,10 +46,10 @@ The GPIOs of the STM32 board are connected similar to the Unocart-2600 except fo
 - Docs with more images 
 - better onscreen Keyboard
 - store Userdata in flash/CCMRAM
-- in ROM purchases
+- in ROM purchases ?
 - switch to HTTP 1.1 and parse chunked responses?
 - switch to https ?
-- Use UDP for the commonication of PlusROMs ?
+- Use UDP for the communication of PlusROMs ?
 
 Copyright:
 
