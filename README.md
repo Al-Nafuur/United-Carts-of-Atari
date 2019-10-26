@@ -26,7 +26,7 @@ The PlusROM emulation routine has been ported to [javatari.js](https://javatari.
 For flashing of the firmware there is no ST-Link or other hardware necessary, only a micro USB cable and the  [STM32CubeProgrammer](https://www.st.com/en/development-tools/stm32cubeprog.html) is required. Downloading the STM32CubeProgrammer is free of charge (which is quit clear, because you have bought 1 of their chips), but you may have to register at the STM website. For connecting with the STM32CubePorgrammer the boot0 Jumper has to be removed, sometimes the reset button beside the USB connector has to pressed for 5 seconds, to establish the connection.
 
 ## Hardware (BOM):
-- PlusCart breakout board
+- PlusCart breakout board -> upload Gerberfile at [JLPCB](https://jlcpcb.com/)
 - [STM32F407VGT6 breakout board](https://www.diymore.cc/products/stm32f4-discovery-stm32f407vgt6-microcontroller-32bit-flash-mcu-arm-cortex-m4-core-development-board?_pos=7&_sid=3f87534b6&_ss=r)
 - [ESP8266 esp-01s with stock firmware 1.6.2](https://www.google.com/search?q=esp8266+esp-01s&sa=X&hl=de&biw=1680&bih=920&tbm=shop&tbs=p_ord:r)
 
@@ -43,7 +43,6 @@ For flashing of the firmware there is no ST-Link or other hardware necessary, on
 ![](./docs/images/Assembly_3.png)
 ![](./docs/images/Assembly_4.png)
 ![](./docs/images/Assembly_5.png)
-
 
 ## Specs
 The GPIOs of the STM32 board are connected similar to the Unocart-2600 except for the SD card. And for Data IN and OUT the PlusCart uses the GPIOs **PC0-PC7**.
