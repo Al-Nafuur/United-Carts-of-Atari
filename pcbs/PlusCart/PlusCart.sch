@@ -1810,12 +1810,12 @@ ATARI 2600 CARTRIDGE PORT</description>
 <instance part="JP1" gate="A" x="139.7" y="40.64"/>
 <instance part="JP2" gate="A" x="93.98" y="40.64"/>
 <instance part="JP3" gate="A" x="93.98" y="91.44"/>
-<instance part="JP4" gate="A" x="48.26" y="66.04"/>
+<instance part="JP4" gate="A" x="43.18" y="91.44"/>
 <instance part="GND5" gate="1" x="91.44" y="12.7"/>
-<instance part="GND7" gate="1" x="38.1" y="60.96"/>
+<instance part="GND7" gate="1" x="33.02" y="86.36"/>
 <instance part="+3V1" gate="G$1" x="116.84" y="43.18" rot="R270"/>
 <instance part="+3V3" gate="G$1" x="106.68" y="104.14" rot="R270"/>
-<instance part="+3V4" gate="G$1" x="63.5" y="71.12" rot="R270"/>
+<instance part="+3V4" gate="G$1" x="58.42" y="96.52" rot="R270"/>
 <instance part="+3V5" gate="G$1" x="152.4" y="22.86" rot="R270"/>
 <instance part="CON3" gate="G$1" x="48.26" y="35.56" rot="MR180"/>
 </instances>
@@ -1863,7 +1863,7 @@ ATARI 2600 CARTRIDGE PORT</description>
 </segment>
 <segment>
 <pinref part="JP4" gate="A" pin="7"/>
-<wire x1="45.72" y1="63.5" x2="38.1" y2="63.5" width="0.1524" layer="91"/>
+<wire x1="40.64" y1="88.9" x2="33.02" y2="88.9" width="0.1524" layer="91"/>
 <pinref part="GND7" gate="1" pin="GND"/>
 </segment>
 <segment>
@@ -2154,8 +2154,8 @@ ATARI 2600 CARTRIDGE PORT</description>
 </segment>
 <segment>
 <pinref part="JP4" gate="A" pin="8"/>
-<wire x1="53.34" y1="63.5" x2="60.96" y2="63.5" width="0.1524" layer="91"/>
-<label x="60.96" y="63.5" size="1.778" layer="95"/>
+<wire x1="48.26" y1="88.9" x2="55.88" y2="88.9" width="0.1524" layer="91"/>
+<label x="55.88" y="88.9" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="USART1_TX" class="0">
@@ -2166,8 +2166,8 @@ ATARI 2600 CARTRIDGE PORT</description>
 </segment>
 <segment>
 <pinref part="JP4" gate="A" pin="1"/>
-<wire x1="45.72" y1="71.12" x2="38.1" y2="71.12" width="0.1524" layer="91"/>
-<label x="38.1" y="71.12" size="1.778" layer="95" rot="R180"/>
+<wire x1="40.64" y1="96.52" x2="33.02" y2="96.52" width="0.1524" layer="91"/>
+<label x="33.02" y="96.52" size="1.778" layer="95" rot="R180"/>
 </segment>
 </net>
 <net name="+3V3" class="0">
@@ -2188,11 +2188,11 @@ ATARI 2600 CARTRIDGE PORT</description>
 </segment>
 <segment>
 <pinref part="JP4" gate="A" pin="6"/>
-<wire x1="53.34" y1="66.04" x2="60.96" y2="66.04" width="0.1524" layer="91"/>
+<wire x1="48.26" y1="91.44" x2="55.88" y2="91.44" width="0.1524" layer="91"/>
 <pinref part="JP4" gate="A" pin="2"/>
-<wire x1="53.34" y1="71.12" x2="60.96" y2="71.12" width="0.1524" layer="91"/>
+<wire x1="48.26" y1="96.52" x2="55.88" y2="96.52" width="0.1524" layer="91"/>
 <pinref part="+3V4" gate="G$1" pin="+3V3"/>
-<wire x1="60.96" y1="66.04" x2="60.96" y2="71.12" width="0.1524" layer="91"/>
+<wire x1="55.88" y1="91.44" x2="55.88" y2="96.52" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="N$1" class="0">

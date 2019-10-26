@@ -88,9 +88,12 @@
 <vertex x="75.184" y="-2.667"/>
 <vertex x="75.184" y="-3.556"/>
 </polygon>
-<text x="36.068" y="20.701" size="1.778" layer="51" rot="SR270" align="top-center">PlusCart V1.0
+<text x="36.068" y="20.701" size="1.778" layer="51" rot="SR270" align="top-center">PlusCart V1.1
 by W.Stubig
 (c) 2019</text>
+<text x="36.322" y="34.163" size="1.778" layer="52" rot="MR270">Insert with this
+side facing to you</text>
+<text x="24.511" y="27.051" size="1.778" layer="51" rot="SR270">(TV side)</text>
 </plain>
 <libraries>
 <library name="con-edge">
@@ -1189,7 +1192,7 @@ Please make sure your boards conform to these design rules.</description>
 <contactref element="CON3" pad="8-B"/>
 <wire x1="53.086" y1="21.209" x2="53.086" y2="42.418" width="0.4064" layer="16"/>
 <wire x1="48.768" y1="46.736" x2="53.086" y2="42.418" width="0.4064" layer="1"/>
-<via x="53.086" y="42.418" extent="1-16" drill="0.6" shape="square"/>
+<via x="53.086" y="42.418" extent="1-16" drill="0.6"/>
 <wire x1="5.842" y1="23.876" x2="21.844" y2="23.876" width="0.4064" layer="1"/>
 <wire x1="21.844" y1="23.876" x2="25.654" y2="20.066" width="0.4064" layer="1"/>
 <wire x1="25.654" y1="20.066" x2="53.086" y2="20.066" width="0.4064" layer="1"/>
