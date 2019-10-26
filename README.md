@@ -4,6 +4,7 @@
 the Atari 2600 PlusCart ist based on Robin Edwards Unocart-2600 (https://github.com/robinhedwards/UnoCart-2600). The PlusCart has no SD-Card, but an ESP8266 to connect to a local WiFi Network and the Internet.
 The PlusCart downloads the ROM-files from an Server in the Internet called the "PlusStore". The way this is done is similar to the way the Unocart-2600 loads ROMs from the FAT filesystem on the SD-card, while the VCS is performing a waitroutine in his RAM.
 
+## PlusROM
 Additionally the PlusCart has one more ROM emulator routine to emulate online ROMs called "PlusROM".
 In the first bytes of such a PlusROM the path and the backend hostname or IP address has to be encoded (as strings both terminated by '\0'). Sending and receiving bytes to the host **does not need** a waitroutine in the VCS RAM! Hostname and path should be shorter than 256 bytes, so they do not affect the available ROM space, because they are encode in an address area that is overlayed by the RAM at runtime.
 
@@ -18,6 +19,8 @@ The bytes are send to the backend as content of an HTTP 1.0 POST request with "C
 The response of the backend should also be a "Content-Type: application/octet-stream" and the response-body should contain the payload and the first byte of the response should be the length of the payload, so "Content-Length" is payload + 1 byte. This is a workaround, because we don't have enough time in the emulator routine to analyse the "Content-Length" header of the response.
 
 These definitions may change in the future (depending on the suggestions of experienced VCS Programmer).
+
+The PlusROM emulation routine has been ported to [javatari.js](https://javatari.org/) and your homebrew PlusROMs can be tested [here](https://pluscart.firmaplus.de/javatari/index.html) 
 
 ## Flashing the firmware
 For flashing of the firmware there is no ST-Link or other hardware necessary, only a micro USB cable and the  [STM32CubeProgrammer](https://www.st.com/en/development-tools/stm32cubeprog.html) is required. Downloading the STM32CubeProgrammer is free of charge (which is quit clear, because you have bought 1 of their chips), but you may have to register at the STM website. For connecting with the STM32CubePorgrammer the boot0 Jumper has to be removed, sometimes the reset button beside the USB connector has to pressed for 5 seconds, to establish the connection.
