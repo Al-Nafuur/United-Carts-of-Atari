@@ -18,6 +18,8 @@ The bytes are send to the backend as content of an HTTP 1.0 POST request with "C
 
 The response of the backend should also be a "Content-Type: application/octet-stream" and the response-body should contain the payload and the first byte of the response should be the length of the payload, so "Content-Length" is payload + 1 byte. This is a workaround, because we don't have enough time in the emulator routine to analyse the "Content-Length" header of the response.
 
+The assembler code for an example online clock application (PlusClock) and the associated PHP backend is in the examples directory.
+
 These definitions may change in the future (depending on the suggestions of experienced VCS Programmer).
 
 The PlusROM emulation routine has been ported to [javatari.js](https://javatari.org/) and your homebrew PlusROMs can be tested [here](https://pluscart.firmaplus.de/javatari/index.html) 
