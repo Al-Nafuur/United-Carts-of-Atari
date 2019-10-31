@@ -30,10 +30,12 @@ For flashing of the firmware there is no ST-Link or other hardware necessary, on
 - [STM32F407VGT6 breakout board](https://www.diymore.cc/products/stm32f4-discovery-stm32f407vgt6-microcontroller-32bit-flash-mcu-arm-cortex-m4-core-development-board?_pos=7&_sid=3f87534b6&_ss=r)
 - [ESP8266 esp-01s with stock firmware 1.6.2](https://www.google.com/search?q=esp8266+esp-01s&sa=X&hl=de&biw=1680&bih=920&tbm=shop&tbs=p_ord:r)
 
-## Software & Tools
-- [STM32CubeIDE](https://www.st.com/en/development-tools/stm32cubeide.html)
+## Useful Software & Tools
 - [STM32CubeProgrammer](https://www.st.com/en/development-tools/stm32cubeprog.html)
+- [STM32CubeIDE](https://www.st.com/en/development-tools/stm32cubeide.html)
 - [WUDSN IDE](https://www.wudsn.com/)
+- [javatari](https://javatari.org/)
+- [javatari **with PlusROM patch**](https://pluscart.firmaplus.de/javatari/index.html?ROM=../PlusClock.rom)
 - [8bitworkshop](https://8bitworkshop.com/v3.4.2/?platform=vcs&file=examples%2Ftinyfonts2.a)
 - [onlinegdb](https://www.onlinegdb.com/online_c_compiler)
 
@@ -57,7 +59,7 @@ GND        | GND            | GND    | Ground
 nc         | V33            | VCC    | 3.3 V
 nc         | PA9            | RxD    | Tx -> RxD
 nc         | PA10           | TxD    | Rx -> TxD
-nc         | V33            | RST    | CS
+nc         | V33            | CH_PD  | CS
 
 
 Copyright:
