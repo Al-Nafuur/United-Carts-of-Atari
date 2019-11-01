@@ -103,7 +103,7 @@ void Error_Handler(void);
 #define TRUE 1
 #define FALSE 0
 
-#define VERSION 	  "0.5.1"
+#define VERSION 	  "0.5.2"
 #define UDID_TEMPLATE "000000000000000000000000"
 
 #define MENU_TEXT_WIFI_SETUP 	  "WiFi Setup"

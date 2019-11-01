@@ -97,7 +97,8 @@ UART_HandleTypeDef huart1;
 uint8_t buffer[BUFFER_SIZE * 1024];
 char stm32_udid[] = UDID_TEMPLATE;         // 3*32 bit + \0
 
-char cartridge_image_path[256]__attribute__((section(".ccmram")));
+char curPath[256]__attribute__((section(".ccmram")));
+
 unsigned int cart_size_bytes;
 int tv_mode;
 uint8_t c;
@@ -238,8 +239,8 @@ HAL_StatusTypeDef FLASH_WaitInCCMRAMForLastOperationWithMaxDelay()
 }
 
 
-void make_firmware_update(uint32_t filesize, uint8_t *http_request_header)__attribute__((section(".data#")));
-void make_firmware_update(uint32_t filesize, uint8_t *http_request_header){
+void do_firmware_update(uint32_t filesize, uint8_t *http_request_header)__attribute__((section(".data#")));
+void do_firmware_update(uint32_t filesize, uint8_t *http_request_header){
 
 	uint32_t Address = ADDR_FLASH_SECTOR_0;
 	uint32_t count=0;
@@ -397,7 +398,7 @@ void make_firmware_update(uint32_t filesize, uint8_t *http_request_header){
 
 }
 
-void buildMenuFromPath(char *path, MENU_ENTRY *d )  {
+void buildMenuFromPath( MENU_ENTRY *d )  {
 	int count = 0;
 	_Bool loadStore = FALSE;
 	_Bool is_entry_row;
@@ -406,27 +407,27 @@ void buildMenuFromPath(char *path, MENU_ENTRY *d )  {
 
 	MENU_ENTRY *dst = (MENU_ENTRY *)&menu_entries[0];
 
-	if(strlen(path) == 0){
-	}else if(strncmp(MENU_TEXT_WIFI_SETUP, path, sizeof(MENU_TEXT_WIFI_SETUP) - 1) == 0 ){
-		if(strlen(path) > sizeof(MENU_TEXT_WIFI_SETUP) ){
+	if(strlen(curPath) == 0){
+	}else if(strncmp(MENU_TEXT_WIFI_SETUP, curPath, sizeof(MENU_TEXT_WIFI_SETUP) - 1) == 0 ){
+		if(strlen(curPath) > sizeof(MENU_TEXT_WIFI_SETUP) ){
 			if(d->type == Menu_Action){ // if actual Entry is of type Menu_Action -> Connect to WiFi
-				// path is: MENU_TEXT_WIFI_SETUP + "/" SSID[33] + Password + "/Enter" + '\0'
-				path[strlen(path) - 6 ] = '\0'; // delete "/Enter" at end of Path
+				// curPath is: MENU_TEXT_WIFI_SETUP + "/" SSID[33] + Password + "/Enter" + '\0'
+				curPath[strlen(curPath) - 6 ] = '\0'; // delete "/Enter" at end of Path
 
 				// TODO before we send them to esp8266 escape , " and \ in SSID and Password..
 				int i = sizeof(MENU_TEXT_WIFI_SETUP);
-		        while( path[i] != 30 && i < sizeof(MENU_TEXT_WIFI_SETUP) + 31 ){
+		        while( curPath[i] != 30 && i < sizeof(MENU_TEXT_WIFI_SETUP) + 31 ){
 		            i++;
 		        }
-		        path[i] = 0;
+		        curPath[i] = 0;
 
-		        // TODO esp8266_connect((unsigned char*) &path[sizeof(MENU_TEXT_WIFI_SETUP) ], (unsigned char*) &path[sizeof(MENU_TEXT_WIFI_SETUP) + 32]);
+		        // TODO esp8266_connect((unsigned char*) &curPath[sizeof(MENU_TEXT_WIFI_SETUP) ], (unsigned char*) &curPath[sizeof(MENU_TEXT_WIFI_SETUP) + 32]);
 
 		    	http_request_header[0] = 0;
 		        strcat((char *)http_request_header, "AT+CWJAP=\"");
-		        strcat((char *)http_request_header, &path[sizeof(MENU_TEXT_WIFI_SETUP) ]);     // skip MENU_TEXT_WIFI_SETUP + "/"
+		        strcat((char *)http_request_header, &curPath[sizeof(MENU_TEXT_WIFI_SETUP) ]);     // skip MENU_TEXT_WIFI_SETUP + "/"
 		        strcat((char *)http_request_header, "\",\"");
-		        strcat((char *)http_request_header, &path[sizeof(MENU_TEXT_WIFI_SETUP) + 32]); // skip MENU_TEXT_WIFI_SETUP + "/" SSID[33]
+		        strcat((char *)http_request_header, &curPath[sizeof(MENU_TEXT_WIFI_SETUP) + 32]); // skip MENU_TEXT_WIFI_SETUP + "/" SSID[33]
 		        strcat((char *)http_request_header, "\"\r\n");
 		    	HAL_UART_Transmit(&huart1, http_request_header, strlen((char *)http_request_header), 50);
 		    	if(_esp8266_wait_response(10000) == ESP8266_OK){
@@ -435,7 +436,7 @@ void buildMenuFromPath(char *path, MENU_ENTRY *d )  {
 		        	set_menu_status_msg(STATUS_MESSAGE_WIFI_NOT_CONNECTED);
 		    	}
 
-				path[0] = '\0';
+				curPath[0] = '\0';
 			}else{
 				MAKE_MENU_ENTRY("(GO BACK)", Leave_Menu); // TODO Delete last Char not all
 				char Key[2] = "0";
@@ -486,9 +487,9 @@ void buildMenuFromPath(char *path, MENU_ENTRY *d )  {
 		    	}while(HAL_UART_Receive(&huart1, &c, 1, 100 ) == HAL_OK);
 	    	}
 		}
-	}else if(strncmp(MENU_TEXT_USER_SETUP, path, sizeof(MENU_TEXT_USER_SETUP) - 1) == 0 ){
+	}else if(strncmp(MENU_TEXT_USER_SETUP, curPath, sizeof(MENU_TEXT_USER_SETUP) - 1) == 0 ){
 		if(d->type == Menu_Action){ // if actual Entry is of type Menu_Action -> Connect user
-			if( prepare_PlusStore_API_request(path) == FALSE){
+			if( prepare_PlusStore_API_request(curPath) == FALSE){
             	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
 				return;
 			}
@@ -507,9 +508,9 @@ void buildMenuFromPath(char *path, MENU_ENTRY *d )  {
         	while(HAL_UART_Receive(&huart1, &c,1, 100 ) == HAL_OK){
         	}
 
-        	path[0] = '\0';
+        	curPath[0] = '\0';
 		}else{
-			if(strcmp(MENU_TEXT_USER_SETUP, path) == 0){
+			if(strcmp(MENU_TEXT_USER_SETUP, curPath) == 0){
 				set_menu_status_msg(STATUS_MESSAGE_USER_CONNECT);
 			}
 
@@ -521,24 +522,24 @@ void buildMenuFromPath(char *path, MENU_ENTRY *d )  {
 			}
 			MAKE_MENU_ENTRY("Enter", Menu_Action);
 		}
-	}else if(strncmp(MENU_TEXT_TV_MODE_SETUP, path, sizeof(MENU_TEXT_TV_MODE_SETUP) - 1) == 0 ){
+	}else if(strncmp(MENU_TEXT_TV_MODE_SETUP, curPath, sizeof(MENU_TEXT_TV_MODE_SETUP) - 1) == 0 ){
 		if(d->type == Menu_Action){
 			HAL_FLASH_Unlock();
-			if(strcmp(&path[sizeof(MENU_TEXT_TV_MODE_SETUP)], MENU_TEXT_TV_MODE_PAL) == 0){
+			if(strcmp(&curPath[sizeof(MENU_TEXT_TV_MODE_SETUP)], MENU_TEXT_TV_MODE_PAL) == 0){
 				set_tv_mode(TV_MODE_PAL);
 				if(tv_mode != TV_MODE_PAL){
 					FLASH_Erase_Sector(FLASH_SECTOR_11, (uint8_t) FLASH_VOLTAGE_RANGE_3); // TODO use User-Option Bytes for TV Mode (0x1FFF C000) bits 0-1 are unused, but don't change RDP, BOR WDG and RST!
 					HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, FLASH_CONFIG_ADDRESS, ((uint32_t)TV_MODE_PAL) );
 				}
 				tv_mode = TV_MODE_PAL;
-			}else if(strcmp(&path[sizeof(MENU_TEXT_TV_MODE_SETUP)], MENU_TEXT_TV_MODE_PAL60) == 0){
+			}else if(strcmp(&curPath[sizeof(MENU_TEXT_TV_MODE_SETUP)], MENU_TEXT_TV_MODE_PAL60) == 0){
 				set_tv_mode(TV_MODE_PAL60);
 				if(tv_mode != TV_MODE_PAL60){
 					FLASH_Erase_Sector(FLASH_SECTOR_11, (uint8_t) FLASH_VOLTAGE_RANGE_3);
 					HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, FLASH_CONFIG_ADDRESS, ((uint32_t)TV_MODE_PAL60) );
 				}
 				tv_mode = TV_MODE_PAL60;
-			}else{ // if(strcmp(&path[sizeof(MENU_TEXT_TV_MODE_SETUP)], MENU_TEXT_TV_MODE_NTSC) == 0)
+			}else{ // if(strcmp(&curPath[sizeof(MENU_TEXT_TV_MODE_SETUP)], MENU_TEXT_TV_MODE_NTSC) == 0)
 				set_tv_mode(TV_MODE_NTSC);
 				if(tv_mode != TV_MODE_NTSC){
 					FLASH_Erase_Sector(FLASH_SECTOR_11, (uint8_t) FLASH_VOLTAGE_RANGE_3);
@@ -547,7 +548,7 @@ void buildMenuFromPath(char *path, MENU_ENTRY *d )  {
 				tv_mode = TV_MODE_NTSC;
 			}
 			HAL_FLASH_Lock();
-        	path[0] = '\0';
+        	curPath[0] = '\0';
 		}else{
 			MAKE_MENU_ENTRY("(GO Back)", Leave_Menu);
 			MAKE_MENU_ENTRY(MENU_TEXT_TV_MODE_PAL, Menu_Action);
@@ -555,27 +556,22 @@ void buildMenuFromPath(char *path, MENU_ENTRY *d )  {
 			MAKE_MENU_ENTRY(MENU_TEXT_TV_MODE_NTSC, Menu_Action);
 		}
 	}else if(d->type == Menu_Action){ // if actual Entry is of type Menu_Action..
-		if(strncmp(MENU_TEXT_FIRMWARE_UPDATE, path, sizeof(MENU_TEXT_FIRMWARE_UPDATE) - 1) == 0 ){
+		if(strncmp(MENU_TEXT_FIRMWARE_UPDATE, curPath, sizeof(MENU_TEXT_FIRMWARE_UPDATE) - 1) == 0 ){
 
 			if( prepare_PlusStore_API_request("&u=1") == FALSE){
 		    	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
 			}
 			__disable_irq();  // Disable interrupts
 			HAL_FLASH_Unlock();
-			// make Flashing in ccmram !!
-			make_firmware_update(d->filesize, http_request_header);
-
-			HAL_FLASH_Lock();
-			__enable_irq();  // Enable interrupts
-			set_menu_status_msg("__Returned__");
-			return;
+			// do Flashing in ram !!
+			do_firmware_update(d->filesize, http_request_header);
 		}
-    	path[0] = '\0';
+    	curPath[0] = '\0';
 	}else{
 		loadStore = TRUE;
 	}
 
-	if(strlen(path) == 0){
+	if(strlen(curPath) == 0){
 		MAKE_MENU_ENTRY(MENU_TEXT_WIFI_SETUP, Sub_Menu);
 		MAKE_MENU_ENTRY(MENU_TEXT_TV_MODE_SETUP, Sub_Menu);
 		loadStore = TRUE;
@@ -586,7 +582,7 @@ void buildMenuFromPath(char *path, MENU_ENTRY *d )  {
 	// Test we should load store and if connected to AP
     if(	loadStore ){
     	if(esp8266_is_connected() == TRUE){
-			if( prepare_PlusStore_API_request(path) == FALSE){
+			if( prepare_PlusStore_API_request(curPath) == FALSE){
             	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
 				return;
 			}
@@ -637,13 +633,18 @@ void buildMenuFromPath(char *path, MENU_ENTRY *d )  {
 
 }
 
-int identify_cartridge(char *filename, uint16_t filesize)
+int identify_cartridge( MENU_ENTRY *d )
 {
+
+
 	unsigned int image_size = 0, count;
 	int cart_type = CART_TYPE_NONE;
 
+	strcat(curPath, "/");
+    strcat(curPath, d->entryname);
+
 	// select type by file extension?
-	char *ext = get_filename_ext(filename);
+	char *ext = get_filename_ext(curPath);
 	EXT_TO_CART_TYPE_MAP *p = ext_to_cart_type_map;
 	while (p->ext) {
 		if (strcasecmp(ext, p->ext) == 0) {
@@ -658,12 +659,12 @@ int identify_cartridge(char *filename, uint16_t filesize)
     	return CART_TYPE_NONE;
     }
 
-	if( prepare_PlusStore_API_request(filename) == FALSE){
+	if( prepare_PlusStore_API_request(curPath) == FALSE){
     	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
 		return CART_TYPE_NONE;
 	}
 
-    uint8_t chunks = ( filesize + 4095 )  / 4096;         //  use Real HTTP Range requests??
+    uint8_t chunks = ( d->filesize + 4095 )  / 4096;         //  use Real HTTP Range requests??
     while(chunks != 0 ){
     	if(HAL_UART_Transmit(&huart1, http_request_header, strlen((char *)http_request_header), 50)!= HAL_OK){
     	}
@@ -792,6 +793,11 @@ int identify_cartridge(char *filename, uint16_t filesize)
 
 	if (cart_type)
 		cart_size_bytes = image_size;
+
+  int len = strlen(curPath);
+	while (len && curPath[--len] != '/');
+	curPath[len] = 0;
+
 
 	return cart_type;
 }
@@ -1978,8 +1984,6 @@ void emulate_cartridge(int cart_type)
 
         HAL_UART_Transmit(&huart1, (uint8_t*) API_ATCMD_2, sizeof(API_ATCMD_2)-1, 10);
 	    while(HAL_UART_Receive(&huart1, &c, 1, 100 ) == HAL_OK){ }
-	    //HAL_UART_Transmit(&huart1,(uint8_t*)"ATE1\r\n", 6, 10);
-	    //while(HAL_UART_Receive(&huart1, &c, 1, 100 ) == HAL_OK){ }
 
 		emulate_PLUS_cartridge(offset, (cart_type == CART_TYPE_PLUS32) );
 	}else if (cart_type == CART_TYPE_AR) {
@@ -1996,9 +2000,9 @@ void convertMenuNameForCart(unsigned char *dst, char *src)
 	}
 }
 
-void createMenuForAtari(char *path, MENU_ENTRY *d )
+void createMenuForAtari( MENU_ENTRY *d )
 {
-	buildMenuFromPath(path, d);
+	buildMenuFromPath( d);
 	uint8_t *menu_ram = get_menu_ram();
 	// create a table of entries for the atari to read
 	memset(menu_ram, 0, 1024);
@@ -2036,7 +2040,7 @@ int main(void)
 {
   /* USER CODE BEGIN 1 */
 
-	char curPath[256] = "";
+	curPath[0] = '\0';
 	int cart_type = CART_TYPE_NONE;
 	_Bool usart_not_init = TRUE;
 
@@ -2090,16 +2094,13 @@ int main(void)
       }
       buffer[0] = 0;
       curPath[0] = 0;
-      createMenuForAtari(curPath, &d);
+      createMenuForAtari(&d);
     } else {
       int sel = ret - CART_CMD_SEL_ITEM_n;
       MENU_ENTRY *d = &menu_entries[sel];
       if (d->type == Cart_File){
     	  // selection is a rom file
-        strcpy(cartridge_image_path, curPath);
-        strcat(cartridge_image_path, "/");
-        strcat(cartridge_image_path, d->entryname);
-        cart_type = identify_cartridge(cartridge_image_path, d->filesize);
+        cart_type = identify_cartridge(d);
         HAL_Delay(200);
         if (cart_type != CART_TYPE_NONE){
             emulate_cartridge(cart_type);
@@ -2131,7 +2132,7 @@ int main(void)
   		  }
   	    }
 
-          createMenuForAtari(curPath, d);
+          createMenuForAtari( d);
           HAL_Delay(200);
       }
     }
