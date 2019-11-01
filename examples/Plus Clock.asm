@@ -14,10 +14,10 @@
 
 	processor 6502
 
-WriteToBuffer equ $fff0
-WriteSendBuffer equ $fff1
-ReceiveBuffer equ $fff2
-ReceiveBufferSize equ $fff3
+WriteToBuffer equ $1ff0
+WriteSendBuffer equ $1ff1
+ReceiveBuffer equ $1ff2
+ReceiveBufferSize equ $1ff3
 
 
 VSYNC	=	$00
