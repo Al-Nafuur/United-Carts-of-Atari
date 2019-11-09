@@ -55,9 +55,6 @@ int isProbablyPLS(int size, unsigned char *bytes)
 {
     int i = 0, hostHasNoDot = 1;
 
-    if(size != 4096 && size != 32768)
-    	return 0;
-
     while (isValidPathChar(bytes[i]))
         i++;
 

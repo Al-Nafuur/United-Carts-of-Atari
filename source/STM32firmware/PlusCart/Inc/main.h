@@ -54,22 +54,36 @@ enum MENU_ENTRY_Type {
 	Menu_Action
 };
 
-enum Transmission_State{
-	No_Transmission,
-	Send_Start,
-	Send_Prepare_Header,
-	Send_Header,
-	Send_Content,
-	Send_Finished,
-	Receive_Header,
-	Receive_Length,
-	Receive_Content,
-	Receive_Finished
+enum cart_base_type{
+	base_type_None,
+	base_type_2K,
+	base_type_4K,
+	base_type_F8,
+	base_type_F6,
+	base_type_F4,
+	base_type_FE,
+	base_type_3F,
+	base_type_3E,
+	base_type_E0,
+	base_type_0840,
+	base_type_CV,
+	base_type_EF,
+	base_type_F0,
+	base_type_FA,
+	base_type_E7,
+	base_type_DPC,
+	base_type_AR
 };
 
 typedef struct {
+	enum cart_base_type base_type;
+	_Bool withSuperChip;
+	_Bool withPlusFunctions;
+} CART_TYPE;
+
+typedef struct {
 	const char *ext;
-	int cart_type;
+	CART_TYPE cart_type;
 } EXT_TO_CART_TYPE_MAP;
 
 
@@ -78,6 +92,7 @@ typedef struct {
 	char entryname[33];
 	uint32_t filesize;
 } MENU_ENTRY;
+
 
 /* USER CODE END ET */
 
@@ -103,7 +118,7 @@ void Error_Handler(void);
 #define TRUE 1
 #define FALSE 0
 
-#define VERSION 	  "0.5.2"
+#define VERSION 	  "0.6.1"
 #define UDID_TEMPLATE "000000000000000000000000"
 
 #define MENU_TEXT_WIFI_SETUP 	  "WiFi Setup"
@@ -121,54 +136,15 @@ void Error_Handler(void);
 #define STATUS_MESSAGE_USER_CONNECTED       "User created"
 #define STATUS_MESSAGE_USER_CONNECT_FAILED  "Failed      "
 
+
+
 #define MAKE_MENU_ENTRY(NAME, TYPE)   dst->type = TYPE; \
                                 strcpy(dst->entryname, NAME); \
                                 dst->filesize = 0U; \
                                 num_menu_entries++; \
-                                dst++; \
+                                dst++;
 
-#define setup_cartridge_image() \
-	if (cart_size_bytes > 0x010000) return; \
-	uint8_t* cart_rom = buffer; \
-	if (!reboot_into_cartridge()) return;
-
-#define setup_cartridge_image_with_ram() \
-	if (cart_size_bytes > 0x010000) return; \
-	uint8_t* cart_rom = buffer; \
-	uint8_t* cart_ram = buffer + cart_size_bytes + (((~cart_size_bytes & 0x03) + 1) & 0x03); \
-	if (!reboot_into_cartridge()) return;
-
-
-/*************************************************************************
- * Cartridge Definitions
- *************************************************************************/
-#define BUFFER_SIZE			96   // kilobytes
-
-#define CART_TYPE_NONE		0
-#define CART_TYPE_2K		1
-#define CART_TYPE_4K		2
-#define CART_TYPE_F8		3	// 8k
-#define CART_TYPE_F6		4	// 16k
-#define CART_TYPE_F4		5	// 32k
-#define CART_TYPE_F8SC		6	// 8k+ram
-#define CART_TYPE_F6SC		7	// 16k+ram
-#define CART_TYPE_F4SC		8	// 32k+ram
-#define CART_TYPE_FE		9	// 8k
-#define CART_TYPE_3F		10	// varies (examples 8k)
-#define CART_TYPE_3E		11	// varies (only example 32k)
-#define CART_TYPE_E0		12	// 8k
-#define CART_TYPE_0840		13	// 8k
-#define CART_TYPE_CV		14	// 2k+ram
-#define CART_TYPE_EF		15	// 64k
-#define CART_TYPE_EFSC		16	// 64k+ram
-#define CART_TYPE_F0		17	// 64k
-#define CART_TYPE_FA		18	// 12k
-#define CART_TYPE_E7		19	// 16k+ram
-#define CART_TYPE_DPC		20	// 8k+DPC(2k)
-#define CART_TYPE_AR		21  // Arcadia Supercharger (variable size)
-#define CART_TYPE_PLUS		22  // plusCart 4K
-#define CART_TYPE_PLUS32	23  // plusCart 32k + 128b RAM
-
+#define BUFFER_SIZE				96   // kilobytes
 
 #define FLASH_CONFIG_ADDRESS     ((uint32_t)0x080FFFFC) /* Base @ of last word in last sector */
 

@@ -59,9 +59,9 @@ MENU_SEL_BK_COL =	$52
 ;------------------------------------------------------------------
 ; atari->cart comms addresses
 ;------------------------------------------------------------------
-CART_CMD_SEL_ITEM_n = 	$1E00	// out
-CART_CMD_ROOT_DIR = 	$1EF0	// out
-CART_CMD_START_CART = 	$1EFF	// out
+CART_CMD_SEL_ITEM = 	$1FF0	// out
+CART_CMD_ROOT_DIR = 	$FF	// out
+CART_CMD_START_CART = 	$1FF1	// out
 
 WaitCart = $84 ; routine to run from 2600 RAM while cart busy copied here
 ITEMS_PER_SCREEN = 7
@@ -120,7 +120,7 @@ init	sta $00,x		;Clear TIA ($00-$3f) and 128 bytes of RAM ($80-$ff)
 	lda $1FF4
 	
 	jsr PrepareWaitCartRoutine
-	ldx #$F0 ; CART_CMD_ROOT_DIR
+	ldx #$FF ; CART_CMD_ROOT_DIR
 	jsr WaitCart
 	
 ; main sd navigation loop
@@ -464,7 +464,7 @@ FirePressed
 	.endp
 ;------------------------------------------------------------------
 	.proc WaitCartRoutine
-	lda $1e00,x	; sent cmd to cart
+	stx $1ff0       ; CART_CMD_SEL_ITEM	; sent cmd to cart
 frame_loop
 ; Enable VBLANK (disable output)
 	lda #2
@@ -1301,7 +1301,7 @@ BlankLine
 	.byte '            '
 
 ; List of directory entries dynamically filled by the cart
-	org $f800
+	org $f720
 ItemsList
 	.byte 'COMBAT (PAL)'
 	.byte 'TESTING 1   '
@@ -1337,11 +1337,6 @@ ItemsList
 	.endp
 	
 ;------------------------------------------------------------------
-; Atari->Cart Command Area
-;------------------------------------------------------------------
-	org $fe00
-		
-;------------------------------------------------------------------
 ; Status area dynamically filled by the cart
 ;------------------------------------------------------------------
 	org $ffe0
@@ -1350,6 +1345,14 @@ StatusBytes
 	org $ffef
 StatusByteReboot
 	.byte 0	; tells us to reboot after selecting an item
+
+;------------------------------------------------------------------
+; Atari->Cart Command Bytes !!
+;------------------------------------------------------------------
+	org $fff0
+	.byte 0 		; selected menu item or 0xff for root dir
+	org $fff1
+	.byte 0			; CART_CMD_START_CART
 
 ;------------------------------------------------------------------
 ; Cartridge Vectors

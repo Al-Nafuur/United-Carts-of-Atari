@@ -6,12 +6,14 @@
 
 #include "cartridge_io.h"
 
-#define CART_CMD_SEL_ITEM_n	0x1E00
-#define CART_CMD_ROOT_DIR	0x1EF0
-#define CART_CMD_START_CART	0x1EFF
+#define CART_CMD_MENU_START	0x1720
+#define CART_CMD_ROOT_DIR	0xff
+#define CART_CMD_START_CART	0x1ff1
 
-#define CART_STATUS_BYTES	0x1FE0	// 16 bytes of status
+#define CART_STATUS_BYTES	0x1fe0	// 16 bytes of status
 
+#define NUM_MENU_ITEMS      	186
+#define NUM_MENU_ITEMS_MEM		(NUM_MENU_ITEMS + 1  ) * 12
 
 
 #define TV_MODE_NTSC	1
