@@ -601,7 +601,7 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
                             pos = 0;
                     	}else if( count < 8 ){ // get the filesize !
                    			dst->filesize = dst->filesize * 10 + ( c -'0' );
-                    	}else if( count > 8 && count < 37 && c != '\n'){ // filename/dirname should begin at index 9
+                    	}else if( count > 8 && count < 41 && c != '\n'){ // filename/dirname should begin at index 9
                     		dst->entryname[pos] = c;
                     		pos++;
                     	}
@@ -676,7 +676,7 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
     	}
     	chunks--;
     	http_request_header[HTTP_REQUEST_CHUNK_PARAM_POS]++;
-    	HAL_Delay(1200);
+    	HAL_Delay(200);
     }
 
     // End Transparent Transmission
@@ -813,7 +813,6 @@ void emulate_cartridge(CART_TYPE cart_type)
         HAL_UART_Transmit(&huart1, (uint8_t*) http_request_header, strlen((char *)http_request_header), 50);
 	    while(HAL_UART_Receive(&huart1, &c, 1, 100 ) == HAL_OK){ }
 
-
 		http_request_header[0] = '\0';
 		strcat((char *)http_request_header, (char *)"POST /");
         strcat((char *)http_request_header, (char *)buffer);
@@ -826,14 +825,12 @@ void emulate_cartridge(CART_TYPE cart_type)
 
         HAL_UART_Transmit(&huart1, (uint8_t*) API_ATCMD_2, sizeof(API_ATCMD_2)-1, 10);
 	    while(HAL_UART_Receive(&huart1, &c, 1, 100 ) == HAL_OK){ }
-
-//			emulate_PLUS_cartridge(offset, (cart_type == CART_TYPE_PLUS32) );
 	}
 
 	if (cart_type.base_type == base_type_2K)
-		emulate_2k_cartridge();
+		emulate_2k_4k_cartridge(offset, cart_type.withPlusFunctions, 0x7FF);
 	else if (cart_type.base_type == base_type_4K)
-		emulate_4k_cartridge(offset, cart_type.withPlusFunctions);
+		emulate_2k_4k_cartridge(offset, cart_type.withPlusFunctions, 0xFFF);
 	else if (cart_type.base_type == base_type_F8)
 		emulate_FxSC_cartridge(offset, cart_type.withPlusFunctions, 0x1FF8, 0x1FF9, cart_type.withSuperChip);
 	else if (cart_type.base_type == base_type_F6)

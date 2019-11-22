@@ -17,102 +17,7 @@ extern uint8_t c;
 extern UART_HandleTypeDef huart1;
 
 
-void emulate_PLUS_cartridge(int header_length, int isPlus32) {
-	setup_cartridge_image_with_ram();
-
-	__disable_irq();  // Disable interrupts
-	uint16_t addr, addr_prev = 0, data = 0, data_prev = 0;
-	unsigned char *bankPtr = &cart_rom[0];
-
-	setup_plus_rom_functions();
-
-  while (1)
-  {
-    while ((addr = ADDR_IN) != addr_prev)
-      addr_prev = addr;
-    // got a stable address
-    if (addr & 0x1000)
-    { // A12 high
-      if (isPlus32 && addr > 0x1FF3 && addr < 0x1FFC){	// bank-switch 1FF4 to 1FFB
-    	  bankPtr = &cart_rom[(addr-0x1FF4)*4*1024];
-      }else if (isPlus32 && (addr & 0x1F00) == 0x1000){	// SC RAM access
-				if (addr & 0x0080)
-				{	// a read from cartridge ram
-					DATA_OUT = ((uint16_t)cart_ram[addr&0x7F]);//<<8;
-					SET_DATA_MODE_OUT
-					// wait for address bus to change
-					while (ADDR_IN == addr) ;
-					SET_DATA_MODE_IN
-				}
-				else
-				{	// a write to cartridge ram
-					// read last data on the bus before the address lines change
-					while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-					cart_ram[addr&0x7F] = data_prev;//>>8;
-				}
-      }else if(addr == 0x1ff2 ){// read from receive buffer
-        DATA_OUT = ((uint16_t)receive_buffer[receive_buffer_read_pointer]);//<<8;
-        SET_DATA_MODE_OUT
-        // if there is more data on the receive_buffer
-        if(receive_buffer_read_pointer < receive_buffer_write_pointer )
-          receive_buffer_read_pointer++;
-        // wait for address bus to change
-        while (ADDR_IN == addr){}
-        SET_DATA_MODE_IN
-      }else if(addr == 0x1ff1){ // write to send Buffer and start Request !!
-        while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-        if(huart_state == No_Transmission)
-          huart_state = Send_Start;
-        out_buffer[out_buffer_write_pointer] = data_prev;//>>8;
-      }else if(addr == 0x1ff3){ // read receive Buffer length
-        DATA_OUT = ((uint16_t)(receive_buffer_write_pointer - receive_buffer_read_pointer));//<<8;
-        SET_DATA_MODE_OUT
-        // wait for address bus to change
-        while (ADDR_IN == addr){}
-        SET_DATA_MODE_IN
-      }else if(addr == 0x1ff0){ // write to send Buffer
-        while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-        out_buffer[out_buffer_write_pointer++] = data_prev;//>>8;
-      }else{
-        DATA_OUT = ((uint16_t)bankPtr[addr&0xFFF]);//<<8;
-        SET_DATA_MODE_OUT
-        // wait for address bus to change
-        while (ADDR_IN == addr){ }
-        SET_DATA_MODE_IN
-      }
-    }else{
-      while (ADDR_IN == addr) {
-    	  process_transmission();
-      }
-    }
-  }
-  __enable_irq();
-}
-
-
-void emulate_2k_cartridge() {
-	setup_cartridge_image();
-
-	__disable_irq();	// Disable interrupts
-	uint16_t addr, addr_prev = 0;
-	while (1)
-	{
-		while ((addr = ADDR_IN) != addr_prev)
-			addr_prev = addr;
-		// got a stable address
-		if (addr & 0x1000)
-		{ // A12 high
-			DATA_OUT = ((uint16_t)cart_rom[addr&0x7FF]);
-			SET_DATA_MODE_OUT
-			// wait for address bus to change
-			while (ADDR_IN == addr) ;
-			SET_DATA_MODE_IN
-		}
-	}
-	__enable_irq();
-}
-
-void emulate_4k_cartridge( int header_length, _Bool withPlusFunctions) {
+void emulate_2k_4k_cartridge( int header_length, _Bool withPlusFunctions, int mask) {
 	setup_cartridge_image();
 
 	__disable_irq();	// Disable interrupts
@@ -127,12 +32,12 @@ void emulate_4k_cartridge( int header_length, _Bool withPlusFunctions) {
 		// got a stable address
 		if (addr & 0x1000)
 		{ // A12 high
-			if(withPlusFunctions && addr > 0x1ff1 && addr < 0x1ff4){
+			if(withPlusFunctions && addr > 0x1ff0 && addr < 0x1ff4){
 				if(addr == 0x1ff2 ){// read from receive buffer
 					DATA_OUT = ((uint16_t)receive_buffer[receive_buffer_read_pointer]);//<<8;
 				    SET_DATA_MODE_OUT
 					// if there is more data on the receive_buffer
-					if(receive_buffer_read_pointer < receive_buffer_write_pointer )
+					if(receive_buffer_read_pointer != receive_buffer_write_pointer )
 					  receive_buffer_read_pointer++;
 					// wait for address bus to change
 					while (ADDR_IN == addr){}
@@ -153,7 +58,7 @@ void emulate_4k_cartridge( int header_length, _Bool withPlusFunctions) {
 					out_buffer[out_buffer_write_pointer++] = data_prev;//>>8;
 				}
 			 }else{
-					DATA_OUT = ((uint16_t)cart_rom[addr&0xFFF]);
+					DATA_OUT = ((uint16_t)cart_rom[addr&mask]);
 					SET_DATA_MODE_OUT
 					// wait for address bus to change
 					while (ADDR_IN == addr) ;
@@ -193,12 +98,12 @@ void emulate_FxSC_cartridge(int header_length, _Bool withPlusFunctions, uint16_t
 		// got a stable address
 		if (addr & 0x1000)
 		{ // A12 high
-			if(withPlusFunctions && addr > 0x1ff1 && addr < 0x1ff4){
+			if(withPlusFunctions && addr > 0x1ff0 && addr < 0x1ff4){
 				if(addr == 0x1ff2 ){// read from receive buffer
-					DATA_OUT = ((uint16_t)receive_buffer[receive_buffer_read_pointer]);//<<8;
+					DATA_OUT = ((uint16_t)receive_buffer[receive_buffer_read_pointer]);
 				    SET_DATA_MODE_OUT
 					// if there is more data on the receive_buffer
-					if(receive_buffer_read_pointer < receive_buffer_write_pointer )
+					if(receive_buffer_read_pointer != receive_buffer_write_pointer )
 					  receive_buffer_read_pointer++;
 					// wait for address bus to change
 					while (ADDR_IN == addr){}
@@ -209,14 +114,14 @@ void emulate_FxSC_cartridge(int header_length, _Bool withPlusFunctions, uint16_t
 					  huart_state = Send_Start;
 					out_buffer[out_buffer_write_pointer] = data_prev;//>>8;
 				}else if(addr == 0x1ff3){ // read receive Buffer length
-					DATA_OUT = ((uint16_t)(receive_buffer_write_pointer - receive_buffer_read_pointer));//<<8;
+					DATA_OUT = ((uint16_t)(receive_buffer_write_pointer - receive_buffer_read_pointer));
 					SET_DATA_MODE_OUT
 					// wait for address bus to change
 					while (ADDR_IN == addr){}
 					SET_DATA_MODE_IN
 				}else{ // if(addr == 0x1ff0){ // write to send Buffer
 					while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-					out_buffer[out_buffer_write_pointer++] = data_prev;//>>8;
+					out_buffer[out_buffer_write_pointer++] = data_prev;
 				}
 			}else{
 				if (addr >= lowBS && addr <= highBS)	// bank-switch
@@ -559,10 +464,10 @@ void emulate_3E_cartridge(int header_length, _Bool withPlusFunctions)
 				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
 				bankPtr[addr&0x3FF] = data_prev;//>>8;
 	      }else if(addr == 0x1ff2 ){// read from receive buffer
-	        DATA_OUT = ((uint16_t)receive_buffer[receive_buffer_read_pointer]);//<<8;
+	        DATA_OUT = ((uint16_t)receive_buffer[receive_buffer_read_pointer]);
 	        SET_DATA_MODE_OUT
 	        // if there is more data on the receive_buffer
-	        if(receive_buffer_read_pointer < receive_buffer_write_pointer )
+	        if(receive_buffer_read_pointer != receive_buffer_write_pointer )
 	          receive_buffer_read_pointer++;
 	        // wait for address bus to change
 	        while (ADDR_IN == addr){}
@@ -573,14 +478,14 @@ void emulate_3E_cartridge(int header_length, _Bool withPlusFunctions)
 	          huart_state = Send_Start;
 	        out_buffer[out_buffer_write_pointer] = data_prev;//>>8;
 	      }else if(addr == 0x1ff3){ // read receive Buffer length
-	        DATA_OUT = ((uint16_t)(receive_buffer_write_pointer - receive_buffer_read_pointer));//<<8;
+	        DATA_OUT = (uint16_t) ((uint8_t)(receive_buffer_write_pointer - receive_buffer_read_pointer));
 	        SET_DATA_MODE_OUT
 	        // wait for address bus to change
 	        while (ADDR_IN == addr){}
 	        SET_DATA_MODE_IN
 	      }else if(addr == 0x1ff0){ // write to send Buffer
 	        while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-	        out_buffer[out_buffer_write_pointer++] = data_prev;//>>8;
+	        out_buffer[out_buffer_write_pointer++] = data_prev;
 
 	      }else
 			{	// reads to either ROM or RAM
@@ -598,7 +503,7 @@ void emulate_3E_cartridge(int header_length, _Bool withPlusFunctions)
 				DATA_OUT = data;//<<8;
 				SET_DATA_MODE_OUT
 				// wait for address bus to change
-				while (ADDR_IN == addr) ;
+				while (ADDR_IN == addr){process_transmission();}
 				SET_DATA_MODE_IN
 			}
 		}

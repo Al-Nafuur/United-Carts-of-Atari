@@ -133,9 +133,7 @@ enum Transmission_State{
 
 
 
-void emulate_PLUS_cartridge(int, int );
-void emulate_2k_cartridge();
-void emulate_4k_cartridge(int, _Bool);
+void emulate_2k_4k_cartridge(int, _Bool, int);
 /* 'Standard' Bankswitching */
 void emulate_FxSC_cartridge(int, _Bool, uint16_t, uint16_t, int);
 /* FA (CBS RAM plus) Bankswitching */
