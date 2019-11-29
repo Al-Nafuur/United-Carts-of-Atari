@@ -124,6 +124,7 @@ static void MX_USART1_UART_Init(void);
 HAL_StatusTypeDef FLASH_WaitInRAMForLastOperationWithMaxDelay() __attribute__((section(".data#")));
 void do_firmware_update(uint32_t filesize, uint8_t *http_request_header)__attribute__((section(".data#")));
 _Bool prepare_PlusStore_API_request(char *);
+void skip_http_header();
 
 
 /* USER CODE END PFP */
@@ -131,6 +132,18 @@ _Bool prepare_PlusStore_API_request(char *);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+void skip_http_header(){
+	int count = 0;
+	while(HAL_UART_Receive(&huart1, &c, 1, 5000 ) == HAL_OK){
+       	if( c == '\n' ){
+       		if (count == 1)
+       			break;
+       		count = 0;
+       	}else{
+       		count++;
+       	}
+	}
+}
 
 _Bool prepare_PlusStore_API_request(char *path){
 
@@ -406,153 +419,179 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 
 	MENU_ENTRY *dst = (MENU_ENTRY *)&menu_entries[0];
 
-	if(strlen(curPath) == 0){
-	}else if(strncmp(MENU_TEXT_WIFI_SETUP, curPath, sizeof(MENU_TEXT_WIFI_SETUP) - 1) == 0 ){
-		if(strlen(curPath) > sizeof(MENU_TEXT_WIFI_SETUP) ){
-			if(d->type == Menu_Action){ // if actual Entry is of type Menu_Action -> Connect to WiFi
-				// curPath is: MENU_TEXT_WIFI_SETUP + "/" SSID[33] + Password + "/Enter" + '\0'
-				curPath[strlen(curPath) - 6 ] = '\0'; // delete "/Enter" at end of Path
+	if(strncmp(MENU_TEXT_SETUP, curPath, sizeof(MENU_TEXT_SETUP) - 1) == 0 ){
+		if(strlen(curPath) == sizeof(MENU_TEXT_SETUP) - 1 ){
+			MAKE_MENU_ENTRY("(GO Back)", Leave_Menu);
+			MAKE_MENU_ENTRY(MENU_TEXT_WIFI_SETUP, Sub_Menu);
+			MAKE_MENU_ENTRY(MENU_TEXT_TV_MODE_SETUP, Sub_Menu);
+			MAKE_MENU_ENTRY(MENU_TEXT_PRIVATE_KEY, Sub_Menu);
+			loadStore = TRUE;
+		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_WIFI_SETUP, sizeof(MENU_TEXT_WIFI_SETUP) - 1) == 0 ){
+			if(strlen(curPath) > sizeof(MENU_TEXT_WIFI_SETUP) + sizeof(MENU_TEXT_SETUP) ){
+				if(d->type == Menu_Action){ // if actual Entry is of type Menu_Action -> Connect to WiFi
+					// curPath is: MENU_TEXT_SETUP + "/" + MENU_TEXT_WIFI_SETUP + "/" SSID[33] + Password + "/Enter" + '\0'
+					curPath[strlen(curPath) - 6 ] = '\0'; // delete "/Enter" at end of Path
 
-				// TODO before we send them to esp8266 escape , " and \ in SSID and Password..
-				int i = sizeof(MENU_TEXT_WIFI_SETUP);
-		        while( curPath[i] != 30 && i < sizeof(MENU_TEXT_WIFI_SETUP) + 31 ){
-		            i++;
-		        }
-		        curPath[i] = 0;
+					// TODO before we send them to esp8266 escape , " and \ in SSID and Password..
+					int i = sizeof(MENU_TEXT_WIFI_SETUP) + sizeof(MENU_TEXT_SETUP);
+			        while( curPath[i] != 30 && i < ( sizeof(MENU_TEXT_WIFI_SETUP) + sizeof(MENU_TEXT_SETUP) + 31) ){
+			            i++;
+			        }
+			        curPath[i] = 0;
 
-		        // TODO esp8266_connect((unsigned char*) &curPath[sizeof(MENU_TEXT_WIFI_SETUP) ], (unsigned char*) &curPath[sizeof(MENU_TEXT_WIFI_SETUP) + 32]);
+			        // TODO esp8266_connect((unsigned char*) &curPath[sizeof(MENU_TEXT_WIFI_SETUP) ], (unsigned char*) &curPath[sizeof(MENU_TEXT_WIFI_SETUP) + 32]);
 
-		    	http_request_header[0] = 0;
-		        strcat((char *)http_request_header, "AT+CWJAP=\"");
-		        strcat((char *)http_request_header, &curPath[sizeof(MENU_TEXT_WIFI_SETUP) ]);     // skip MENU_TEXT_WIFI_SETUP + "/"
-		        strcat((char *)http_request_header, "\",\"");
-		        strcat((char *)http_request_header, &curPath[sizeof(MENU_TEXT_WIFI_SETUP) + 32]); // skip MENU_TEXT_WIFI_SETUP + "/" SSID[33]
-		        strcat((char *)http_request_header, "\"\r\n");
-		    	HAL_UART_Transmit(&huart1, http_request_header, strlen((char *)http_request_header), 50);
-		    	if(_esp8266_wait_response(10000) == ESP8266_OK){
-		        	set_menu_status_msg(STATUS_MESSAGE_WIFI_CONNECTED);
-		    	}else{
-		        	set_menu_status_msg(STATUS_MESSAGE_WIFI_NOT_CONNECTED);
-		    	}
+			    	http_request_header[0] = 0;
+			        strcat((char *)http_request_header, "AT+CWJAP=\"");
+			        strcat((char *)http_request_header, &curPath[sizeof(MENU_TEXT_WIFI_SETUP) + sizeof(MENU_TEXT_SETUP) ]);     // skip MENU_TEXT_WIFI_SETUP + "/"
+			        strcat((char *)http_request_header, "\",\"");
+			        strcat((char *)http_request_header, &curPath[sizeof(MENU_TEXT_WIFI_SETUP)  + sizeof(MENU_TEXT_SETUP) + 32]); // skip MENU_TEXT_WIFI_SETUP + "/" SSID[33]
+			        strcat((char *)http_request_header, "\"\r\n");
+			    	HAL_UART_Transmit(&huart1, http_request_header, strlen((char *)http_request_header), 50);
+			    	if(_esp8266_wait_response(10000) == ESP8266_OK){
+			        	set_menu_status_msg(STATUS_MESSAGE_WIFI_CONNECTED);
+			    	}else{
+			        	set_menu_status_msg(STATUS_MESSAGE_WIFI_NOT_CONNECTED);
+			    	}
 
-				curPath[0] = '\0';
+					curPath[0] = '\0';
+				}else{
+					MAKE_MENU_ENTRY("(GO BACK)", Leave_Menu); // TODO Delete last Char not all
+					char Key[2] = "0";
+					for (char i=32; i < 96; i++){
+						Key[0] = i;
+						MAKE_MENU_ENTRY(Key, Keyboard_Char);
+					}
+
+					MAKE_MENU_ENTRY("Enter", Menu_Action);
+				}
+
 			}else{
-				MAKE_MENU_ENTRY("(GO BACK)", Leave_Menu); // TODO Delete last Char not all
+				MAKE_MENU_ENTRY("(GO BACK)", Leave_Menu);
+				uint8_t  ATCMD1[]  = "AT+CWLAP\r\n";
+		        if( HAL_UART_Transmit(&huart1, ATCMD1, sizeof(ATCMD1)-1, 10) != HAL_OK){
+		        	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
+		    		return;
+		    	}
+		        //enum ssid_name_stauts{in_name, char_escaped };
+		    	if(HAL_UART_Receive(&huart1, &c, 1, 4000 ) == HAL_OK){
+			    	do{
+			            if(count == 0){ // first char defines if its an entry row with SSID or Header Row
+			            	is_entry_row = (c == '+' ) ? 1 : 0;
+			                dst->type = Sub_Menu;
+			                dst->filesize = 0U;
+			                pos=0;
+			                while(pos < 32){
+			                	dst->entryname[pos++] = 30; // ASCII record separator 32x illegal SSID Char..
+			                }
+	                        dst->entryname[32] = '\0';
+			                pos = 0;
+			            }else if( is_entry_row ){
+			            	if( count > 10 && count < 43 ){ // Wifi
+			            		if (c == '"'){ // TODO howto find not escaped " , and \ in ESP8266 CWLAP response !!
+			                        dst++;
+			                        num_menu_entries++;
+			                        count = 43; // ugly
+			            		}else{
+			            			dst->entryname[pos++] = c;
+			            		}
+			            	}
+			            }
+			            if (c == '\n'){
+			                count = 0;
+			            }else{
+			                count++;
+			            }
+			    	}while(HAL_UART_Receive(&huart1, &c, 1, 100 ) == HAL_OK);
+		    	}
+			}
+		}else if( strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_TV_MODE_SETUP, sizeof(MENU_TEXT_TV_MODE_SETUP) - 1) == 0 ){
+			if(d->type == Menu_Action){
+				HAL_FLASH_Unlock();
+				if(strcmp(&curPath[sizeof(MENU_TEXT_SETUP) + sizeof(MENU_TEXT_TV_MODE_SETUP)], MENU_TEXT_TV_MODE_PAL) == 0){
+					set_tv_mode(TV_MODE_PAL);
+					if(tv_mode != TV_MODE_PAL){
+						FLASH_Erase_Sector(FLASH_SECTOR_11, (uint8_t) FLASH_VOLTAGE_RANGE_3); // TODO use User-Option Bytes for TV Mode (0x1FFF C000) bits 0-1 are unused, but don't change RDP, BOR WDG and RST!
+						HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, FLASH_CONFIG_ADDRESS, ((uint32_t)TV_MODE_PAL) );
+					}
+					tv_mode = TV_MODE_PAL;
+				}else if(strcmp(&curPath[sizeof(MENU_TEXT_SETUP) + sizeof(MENU_TEXT_TV_MODE_SETUP)], MENU_TEXT_TV_MODE_PAL60) == 0){
+					set_tv_mode(TV_MODE_PAL60);
+					if(tv_mode != TV_MODE_PAL60){
+						FLASH_Erase_Sector(FLASH_SECTOR_11, (uint8_t) FLASH_VOLTAGE_RANGE_3);
+						HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, FLASH_CONFIG_ADDRESS, ((uint32_t)TV_MODE_PAL60) );
+					}
+					tv_mode = TV_MODE_PAL60;
+				}else{ // if(strcmp(&curPath[sizeof(MENU_TEXT_SETUP) + sizeof(MENU_TEXT_TV_MODE_SETUP)], MENU_TEXT_TV_MODE_NTSC) == 0)
+					set_tv_mode(TV_MODE_NTSC);
+					if(tv_mode != TV_MODE_NTSC){
+						FLASH_Erase_Sector(FLASH_SECTOR_11, (uint8_t) FLASH_VOLTAGE_RANGE_3);
+						HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, FLASH_CONFIG_ADDRESS, ((uint32_t)TV_MODE_NTSC) );
+					}
+					tv_mode = TV_MODE_NTSC;
+				}
+				HAL_FLASH_Lock();
+	        	curPath[0] = '\0';
+			}else{
+				MAKE_MENU_ENTRY("(GO Back)", Leave_Menu);
+				MAKE_MENU_ENTRY(MENU_TEXT_TV_MODE_PAL, Menu_Action);
+				MAKE_MENU_ENTRY(MENU_TEXT_TV_MODE_PAL60, Menu_Action);
+				MAKE_MENU_ENTRY(MENU_TEXT_TV_MODE_NTSC, Menu_Action);
+			}
+
+		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_USER_SETUP, sizeof(MENU_TEXT_USER_SETUP) - 1) == 0 ){
+			if(d->type == Menu_Action){ // if actual Entry is of type Menu_Action -> Connect user
+				if( prepare_PlusStore_API_request(curPath) == FALSE){
+	            	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
+					return;
+				}
+	        	HAL_UART_Transmit(&huart1, http_request_header, strlen((char *)http_request_header), 50);
+
+	        	while(HAL_UART_Receive(&huart1, &c,1, 400 ) == HAL_OK){}
+	        	if(c == '0')
+	        		set_menu_status_msg(STATUS_MESSAGE_USER_CONNECT_FAILED);
+	        	else
+	        		set_menu_status_msg(STATUS_MESSAGE_USER_CONNECTED);
+
+	        	if( HAL_UART_Transmit(&huart1, ATCMD6, sizeof(ATCMD6)-1, 10) != HAL_OK){
+	            	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
+	        		return;
+	        	}
+	        	while(HAL_UART_Receive(&huart1, &c,1, 100 ) == HAL_OK){
+	        	}
+
+	        	curPath[0] = '\0';
+			}else{
+				if(strcmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_USER_SETUP) == 0){
+					set_menu_status_msg(STATUS_MESSAGE_USER_CONNECT);
+				}
+
+				MAKE_MENU_ENTRY("(GO BACK)", Leave_Menu); // TODO Delete last Char or All?
 				char Key[2] = "0";
 				for (char i=32; i < 96; i++){
 					Key[0] = i;
 					MAKE_MENU_ENTRY(Key, Keyboard_Char);
 				}
-
 				MAKE_MENU_ENTRY("Enter", Menu_Action);
 			}
+		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_PRIVATE_KEY, sizeof(MENU_TEXT_PRIVATE_KEY) - 1) == 0 ){
+			if(d->type == Menu_Action){ // if actual Entry is of type Menu_Action -> Save Private key
+				set_menu_status_msg(STATUS_MESSAGE_PRIVATE_KEY_SAVED);
 
-		}else{
-			MAKE_MENU_ENTRY("(GO BACK)", Leave_Menu);
-			uint8_t  ATCMD1[]  = "AT+CWLAP\r\n";
-	        if( HAL_UART_Transmit(&huart1, ATCMD1, sizeof(ATCMD1)-1, 10) != HAL_OK){
-	        	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
-	    		return;
-	    	}
-	        //enum ssid_name_stauts{in_name, char_escaped };
-	    	if(HAL_UART_Receive(&huart1, &c, 1, 4000 ) == HAL_OK){
-		    	do{
-		            if(count == 0){ // first char defines if its an entry row with SSID or Header Row
-		            	is_entry_row = (c == '+' ) ? 1 : 0;
-		                dst->type = Sub_Menu;
-		                dst->filesize = 0U;
-		                pos=0;
-		                while(pos < 32){
-		                	dst->entryname[pos++] = 30; // ASCII record separator 32x illegal SSID Char..
-		                }
-                        dst->entryname[32] = '\0';
-		                pos = 0;
-		            }else if( is_entry_row ){
-		            	if( count > 10 && count < 43 ){ // Wifi
-		            		if (c == '"'){ // TODO howto find not escaped " , and \ in ESP8266 CWLAP response !!
-		                        dst++;
-		                        num_menu_entries++;
-		                        count = 43; // ugly
-		            		}else{
-		            			dst->entryname[pos++] = c;
-		            		}
-		            	}
-		            }
-		            if (c == '\n'){
-		                count = 0;
-		            }else{
-		                count++;
-		            }
-		    	}while(HAL_UART_Receive(&huart1, &c, 1, 100 ) == HAL_OK);
-	    	}
-		}
-	}else if(strncmp(MENU_TEXT_USER_SETUP, curPath, sizeof(MENU_TEXT_USER_SETUP) - 1) == 0 ){
-		if(d->type == Menu_Action){ // if actual Entry is of type Menu_Action -> Connect user
-			if( prepare_PlusStore_API_request(curPath) == FALSE){
-            	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
-				return;
-			}
-        	HAL_UART_Transmit(&huart1, http_request_header, strlen((char *)http_request_header), 50);
-
-        	while(HAL_UART_Receive(&huart1, &c,1, 400 ) == HAL_OK){}
-        	if(c == '0')
-        		set_menu_status_msg(STATUS_MESSAGE_USER_CONNECT_FAILED);
-        	else
-        		set_menu_status_msg(STATUS_MESSAGE_USER_CONNECTED);
-
-        	if( HAL_UART_Transmit(&huart1, ATCMD6, sizeof(ATCMD6)-1, 10) != HAL_OK){
-            	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
-        		return;
-        	}
-        	while(HAL_UART_Receive(&huart1, &c,1, 100 ) == HAL_OK){
-        	}
-
-        	curPath[0] = '\0';
-		}else{
-			if(strcmp(MENU_TEXT_USER_SETUP, curPath) == 0){
-				set_menu_status_msg(STATUS_MESSAGE_USER_CONNECT);
-			}
-
-			MAKE_MENU_ENTRY("(GO BACK)", Leave_Menu); // TODO Delete last Char or All?
-			char Key[2] = "0";
-			for (char i=32; i < 96; i++){
-				Key[0] = i;
-				MAKE_MENU_ENTRY(Key, Keyboard_Char);
-			}
-			MAKE_MENU_ENTRY("Enter", Menu_Action);
-		}
-	}else if(strncmp(MENU_TEXT_TV_MODE_SETUP, curPath, sizeof(MENU_TEXT_TV_MODE_SETUP) - 1) == 0 ){
-		if(d->type == Menu_Action){
-			HAL_FLASH_Unlock();
-			if(strcmp(&curPath[sizeof(MENU_TEXT_TV_MODE_SETUP)], MENU_TEXT_TV_MODE_PAL) == 0){
-				set_tv_mode(TV_MODE_PAL);
-				if(tv_mode != TV_MODE_PAL){
-					FLASH_Erase_Sector(FLASH_SECTOR_11, (uint8_t) FLASH_VOLTAGE_RANGE_3); // TODO use User-Option Bytes for TV Mode (0x1FFF C000) bits 0-1 are unused, but don't change RDP, BOR WDG and RST!
-					HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, FLASH_CONFIG_ADDRESS, ((uint32_t)TV_MODE_PAL) );
+	        	curPath[0] = '\0';
+			}else{
+				if(strcmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_PRIVATE_KEY ) == 0){
+					set_menu_status_msg(STATUS_MESSAGE_PRIVATE_KEY);
 				}
-				tv_mode = TV_MODE_PAL;
-			}else if(strcmp(&curPath[sizeof(MENU_TEXT_TV_MODE_SETUP)], MENU_TEXT_TV_MODE_PAL60) == 0){
-				set_tv_mode(TV_MODE_PAL60);
-				if(tv_mode != TV_MODE_PAL60){
-					FLASH_Erase_Sector(FLASH_SECTOR_11, (uint8_t) FLASH_VOLTAGE_RANGE_3);
-					HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, FLASH_CONFIG_ADDRESS, ((uint32_t)TV_MODE_PAL60) );
+
+				MAKE_MENU_ENTRY("(GO BACK)", Leave_Menu); // TODO Delete last Char or All?
+				char Key[2] = "0";
+				for (char i=32; i < 96; i++){
+					Key[0] = i;
+					MAKE_MENU_ENTRY(Key, Keyboard_Char);
 				}
-				tv_mode = TV_MODE_PAL60;
-			}else{ // if(strcmp(&curPath[sizeof(MENU_TEXT_TV_MODE_SETUP)], MENU_TEXT_TV_MODE_NTSC) == 0)
-				set_tv_mode(TV_MODE_NTSC);
-				if(tv_mode != TV_MODE_NTSC){
-					FLASH_Erase_Sector(FLASH_SECTOR_11, (uint8_t) FLASH_VOLTAGE_RANGE_3);
-					HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, FLASH_CONFIG_ADDRESS, ((uint32_t)TV_MODE_NTSC) );
-				}
-				tv_mode = TV_MODE_NTSC;
+				MAKE_MENU_ENTRY("Enter", Menu_Action);
 			}
-			HAL_FLASH_Lock();
-        	curPath[0] = '\0';
-		}else{
-			MAKE_MENU_ENTRY("(GO Back)", Leave_Menu);
-			MAKE_MENU_ENTRY(MENU_TEXT_TV_MODE_PAL, Menu_Action);
-			MAKE_MENU_ENTRY(MENU_TEXT_TV_MODE_PAL60, Menu_Action);
-			MAKE_MENU_ENTRY(MENU_TEXT_TV_MODE_NTSC, Menu_Action);
 		}
 	}else if(d->type == Menu_Action){ // if actual Entry is of type Menu_Action..
 		if(strncmp(MENU_TEXT_FIRMWARE_UPDATE, curPath, sizeof(MENU_TEXT_FIRMWARE_UPDATE) - 1) == 0 ){
@@ -570,16 +609,8 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 		loadStore = TRUE;
 	}
 
-	if(strlen(curPath) == 0){
-		MAKE_MENU_ENTRY(MENU_TEXT_WIFI_SETUP, Sub_Menu);
-		MAKE_MENU_ENTRY(MENU_TEXT_TV_MODE_SETUP, Sub_Menu);
-		loadStore = TRUE;
-	}
-
-
-
 	// Test we should load store and if connected to AP
-    if(	loadStore ){
+    if(	loadStore || strlen(curPath) == 0 ){
     	if(esp8266_is_connected() == TRUE){
 			if( prepare_PlusStore_API_request(curPath) == FALSE){
             	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
@@ -588,7 +619,8 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 
             HAL_UART_Transmit(&huart1, http_request_header, strlen((char *)http_request_header), 50);
         	count = 0;
-        	while(HAL_UART_Receive(&huart1, &c,1, 400 ) == HAL_OK){
+        	skip_http_header();
+        	while(HAL_UART_Receive(&huart1, &c, 1, 400 ) == HAL_OK){
         		if(num_menu_entries < NUM_MENU_ITEMS){
                     if(count == 0){ // first char defines if its an entry row (or Header Row) and dir or file
                     	is_entry_row = (c > '/' && c < ':' ) ? TRUE : FALSE; // First Char is '0' to '9'
@@ -632,13 +664,16 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 
     }
 
+    if(strlen(curPath) == 0){
+		MAKE_MENU_ENTRY(MENU_TEXT_SETUP, Sub_Menu);
+	}
 }
 
 CART_TYPE identify_cartridge( MENU_ENTRY *d )
 {
 
 
-	unsigned int image_size = 0, count;
+	unsigned int image_size = 0;
 	CART_TYPE cart_type = { base_type_None, FALSE, FALSE };
 
 	strcat(curPath, "/");
@@ -659,17 +694,8 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
     	if(HAL_UART_Transmit(&huart1, http_request_header, strlen((char *)http_request_header), 50)!= HAL_OK){
     	}
 
-    	count = 0;
-    	// Skip HTTP Header
-    	while(HAL_UART_Receive(&huart1, &c, 1, 400 ) == HAL_OK){
-           	if( c == '\n' ){
-           		if (count == 1)
-           			break;
-           		count = 0;
-           	}else{
-           		count++;
-           	}
-    	}
+    	skip_http_header();
+
     	// Now for the HTTP Body
     	while(HAL_UART_Receive(&huart1, &c, 1, 400 ) == HAL_OK){
             	buffer[image_size++] = c;
@@ -989,8 +1015,8 @@ int main(void)
   		  while (len && curPath[--len] != '/');
   		  curPath[len] = 0;
   		} else {
-  		  // go into Menu
-  		  if(( d->type != Keyboard_Char && strlen(curPath) > 0) || strcmp(MENU_TEXT_USER_SETUP, curPath) == 0 ){
+  		  // go into Menu TODO find better way for separation of first keyboard char!!
+  		  if(( d->type != Keyboard_Char && strlen(curPath) > 0) || strcmp(MENU_TEXT_SETUP"/"MENU_TEXT_USER_SETUP, curPath) == 0 ){
     		    strcat(curPath, "/");
   		  }
 

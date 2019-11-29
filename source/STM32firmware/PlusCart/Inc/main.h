@@ -118,14 +118,16 @@ void Error_Handler(void);
 #define TRUE 1
 #define FALSE 0
 
-#define VERSION 	  "0.7.1"
+#define VERSION 	  "0.7.5"
 #define UDID_TEMPLATE "000000000000000000000000"
 
+#define MENU_TEXT_SETUP 	      "Setup"
 #define MENU_TEXT_WIFI_SETUP 	  "WiFi Setup"
 #define MENU_TEXT_TV_MODE_SETUP   "Set TV Mode"
 #define MENU_TEXT_TV_MODE_PAL     "PAL"
 #define MENU_TEXT_TV_MODE_PAL60   "PAL 60Hz"
 #define MENU_TEXT_TV_MODE_NTSC    "NTSC"
+#define MENU_TEXT_PRIVATE_KEY     "Private Key"
 #define MENU_TEXT_FIRMWARE_UPDATE "** Update **"
 #define MENU_TEXT_USER_SETUP      "Plus connect"
 
@@ -135,6 +137,8 @@ void Error_Handler(void);
 #define STATUS_MESSAGE_USER_CONNECT         "Insert email"
 #define STATUS_MESSAGE_USER_CONNECTED       "User created"
 #define STATUS_MESSAGE_USER_CONNECT_FAILED  "Failed      "
+#define STATUS_MESSAGE_PRIVATE_KEY          "Insert Key  "
+#define STATUS_MESSAGE_PRIVATE_KEY_SAVED    "Key saved   "
 
 
 
