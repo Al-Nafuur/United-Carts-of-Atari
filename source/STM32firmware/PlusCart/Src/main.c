@@ -546,7 +546,7 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 					return;
 				}
 	        	HAL_UART_Transmit(&huart1, http_request_header, strlen((char *)http_request_header), 50);
-
+            	skip_http_header();
 	        	while(HAL_UART_Receive(&huart1, &c,1, 400 ) == HAL_OK){}
 	        	if(c == '0')
 	        		set_menu_status_msg(STATUS_MESSAGE_USER_CONNECT_FAILED);
