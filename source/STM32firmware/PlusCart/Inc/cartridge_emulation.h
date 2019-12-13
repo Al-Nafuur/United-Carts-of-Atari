@@ -5,10 +5,6 @@
 #include "cartridge_io.h"
 
 
-extern unsigned int cart_size_bytes;
-extern uint8_t buffer[];
-extern uint8_t http_request_header[];
-
 enum Transmission_State{
 	No_Transmission,
 	Send_Start,
@@ -38,7 +34,7 @@ enum Transmission_State{
 		uint8_t receive_buffer_write_pointer = 0, receive_buffer_read_pointer = 0, content_counter = 0; \
 		uint8_t out_buffer_write_pointer = 0, out_buffer_send_pointer = 0; \
 		uint8_t receive_buffer[256], out_buffer[256]; \
-		uint8_t prev_c, prev_prev_c = 0, i; \
+		uint8_t prev_c = 0, prev_prev_c = 0, i; \
 		uint16_t content_len; \
 		int content_length_pos = header_length - 5; \
 		enum Transmission_State huart_state = No_Transmission; \

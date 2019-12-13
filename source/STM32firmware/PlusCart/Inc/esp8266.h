@@ -10,8 +10,6 @@
  */
 
 #include <stdint.h>
-#include <string.h>
-#include "stm32f4xx_hal.h"
 
 
 #ifndef ESP8266_H
@@ -23,8 +21,10 @@ extern "C" {
 
 /** Some constants **/
 
+#define UDID_TEMPLATE "000000000000000000000000"
+
 /* Hash Values of ESP8266 Response messages */
-#define ESP8266_NO_RESPONSE                    5381UL // inital hash value
+#define ESP8266_NO_RESPONSE                    5381UL // initial hash value
 #define ESP8266_OK                          5862591UL // OK
 #define ESP8266_READY                  210726483418UL // Ready
 #define ESP8266_ERROR                  210672417103UL // Error
@@ -40,20 +40,58 @@ extern "C" {
 #define HAL_UART_TIMEOUT_SEND    50
 #define HAL_UART_TIMEOUT_RECEIVE 10
 
+#define MAX_RANGE_SIZE           4096
+#define RANGE_BOUNDARY_SIZE        19
+#define RANGE_BOUNDARY_TEMPLATE  '_','_','_','_','_','_','_','_','_','_','_','_','_'
+//"_____________"
+
 #define TRUE    1
 #define FALSE   0
 
+typedef struct {
+	uint32_t start;
+	uint32_t stop;
+} http_range;
+
+enum MENU_ENTRY_Type {
+	Root_Menu = -1,
+	Leave_Menu,
+	Sub_Menu,
+	Cart_File,
+	Input_Field,
+	Keyboard_Char,
+	Menu_Action
+};
+
+typedef struct {
+	enum MENU_ENTRY_Type type;
+	char entryname[33];
+	uint32_t filesize;
+} MENU_ENTRY;
 
 /** Should be written by the user for input from / output to the ESP module **/
 
-void Initialize_ESP8266();
+void Initialize_ESP8266(void);
 
 /** Function prototypes **/
+
+_Bool esp8266_PlusStore_API_prepare_request(char *);
+
+int connect_PlusROM_API(void);
+
+void get_boundary_http_header(char *);
+void skip_http_header(void);
+_Bool close_transparent_transmission(void);
 
 // Check if the module is started (AT)
 _Bool esp8266_is_started(void);
 // Restart module (AT+RST)
 _Bool esp8266_restart(void);
+_Bool esp8266_wifi_list(MENU_ENTRY **, int *);
+_Bool esp8266_wifi_connect(char *, char *);
+
+uint32_t esp8266_PlusStore_API_range_request( char *, uint32_t, http_range *, uint8_t *);
+uint32_t esp8266_PlusStore_API_file_request( uint8_t *, char *, uint32_t, uint32_t );
 
 // Enabled/disable command echoing (ATE)
 void esp8266_echo_commands(_Bool);
@@ -69,6 +107,8 @@ void _esp8266_print(unsigned char *);
 
 // Wait for any response on the input
 unsigned long _esp8266_wait_response(uint16_t);
+
+void generate_udid_string(void);
 
 #ifdef	__cplusplus
 }

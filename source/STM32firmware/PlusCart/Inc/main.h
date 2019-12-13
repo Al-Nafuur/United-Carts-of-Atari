@@ -44,15 +44,6 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
-enum MENU_ENTRY_Type {
-	Root_Menu = -1,
-	Leave_Menu,
-	Sub_Menu,
-	Cart_File,
-	Input_Field,
-	Keyboard_Char,
-	Menu_Action
-};
 
 enum cart_base_type{
 	base_type_None,
@@ -87,12 +78,6 @@ typedef struct {
 } EXT_TO_CART_TYPE_MAP;
 
 
-typedef struct {
-	enum MENU_ENTRY_Type type;
-	char entryname[33];
-	uint32_t filesize;
-} MENU_ENTRY;
-
 
 /* USER CODE END ET */
 
@@ -118,8 +103,7 @@ void Error_Handler(void);
 #define TRUE 1
 #define FALSE 0
 
-#define VERSION 	  "0.7.5"
-#define UDID_TEMPLATE "000000000000000000000000"
+#define BUFFER_SIZE				96   // kilobytes
 
 #define MENU_TEXT_SETUP 	      "Setup"
 #define MENU_TEXT_WIFI_SETUP 	  "WiFi Setup"
@@ -141,15 +125,6 @@ void Error_Handler(void);
 #define STATUS_MESSAGE_PRIVATE_KEY_SAVED    "Key saved   "
 
 
-
-#define MAKE_MENU_ENTRY(NAME, TYPE)   dst->type = TYPE; \
-                                strcpy(dst->entryname, NAME); \
-                                dst->filesize = 0U; \
-                                num_menu_entries++; \
-                                dst++;
-
-#define BUFFER_SIZE				96   // kilobytes
-
 #define FLASH_CONFIG_ADDRESS     ((uint32_t)0x080FFFFC) /* Base @ of last word in last sector */
 
 /* Base address of the Flash sectors */
@@ -167,6 +142,7 @@ void Error_Handler(void);
 #define ADDR_FLASH_SECTOR_11    ((uint32_t)0x080E0000) /* Base @ of Sector 11, 128 Kbytes */
 
 /* USER CODE END Private defines */
+
 
 #ifdef __cplusplus
 }

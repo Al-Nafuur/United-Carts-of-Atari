@@ -12,9 +12,7 @@
 #include <stdlib.h>
 #include "cartridge_emulation.h"
 #include "cartridge_firmware.h"
-
-extern uint8_t c;
-extern UART_HandleTypeDef huart1;
+#include "global.h"
 
 
 void emulate_2k_4k_cartridge( int header_length, _Bool withPlusFunctions, int mask) {
