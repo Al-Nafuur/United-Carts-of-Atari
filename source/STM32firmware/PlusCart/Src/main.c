@@ -243,7 +243,6 @@ void do_firmware_update(uint32_t filesize, uint8_t *http_request_header){
 	    	// Skip HTTP Header
 	    	while(1){ // todo set and break on timeout ?
                 if(( huart1.Instance->SR & UART_FLAG_RXNE) == UART_FLAG_RXNE){ // ! (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_TXE) ) ){
-                    //c = (uint8_t)huart1.Instance->DR; // & (uint8_t)0xFF);
 					if( (uint8_t)huart1.Instance->DR == '\n' ){
 						if (count == 1)
 							break;

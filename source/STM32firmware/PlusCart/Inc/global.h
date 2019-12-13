@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include "stm32f4xx_hal.h"
 
-#define VERSION                   "0.8.0"
+#define VERSION                   "0.8.1"
 #define PLUSSTORE_API_HOST        "pluscart.firmaplus.de"
 
 extern UART_HandleTypeDef huart1;

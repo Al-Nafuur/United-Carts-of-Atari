@@ -552,6 +552,7 @@ reboot
 	lda CART_CMD_START_CART
 	sta wsync
 	sta wsync
+	lda $1FF4		;unblock command only needed for firmware update 
 	jmp ($fffc)
 SDLogo
 	.byte $22
@@ -707,18 +708,18 @@ ASCIILookupTable
 	.byte 63,63,63,63,63,63,63,63
 	.byte 63,63,63,63,63,63,63,63
 	.byte 63,63,63,63,63,63,63,63
-	.byte 00,01,02,03,04,05,06,07
-	.byte 08,09,10,11,12,13,14,15
+	.byte 0 ,33,34,35,36,37,38,39
+	.byte 27,28,42,43,44,29,30,47
+	.byte 48,49,50,51,52,53,54,55
+	.byte 56,57,58,59,60,61,62,31
+	.byte 32,1 ,2 ,3 ,4 ,5 ,6 ,7 
+	.byte 8 ,9 ,10,11,12,13,14,15
 	.byte 16,17,18,19,20,21,22,23
-	.byte 24,25,26,27,28,29,30,31
-	.byte 32,33,34,35,36,37,38,39
-	.byte 40,41,42,43,44,45,46,47
-	.byte 48,49,50,51,52,53,54,55
-	.byte 56,57,58,59,60,61,62,63
-	.byte 63,33,34,35,36,37,38,39
-	.byte 40,41,42,43,44,45,46,47
-	.byte 48,49,50,51,52,53,54,55
-	.byte 56,57,58,63,63,63,63,63
+	.byte 24,25,26,40,41,45,46,63
+	.byte 63,1 ,2 ,3 ,4 ,5 ,6 ,7 
+	.byte 8 ,9 ,10,11,12,13,14,15
+	.byte 16,17,18,19,20,21,22,23
+	.byte 24,25,26,63,63,63,63,63
 	
 ; 8x8 Font data.
 ; Beginning must be aligned to page boundary
@@ -733,296 +734,6 @@ FontData
        .byte $00 ; |        |
        .byte $00 ; |        |
        .byte $00 ; |        |
-
-       .byte $00 ; |        |
-       .byte $18 ; |   XX   |
-       .byte $18 ; |   XX   |
-       .byte $00 ; |        |
-       .byte $18 ; |   XX   |
-       .byte $18 ; |   XX   |
-       .byte $18 ; |   XX   |
-       .byte $18 ; |   XX   |
-
-       .byte $00 ; |        |
-       .byte $00 ; |        |
-       .byte $00 ; |        |
-       .byte $00 ; |        |
-       .byte $00 ; |        |
-       .byte $66 ; | XX  XX |
-       .byte $66 ; | XX  XX |
-       .byte $66 ; | XX  XX |
-
-       .byte $00 ; |        |
-       .byte $28 ; |  X X   |
-       .byte $28 ; |  X X   |
-       .byte $7C ; | XXXXX  |
-       .byte $28 ; |  X X   |
-       .byte $7C ; | XXXXX  |
-       .byte $28 ; |  X X   |
-       .byte $28 ; |  X X   |
-
-       .byte $00 ; |        |
-       .byte $18 ; |   XX   |
-       .byte $7C ; | XXXXX  |
-       .byte $06 ; |     XX |
-       .byte $7C ; | XXXXX  |
-       .byte $C0 ; |XX      |
-       .byte $7C ; | XXXXX  |
-       .byte $18 ; |   XX   |
-
-       .byte $00 ; |        |
-       .byte $0C ; |    XX  |
-       .byte $0C ; |    XX  |
-       .byte $70 ; | XXX    |
-       .byte $0E ; |    XXX |
-       .byte $30 ; |  XX    |
-       .byte $30 ; |  XX    |
-       .byte $00 ; |        |
-
-       .byte $00 ; |        |
-       .byte $7E ; | XXXXXX |
-       .byte $CC ; |XX  XX  |
-       .byte $66 ; | XX  XX |
-       .byte $38 ; |  XXX   |
-       .byte $60 ; | XX     |
-       .byte $30 ; |  XX    |
-       .byte $0E ; |    XXX |
-
-       .byte $00 ; |        |
-       .byte $00 ; |        |
-       .byte $00 ; |        |
-       .byte $00 ; |        |
-       .byte $00 ; |        |
-       .byte $30 ; |  XX    |
-       .byte $30 ; |  XX    |
-       .byte $30 ; |  XX    |
-
-       .byte $00 ; |        |
-       .byte $18 ; |   XX   |
-       .byte $30 ; |  XX    |
-       .byte $60 ; | XX     |
-       .byte $60 ; | XX     |
-       .byte $60 ; | XX     |
-       .byte $30 ; |  XX    |
-       .byte $18 ; |   XX   |
-
-       .byte $00 ; |        |
-       .byte $60 ; | XX     |
-       .byte $30 ; |  XX    |
-       .byte $18 ; |   XX   |
-       .byte $18 ; |   XX   |
-       .byte $18 ; |   XX   |
-       .byte $30 ; |  XX    |
-       .byte $60 ; | XX     |
-
-       .byte $00 ; |        |
-       .byte $00 ; |        |
-       .byte $66 ; | XX  XX |
-       .byte $18 ; |   XX   |
-       .byte $7E ; | XXXXXX |
-       .byte $7E ; | XXXXXX |
-       .byte $18 ; |   XX   |
-       .byte $18 ; |   XX   |
-
-       .byte $00 ; |        |
-       .byte $00 ; |        |
-       .byte $30 ; |  XX    |
-       .byte $30 ; |  XX    |
-       .byte $FC ; |XXXXXX  |
-       .byte $30 ; |  XX    |
-       .byte $30 ; |  XX    |
-       .byte $00 ; |        |
-
-       .byte $00 ; |        |
-       .byte $60 ; | XX     |
-       .byte $30 ; |  XX    |
-       .byte $30 ; |  XX    |
-       .byte $00 ; |        |
-       .byte $00 ; |        |
-       .byte $00 ; |        |
-       .byte $00 ; |        |
-
-       .byte $00 ; |        |
-       .byte $00 ; |        |
-       .byte $00 ; |        |
-       .byte $00 ; |        |
-       .byte $FC ; |XXXXXX  |
-       .byte $00 ; |        |
-       .byte $00 ; |        |
-       .byte $00 ; |        |
-
-       .byte $00 ; |        |
-       .byte $60 ; | XX     |
-       .byte $60 ; | XX     |
-       .byte $00 ; |        |
-       .byte $00 ; |        |
-       .byte $00 ; |        |
-       .byte $00 ; |        |
-       .byte $00 ; |        |
-
-       .byte $00 ; |        |
-       .byte $60 ; | XX     |
-       .byte $30 ; |  XX    |
-       .byte $30 ; |  XX    |
-       .byte $18 ; |   XX   |
-       .byte $0C ; |    XX  |
-       .byte $0C ; |    XX  |
-       .byte $06 ; |     XX |
-
-       .byte $00 ; |        |
-       .byte $7C ; | XXXXX  |
-       .byte $C6 ; |XX   XX |
-       .byte $E6 ; |XXX  XX |
-       .byte $D6 ; |XX X XX |
-       .byte $CE ; |XX  XXX |
-       .byte $C6 ; |XX   XX |
-       .byte $7C ; | XXXXX  |
-
-       .byte $00 ; |        |
-       .byte $FC ; |XXXXXX  |
-       .byte $30 ; |  XX    |
-       .byte $30 ; |  XX    |
-       .byte $30 ; |  XX    |
-       .byte $30 ; |  XX    |
-       .byte $70 ; | XXX    |
-       .byte $30 ; |  XX    |
-
-       .byte $00 ; |        |
-       .byte $FE ; |XXXXXXX |
-       .byte $E0 ; |XXX     |
-       .byte $78 ; | XXXX   |
-       .byte $3C ; |  XXXX  |
-       .byte $0E ; |    XXX |
-       .byte $C6 ; |XX   XX |
-       .byte $7C ; | XXXXX  |
-
-       .byte $00 ; |        |
-       .byte $7C ; | XXXXX  |
-       .byte $C6 ; |XX   XX |
-       .byte $06 ; |     XX |
-       .byte $3C ; |  XXXX  |
-       .byte $18 ; |   XX   |
-       .byte $0C ; |    XX  |
-       .byte $7E ; | XXXXXX |
-
-       .byte $00 ; |        |
-       .byte $0C ; |    XX  |
-       .byte $0C ; |    XX  |
-       .byte $FE ; |XXXXXXX |
-       .byte $CC ; |XX  XX  |
-       .byte $6C ; | XX XX  |
-       .byte $3C ; |  XXXX  |
-       .byte $1C ; |   XXX  |
-
-
-       .byte $00 ; |        |
-       .byte $7C ; | XXXXX  |
-       .byte $C6 ; |XX   XX |
-       .byte $06 ; |     XX |
-       .byte $06 ; |     XX |
-       .byte $FC ; |XXXXXX  |
-       .byte $C0 ; |XX      |
-       .byte $FC ; |XXXXXX  |
-
-       .byte $00 ; |        |
-       .byte $7C ; | XXXXX  |
-       .byte $C6 ; |XX   XX |
-       .byte $C6 ; |XX   XX |
-       .byte $FC ; |XXXXXX  |
-       .byte $C0 ; |XX      |
-       .byte $60 ; | XX     |
-       .byte $3C ; |  XXXX  |
-
-       .byte $00 ; |        |
-       .byte $30 ; |  XX    |
-       .byte $30 ; |  XX    |
-       .byte $30 ; |  XX    |
-       .byte $18 ; |   XX   |
-       .byte $0C ; |    XX  |
-       .byte $C6 ; |XX   XX |
-       .byte $FE ; |XXXXXXX |
-
-       .byte $00 ; |        |
-       .byte $7C ; | XXXXX  |
-       .byte $C6 ; |XX   XX |
-       .byte $C6 ; |XX   XX |
-       .byte $7C ; | XXXXX  |
-       .byte $C6 ; |XX   XX |
-       .byte $C6 ; |XX   XX |
-       .byte $7C ; | XXXXX  |
-
-       .byte $00 ; |        |
-       .byte $78 ; | XXXX   |
-       .byte $0C ; |    XX  |
-       .byte $06 ; |     XX |
-       .byte $7E ; | XXXXXX |
-       .byte $C6 ; |XX   XX |
-       .byte $C6 ; |XX   XX |
-       .byte $7C ; | XXXXX  |
-
-       .byte $00 ; |        |
-       .byte $00 ; |        |
-       .byte $60 ; | XX     |
-       .byte $60 ; | XX     |
-       .byte $00 ; |        |
-       .byte $60 ; | XX     |
-       .byte $60 ; | XX     |
-       .byte $00 ; |        |
-
-
-       .byte $00 ; |        |
-       .byte $00 ; |        |
-       .byte $60 ; | XX     |
-       .byte $30 ; |  XX    |
-       .byte $00 ; |        |
-       .byte $30 ; |  XX    |
-       .byte $30 ; |  XX    |
-       .byte $00 ; |        |
-
-       .byte $00 ; |        |
-       .byte $02 ; |      X |
-       .byte $0C ; |    XX  |
-       .byte $30 ; |  XX    |
-       .byte $C0 ; |XX      |
-       .byte $30 ; |  XX    |
-       .byte $0C ; |    XX  |
-       .byte $02 ; |      X |
-
-       .byte $00 ; |        |
-       .byte $00 ; |        |
-       .byte $00 ; |        |
-       .byte $3C ; |  XXXX  |
-       .byte $00 ; |        |
-       .byte $3C ; |  XXXX  |
-       .byte $00 ; |        |
-       .byte $00 ; |        |
-
-       .byte $00 ; |        |
-       .byte $80 ; |X       |
-       .byte $60 ; | XX     |
-       .byte $18 ; |   XX   |
-       .byte $06 ; |     XX |
-       .byte $18 ; |   XX   |
-       .byte $60 ; | XX     |
-       .byte $80 ; |X       |
-
-       .byte $00 ; |        |
-       .byte $18 ; |   XX   |
-       .byte $18 ; |   XX   |
-       .byte $00 ; |        |
-       .byte $18 ; |   XX   |
-       .byte $0C ; |    XX  |
-       .byte $66 ; | XX  XX |
-       .byte $18 ; |   XX   |
-
-       .byte $00 ; |        |
-       .byte $7C ; | XXXXX  |
-       .byte $C0 ; |XX      | 
-       .byte $CE ; |XX  XXX |
-       .byte $D6 ; |XX X XX |
-       .byte $CE ; |XX  XXX |
-       .byte $C6 ; |XX   XX |
-       .byte $7C ; | XXXXX  |
 
        .byte $00 ; |        |
        .byte $C6 ; |XX   XX |
@@ -1259,6 +970,123 @@ FontData
        .byte $FE ; |XXXXXXX |
 
        .byte $00 ; |        |
+       .byte $18 ; |   XX   |
+       .byte $30 ; |  XX    |
+       .byte $60 ; | XX     |
+       .byte $60 ; | XX     |
+       .byte $60 ; | XX     |
+       .byte $30 ; |  XX    |
+       .byte $18 ; |   XX   |
+
+       .byte $00 ; |        |
+       .byte $60 ; | XX     |
+       .byte $30 ; |  XX    |
+       .byte $18 ; |   XX   |
+       .byte $18 ; |   XX   |
+       .byte $18 ; |   XX   |
+       .byte $30 ; |  XX    |
+       .byte $60 ; | XX     |
+
+       .byte $00 ; |        |
+       .byte $00 ; |        |
+       .byte $00 ; |        |
+       .byte $00 ; |        |
+       .byte $FC ; |XXXXXX  |
+       .byte $00 ; |        |
+       .byte $00 ; |        |
+       .byte $00 ; |        |
+
+       .byte $00 ; |        |
+       .byte $60 ; | XX     |
+       .byte $60 ; | XX     |
+       .byte $00 ; |        |
+       .byte $00 ; |        |
+       .byte $00 ; |        |
+       .byte $00 ; |        |
+       .byte $00 ; |        |
+
+       .byte $00 ; |        |
+       .byte $18 ; |   XX   |
+       .byte $18 ; |   XX   |
+       .byte $00 ; |        |
+       .byte $18 ; |   XX   |
+       .byte $0C ; |    XX  |
+       .byte $66 ; | XX  XX |
+       .byte $18 ; |   XX   |
+
+       .byte $00 ; |        |
+       .byte $7C ; | XXXXX  |
+       .byte $C0 ; |XX      | 
+       .byte $CE ; |XX  XXX |
+       .byte $D6 ; |XX X XX |
+       .byte $CE ; |XX  XXX |
+       .byte $C6 ; |XX   XX |
+       .byte $7C ; | XXXXX  |
+
+       .byte $00 ; |        |
+       .byte $18 ; |   XX   |
+       .byte $18 ; |   XX   |
+       .byte $00 ; |        |
+       .byte $18 ; |   XX   |
+       .byte $18 ; |   XX   |
+       .byte $18 ; |   XX   |
+       .byte $18 ; |   XX   |
+
+       .byte $00 ; |        |
+       .byte $00 ; |        |
+       .byte $00 ; |        |
+       .byte $00 ; |        |
+       .byte $00 ; |        |
+       .byte $66 ; | XX  XX |
+       .byte $66 ; | XX  XX |
+       .byte $66 ; | XX  XX |
+
+       .byte $00 ; |        |
+       .byte $28 ; |  X X   |
+       .byte $28 ; |  X X   |
+       .byte $7C ; | XXXXX  |
+       .byte $28 ; |  X X   |
+       .byte $7C ; | XXXXX  |
+       .byte $28 ; |  X X   |
+       .byte $28 ; |  X X   |
+
+       .byte $00 ; |        |
+       .byte $18 ; |   XX   |
+       .byte $7C ; | XXXXX  |
+       .byte $06 ; |     XX |
+       .byte $7C ; | XXXXX  |
+       .byte $C0 ; |XX      |
+       .byte $7C ; | XXXXX  |
+       .byte $18 ; |   XX   |
+
+       .byte $00 ; |        |
+       .byte $0C ; |    XX  |
+       .byte $0C ; |    XX  |
+       .byte $70 ; | XXX    |
+       .byte $0E ; |    XXX |
+       .byte $30 ; |  XX    |
+       .byte $30 ; |  XX    |
+       .byte $00 ; |        |
+
+       .byte $00 ; |        |
+       .byte $7E ; | XXXXXX |
+       .byte $CC ; |XX  XX  |
+       .byte $66 ; | XX  XX |
+       .byte $38 ; |  XXX   |
+       .byte $60 ; | XX     |
+       .byte $30 ; |  XX    |
+       .byte $0E ; |    XXX |
+
+       .byte $00 ; |        |
+       .byte $00 ; |        |
+       .byte $00 ; |        |
+       .byte $00 ; |        |
+       .byte $00 ; |        |
+       .byte $30 ; |  XX    |
+       .byte $30 ; |  XX    |
+       .byte $30 ; |  XX    |
+
+       .byte $00 ; |        |
        .byte $38 ; |  XXX   |
        .byte $30 ; |  XX    |
        .byte $30 ; |  XX    |
@@ -1277,6 +1105,33 @@ FontData
        .byte $60 ; | XX     |
 
        .byte $00 ; |        |
+       .byte $00 ; |        |
+       .byte $66 ; | XX  XX |
+       .byte $18 ; |   XX   |
+       .byte $7E ; | XXXXXX |
+       .byte $7E ; | XXXXXX |
+       .byte $18 ; |   XX   |
+       .byte $18 ; |   XX   |
+
+       .byte $00 ; |        |
+       .byte $00 ; |        |
+       .byte $30 ; |  XX    |
+       .byte $30 ; |  XX    |
+       .byte $FC ; |XXXXXX  |
+       .byte $30 ; |  XX    |
+       .byte $30 ; |  XX    |
+       .byte $00 ; |        |
+
+       .byte $00 ; |        |
+       .byte $60 ; | XX     |
+       .byte $30 ; |  XX    |
+       .byte $30 ; |  XX    |
+       .byte $00 ; |        |
+       .byte $00 ; |        |
+       .byte $00 ; |        |
+       .byte $00 ; |        |
+
+       .byte $00 ; |        |
        .byte $38 ; |  XXX   |
        .byte $18 ; |   XX   |
        .byte $18 ; |   XX   |
@@ -1293,6 +1148,152 @@ FontData
        .byte $66 ; | XX  XX |
        .byte $3C ; |  XXXX  |
        .byte $18 ; |   XX   |
+
+       .byte $00 ; |        |
+       .byte $60 ; | XX     |
+       .byte $30 ; |  XX    |
+       .byte $30 ; |  XX    |
+       .byte $18 ; |   XX   |
+       .byte $0C ; |    XX  |
+       .byte $0C ; |    XX  |
+       .byte $06 ; |     XX |
+
+       .byte $00 ; |        |
+       .byte $7C ; | XXXXX  |
+       .byte $C6 ; |XX   XX |
+       .byte $E6 ; |XXX  XX |
+       .byte $D6 ; |XX X XX |
+       .byte $CE ; |XX  XXX |
+       .byte $C6 ; |XX   XX |
+       .byte $7C ; | XXXXX  |
+
+       .byte $00 ; |        |
+       .byte $FC ; |XXXXXX  |
+       .byte $30 ; |  XX    |
+       .byte $30 ; |  XX    |
+       .byte $30 ; |  XX    |
+       .byte $30 ; |  XX    |
+       .byte $70 ; | XXX    |
+       .byte $30 ; |  XX    |
+
+       .byte $00 ; |        |
+       .byte $FE ; |XXXXXXX |
+       .byte $E0 ; |XXX     |
+       .byte $78 ; | XXXX   |
+       .byte $3C ; |  XXXX  |
+       .byte $0E ; |    XXX |
+       .byte $C6 ; |XX   XX |
+       .byte $7C ; | XXXXX  |
+
+       .byte $00 ; |        |
+       .byte $7C ; | XXXXX  |
+       .byte $C6 ; |XX   XX |
+       .byte $06 ; |     XX |
+       .byte $3C ; |  XXXX  |
+       .byte $18 ; |   XX   |
+       .byte $0C ; |    XX  |
+       .byte $7E ; | XXXXXX |
+
+       .byte $00 ; |        |
+       .byte $0C ; |    XX  |
+       .byte $0C ; |    XX  |
+       .byte $FE ; |XXXXXXX |
+       .byte $CC ; |XX  XX  |
+       .byte $6C ; | XX XX  |
+       .byte $3C ; |  XXXX  |
+       .byte $1C ; |   XXX  |
+
+
+       .byte $00 ; |        |
+       .byte $7C ; | XXXXX  |
+       .byte $C6 ; |XX   XX |
+       .byte $06 ; |     XX |
+       .byte $06 ; |     XX |
+       .byte $FC ; |XXXXXX  |
+       .byte $C0 ; |XX      |
+       .byte $FC ; |XXXXXX  |
+
+       .byte $00 ; |        |
+       .byte $7C ; | XXXXX  |
+       .byte $C6 ; |XX   XX |
+       .byte $C6 ; |XX   XX |
+       .byte $FC ; |XXXXXX  |
+       .byte $C0 ; |XX      |
+       .byte $60 ; | XX     |
+       .byte $3C ; |  XXXX  |
+
+       .byte $00 ; |        |
+       .byte $30 ; |  XX    |
+       .byte $30 ; |  XX    |
+       .byte $30 ; |  XX    |
+       .byte $18 ; |   XX   |
+       .byte $0C ; |    XX  |
+       .byte $C6 ; |XX   XX |
+       .byte $FE ; |XXXXXXX |
+
+       .byte $00 ; |        |
+       .byte $7C ; | XXXXX  |
+       .byte $C6 ; |XX   XX |
+       .byte $C6 ; |XX   XX |
+       .byte $7C ; | XXXXX  |
+       .byte $C6 ; |XX   XX |
+       .byte $C6 ; |XX   XX |
+       .byte $7C ; | XXXXX  |
+
+       .byte $00 ; |        |
+       .byte $78 ; | XXXX   |
+       .byte $0C ; |    XX  |
+       .byte $06 ; |     XX |
+       .byte $7E ; | XXXXXX |
+       .byte $C6 ; |XX   XX |
+       .byte $C6 ; |XX   XX |
+       .byte $7C ; | XXXXX  |
+
+       .byte $00 ; |        |
+       .byte $00 ; |        |
+       .byte $60 ; | XX     |
+       .byte $60 ; | XX     |
+       .byte $00 ; |        |
+       .byte $60 ; | XX     |
+       .byte $60 ; | XX     |
+       .byte $00 ; |        |
+
+
+       .byte $00 ; |        |
+       .byte $00 ; |        |
+       .byte $60 ; | XX     |
+       .byte $30 ; |  XX    |
+       .byte $00 ; |        |
+       .byte $30 ; |  XX    |
+       .byte $30 ; |  XX    |
+       .byte $00 ; |        |
+
+       .byte $00 ; |        |
+       .byte $02 ; |      X |
+       .byte $0C ; |    XX  |
+       .byte $30 ; |  XX    |
+       .byte $C0 ; |XX      |
+       .byte $30 ; |  XX    |
+       .byte $0C ; |    XX  |
+       .byte $02 ; |      X |
+
+       .byte $00 ; |        |
+       .byte $00 ; |        |
+       .byte $00 ; |        |
+       .byte $3C ; |  XXXX  |
+       .byte $00 ; |        |
+       .byte $3C ; |  XXXX  |
+       .byte $00 ; |        |
+       .byte $00 ; |        |
+
+       .byte $00 ; |        |
+       .byte $80 ; |X       |
+       .byte $60 ; | XX     |
+       .byte $18 ; |   XX   |
+       .byte $06 ; |     XX |
+       .byte $18 ; |   XX   |
+       .byte $60 ; | XX     |
+       .byte $80 ; |X       |
 
        .byte $00 ; |        |
        .byte $FE ; |XXXXXXX |
