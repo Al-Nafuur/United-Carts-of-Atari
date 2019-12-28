@@ -160,4 +160,7 @@ void emulate_E7_cartridge();
 /* DPC (Pitfall II) Bankswitching */
 void emulate_DPC_cartridge();
 
+/* Pink Panther */
+void emulate_pp_cartridge(uint8_t* ram);
+
 #endif // CARTRIDGE_EMULATION_H

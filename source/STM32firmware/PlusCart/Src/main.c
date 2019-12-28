@@ -392,7 +392,8 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 			    	}
 					curPath[0] = '\0';
 				}else{
-					make_menu_entry(&dst, "(GO BACK)", Leave_Menu); // TODO Delete last char not all
+					make_menu_entry(&dst, "(GO BACK)", Leave_Menu); // TODO Delete last Char or All?
+					make_menu_entry(&dst, "(DEL CHAR)", Delete_Keyboard_Char); // TODO Delete last Char or All?
 					char Key[2] = "0";
 					for (char i=32; i < 96; i++){
 						Key[0] = i;
@@ -471,6 +472,7 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 				}
 
 				make_menu_entry(&dst, "(GO BACK)", Leave_Menu); // TODO Delete last Char or All?
+				make_menu_entry(&dst, "(DEL CHAR)", Delete_Keyboard_Char); // TODO Delete last Char or All?
 				char Key[2] = "0";
 				for (char i=32; i < 96; i++){
 					Key[0] = i;
@@ -510,6 +512,7 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 				}
 
 				make_menu_entry(&dst, "(GO BACK)", Leave_Menu); // TODO Delete last Char or All?
+				make_menu_entry(&dst, "(DEL CHAR)", Delete_Keyboard_Char); // TODO Delete last Char or All?
 				char Key[2] = "0";
 				for (char i=32; i < 96; i++){
 					Key[0] = i;
@@ -667,6 +670,9 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 		else
 			cart_type.base_type = base_type_F8;
 	}
+	else if (image_size == 8*1024 + 3) {
+		cart_type.base_type = base_type_PP;
+	}
 	else if(image_size >= 10240 && image_size <= 10496)
 	{  // ~10K - Pitfall II
 		cart_type.base_type = base_type_DPC;
@@ -761,9 +767,19 @@ void emulate_cartridge(CART_TYPE cart_type)
 		emulate_E7_cartridge();
 	else if (cart_type.base_type == base_type_DPC)
 		emulate_DPC_cartridge();
-	else if (cart_type.base_type == base_type_AR) {
+	else if (cart_type.base_type == base_type_AR)
 		emulate_supercharger_cartridge(curPath, cart_size_bytes, buffer, tv_mode);
-	}
+	else if (cart_type.base_type == base_type_PP)
+		emulate_pp_cartridge( buffer + 8*1024);
+//	else if (cart_type.base_type == base_type_DF)
+//		emulate_df_cartridge(cartridge_image_path, cart_size_bytes, buffer);
+//	else if (cart_type.base_type == base_type_DFSC)
+//		emulate_dfsc_cartridge(cartridge_image_path, cart_size_bytes, buffer);
+//	else if (cart_type.base_type == base_type_BF)
+//		emulate_bf_cartridge(cartridge_image_path, cart_size_bytes, buffer);
+//	else if (cart_type.base_type == base_type_BFSC)
+//		emulate_bfsc_cartridge(cartridge_image_path, cart_size_bytes, buffer);
+
 }
 
 void convertMenuNameForCart(unsigned char *dst, char *src)
@@ -885,10 +901,11 @@ int main(void)
     		  if(len && curPath[--len] != '/' ){
     	  		  curPath[len] = 0;
     		  }
-    		  len = strlen(buffer);
-    		  if(len && buffer[--len] != '/' ){
-    			  buffer[len] = 0;
+    		  len = strlen((char *) buffer);
+    		  if(len){
+    			  buffer[--len] = 0;
     		  }
+  	    	  set_menu_status_msg((char *)buffer);
   		} else {
   		  // go into Menu TODO find better way for separation of first keyboard char!!
   		  if(( d->type != Keyboard_Char && strlen(curPath) > 0) || strcmp(MENU_TEXT_SETUP"/"MENU_TEXT_PLUS_CONNECT, curPath) == 0 ){
@@ -903,7 +920,7 @@ int main(void)
   	  				  buffer[i] = buffer[i + 1];
   	  			  }
   			  }
-  	    	set_menu_status_msg((char *)buffer);
+  	    	  set_menu_status_msg((char *)buffer);
   		  }else if(d->type == Menu_Action){
   		      buffer[0] = 0;
   		  }

@@ -63,7 +63,10 @@ enum cart_base_type{
 	base_type_FA,
 	base_type_E7,
 	base_type_DPC,
-	base_type_AR
+	base_type_AR,
+	base_type_PP,
+	base_type_DF,
+	base_type_BF
 };
 
 typedef struct {
