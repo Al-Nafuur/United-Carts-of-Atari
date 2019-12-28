@@ -19,8 +19,14 @@
 extern "C" {
 #endif
 
-/** Some constants **/
+/** API connect/request **/
+#define  API_ATCMD_1  "AT+CIPSTART=\"TCP\",\"" PLUSSTORE_API_HOST "\",80\r\n"
+#define  API_ATCMD_2  "AT+CIPSEND\r\n"
+#define  API_ATCMD_3  "GET /api.php?c=0&p="
+#define  API_ATCMD_4  " HTTP/1.0\r\nHost: " PLUSSTORE_API_HOST "\r\nPlusStore-ID: v" VERSION " "
+#define  API_ATCMD_5  "\r\nConnection: keep-alive\r\n\r\n"
 
+/** Some constants **/
 #define UDID_TEMPLATE "000000000000000000000000"
 
 /* Hash Values of ESP8266 Response messages */
@@ -60,7 +66,8 @@ enum MENU_ENTRY_Type {
 	Cart_File,
 	Input_Field,
 	Keyboard_Char,
-	Menu_Action
+	Menu_Action,
+	Delete_Keyboard_Char
 };
 
 typedef struct {

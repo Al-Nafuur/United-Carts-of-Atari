@@ -82,7 +82,7 @@ EXT_TO_CART_TYPE_MAP ext_to_cart_type_map[]__attribute__((section(".ccmram"))) =
 	{0,{0,0,0}}
 };
 
-#define HTTP_REQUEST_CHUNK_PARAM_POS  15
+#define HTTP_REQUEST_CHUNK_PARAM_POS    sizeof(API_ATCMD_3) - 5
 
 /* USER CODE END PD */
 
@@ -364,6 +364,7 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 	MENU_ENTRY *dst = (MENU_ENTRY *)&menu_entries[0];
 
 	if(strncmp(MENU_TEXT_SETUP, curPath, sizeof(MENU_TEXT_SETUP) - 1) == 0 ){
+		//char *  curPathPos = (char *) &curPath[sizeof(MENU_TEXT_SETUP)];
 		if(strlen(curPath) == sizeof(MENU_TEXT_SETUP) - 1 ){
 			make_menu_entry(&dst, "(GO Back)", Leave_Menu);
 			make_menu_entry(&dst, MENU_TEXT_WIFI_SETUP, Sub_Menu);
@@ -441,7 +442,7 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 				make_menu_entry(&dst, MENU_TEXT_TV_MODE_NTSC, Menu_Action);
 			}
 
-		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_USER_SETUP, sizeof(MENU_TEXT_USER_SETUP) - 1) == 0 ){
+		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_PLUS_CONNECT, sizeof(MENU_TEXT_PLUS_CONNECT) - 1) == 0 ){
 			if(d->type == Menu_Action){ // if actual Entry is of type Menu_Action -> Connect user
 				if( esp8266_PlusStore_API_prepare_request(curPath) == FALSE){
 	            	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
@@ -452,9 +453,11 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 	        	skip_http_header();
 	        	while(HAL_UART_Receive(&huart1, &c, 1, 50 ) == HAL_OK){}
 	        	if(c == '0')
-	        		set_menu_status_msg(STATUS_MESSAGE_USER_CONNECT_FAILED);
+	        		set_menu_status_msg(STATUS_MESSAGE_PLUS_CONNECT_FAILED);
+	        	else if(c == '1')
+	        		set_menu_status_msg(STATUS_MESSAGE_PLUS_CREATED);
 	        	else
-	        		set_menu_status_msg(STATUS_MESSAGE_USER_CONNECTED);
+	        		set_menu_status_msg(STATUS_MESSAGE_PLUS_CONNECTED);
 
 	        	if( ! close_transparent_transmission() ){
 	            	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
@@ -463,8 +466,8 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 
 	        	curPath[0] = '\0';
 			}else{
-				if(strcmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_USER_SETUP) == 0){
-					set_menu_status_msg(STATUS_MESSAGE_USER_CONNECT);
+				if(strcmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_PLUS_CONNECT) == 0){
+					set_menu_status_msg(STATUS_MESSAGE_PLUS_CONNECT);
 				}
 
 				make_menu_entry(&dst, "(GO BACK)", Leave_Menu); // TODO Delete last Char or All?
@@ -475,6 +478,27 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 				}
 				make_menu_entry(&dst, "Enter", Menu_Action);
 			}
+		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_PLUS_REMOVE, sizeof(MENU_TEXT_PLUS_REMOVE) - 1) == 0 ){
+			if( esp8266_PlusStore_API_prepare_request(curPath) == FALSE){
+            	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
+				return;
+			}
+        	HAL_UART_Transmit(&huart1, (uint8_t *)http_request_header, strlen(http_request_header), 50);
+
+        	skip_http_header();
+        	while(HAL_UART_Receive(&huart1, &c, 1, 50 ) == HAL_OK){}
+        	if(c == '0')
+        		set_menu_status_msg(STATUS_MESSAGE_PLUS_CONNECT_FAILED);
+        	else
+        		set_menu_status_msg(STATUS_MESSAGE_PLUS_REMOVED);
+
+        	if( ! close_transparent_transmission() ){
+            	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
+        		return;
+        	}
+
+        	curPath[0] = '\0';
+
 		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_PRIVATE_KEY, sizeof(MENU_TEXT_PRIVATE_KEY) - 1) == 0 ){
 			if(d->type == Menu_Action){ // if actual Entry is of type Menu_Action -> Save Private key
 				set_menu_status_msg(STATUS_MESSAGE_PRIVATE_KEY_SAVED);
@@ -855,9 +879,19 @@ int main(void)
   		  int len = strlen(curPath);
   		  while (len && curPath[--len] != '/');
   		  curPath[len] = 0;
+  		  buffer[0] = 0; // Reset Keyboard input field
+  		} else if(d->type == Delete_Keyboard_Char){
+    		  int len = strlen(curPath);
+    		  if(len && curPath[--len] != '/' ){
+    	  		  curPath[len] = 0;
+    		  }
+    		  len = strlen(buffer);
+    		  if(len && buffer[--len] != '/' ){
+    			  buffer[len] = 0;
+    		  }
   		} else {
   		  // go into Menu TODO find better way for separation of first keyboard char!!
-  		  if(( d->type != Keyboard_Char && strlen(curPath) > 0) || strcmp(MENU_TEXT_SETUP"/"MENU_TEXT_USER_SETUP, curPath) == 0 ){
+  		  if(( d->type != Keyboard_Char && strlen(curPath) > 0) || strcmp(MENU_TEXT_SETUP"/"MENU_TEXT_PLUS_CONNECT, curPath) == 0 ){
     		    strcat(curPath, "/");
   		  }
 

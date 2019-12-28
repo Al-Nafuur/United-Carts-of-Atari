@@ -15,11 +15,6 @@
 #include "global.h"
 #include "esp8266.h"
 
-#define  API_ATCMD_1  "AT+CIPSTART=\"TCP\",\"" PLUSSTORE_API_HOST "\",80\r\n"
-#define  API_ATCMD_2  "AT+CIPSEND\r\n"
-#define  API_ATCMD_3  "GET /api.php?c=0&p="
-#define  API_ATCMD_4  " HTTP/1.0\r\nHost: " PLUSSTORE_API_HOST "\r\nPlusStore-ID: v" VERSION " "
-#define  API_ATCMD_5  "\r\nConnection: keep-alive\r\n\r\n"
 char stm32_udid[] = UDID_TEMPLATE;
 
 _Bool esp8266_PlusStore_API_prepare_request(char *path){
