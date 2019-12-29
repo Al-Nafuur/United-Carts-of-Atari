@@ -30,7 +30,7 @@ void emulate_2k_4k_cartridge( int header_length, _Bool withPlusFunctions, int ma
 		// got a stable address
 		if (addr & 0x1000)
 		{ // A12 high
-			if(withPlusFunctions && addr > 0x1ff0 && addr < 0x1ff4){
+			if(withPlusFunctions && addr > 0x1fef && addr < 0x1ff4){
 				if(addr == 0x1ff2 ){// read from receive buffer
 					DATA_OUT = ((uint16_t)receive_buffer[receive_buffer_read_pointer]);//<<8;
 				    SET_DATA_MODE_OUT
