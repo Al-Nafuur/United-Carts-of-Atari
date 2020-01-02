@@ -9,7 +9,7 @@ The PlusCart downloads the ROM-files from an Server in the Internet called the "
 Additionally the PlusCart has one more interesting feature. It offers **internet access** to the ROM Developers, these functions are called "[PlusROM](http://pluscart.firmaplus.de/pico/?PlusROM)".
 
 ## [Documentation](http://pluscart.firmaplus.de/pico/)
-
+More information and documentation can be found at the [PlusCart website](http://pluscart.firmaplus.de/pico/)
 
 
 Copyright:
