@@ -108,16 +108,18 @@ void Error_Handler(void);
 
 #define BUFFER_SIZE				96   // kilobytes
 
-#define MENU_TEXT_SETUP 	      "Setup"
-#define MENU_TEXT_WIFI_SETUP 	  "WiFi Setup"
-#define MENU_TEXT_TV_MODE_SETUP   "Set TV Mode"
-#define MENU_TEXT_TV_MODE_PAL     "PAL"
-#define MENU_TEXT_TV_MODE_PAL60   "PAL 60Hz"
-#define MENU_TEXT_TV_MODE_NTSC    "NTSC"
-#define MENU_TEXT_PRIVATE_KEY     "Private Key"
-#define MENU_TEXT_FIRMWARE_UPDATE "** Update **"
-#define MENU_TEXT_PLUS_CONNECT    "Plus connect"
-#define MENU_TEXT_PLUS_REMOVE     "Plus remove"
+#define MENU_TEXT_INBUILD_ROMS              "Offline ROMs"
+#define MENU_TEXT_SETUP 	                "Setup"
+#define MENU_TEXT_WIFI_SETUP 	            "WiFi Setup"
+#define MENU_TEXT_TV_MODE_SETUP             "Set TV Mode"
+#define MENU_TEXT_TV_MODE_PAL               "PAL"
+#define MENU_TEXT_TV_MODE_PAL60             "PAL 60Hz"
+#define MENU_TEXT_TV_MODE_NTSC              "NTSC"
+#define MENU_TEXT_PRIVATE_KEY               "Private Key"
+#define MENU_TEXT_FIRMWARE_UPDATE           "** Update **"
+#define MENU_TEXT_INBUILD_ROM_UPDATE        "*Update ROMs"
+#define MENU_TEXT_PLUS_CONNECT              "Plus connect"
+#define MENU_TEXT_PLUS_REMOVE               "Plus remove"
 
 #define STATUS_MESSAGE_WIFI_NOT_CONNECTED   "No WiFi     "
 #define STATUS_MESSAGE_WIFI_CONNECTED       "WiFi connect"

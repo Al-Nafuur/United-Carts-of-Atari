@@ -37,6 +37,7 @@
 
 #include "global.h"
 #include "esp8266.h"
+#include "flash.h"
 #include "cartridge_io.h"
 #include "cartridge_firmware.h"
 #include "cartridge_supercharger.h"
@@ -121,7 +122,7 @@ static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 HAL_StatusTypeDef FLASH_WaitInRAMForLastOperationWithMaxDelay() __attribute__((section(".data#")));
-void do_firmware_update(uint32_t filesize, uint8_t *http_request_header)__attribute__((section(".data#")));
+void do_flash_update(uint32_t filesize, uint8_t *http_request_header, uint32_t Address)__attribute__((section(".data#")));
 
 
 /* USER CODE END PFP */
@@ -163,11 +164,11 @@ HAL_StatusTypeDef FLASH_WaitInRAMForLastOperationWithMaxDelay()
 }
 
 
-void do_firmware_update(uint32_t filesize, uint8_t *http_request_header){
+void do_flash_update(uint32_t filesize, uint8_t *http_request_header, uint32_t Address){
 
-	uint32_t Address = ADDR_FLASH_SECTOR_0;
 	uint32_t count=0;
-	uint8_t c;
+	uint8_t c;  // ToDo use global c !!
+	uint32_t flash_max = 5;
 	HAL_StatusTypeDef status;
 
 
@@ -179,7 +180,9 @@ void do_firmware_update(uint32_t filesize, uint8_t *http_request_header){
 	// Wait for last operation to be completed
 	if(FLASH_WaitInRAMForLastOperationWithMaxDelay() == HAL_OK)
 	{
-	      for( count = FLASH_SECTOR_0; count < FLASH_SECTOR_6; count++)
+		count = Address == ADDR_FLASH_SECTOR_0 ? FLASH_SECTOR_0:FLASH_SECTOR_5;
+		flash_max = count + 5U;
+	      for( ; count < flash_max; count++)
 	      {
 //	        FLASH_Erase_Sector(count, (uint8_t) FLASH_VOLTAGE_RANGE_3);
 	    	  CLEAR_BIT(FLASH->CR, FLASH_CR_PSIZE);
@@ -315,9 +318,10 @@ void do_firmware_update(uint32_t filesize, uint8_t *http_request_header){
 			}
 		}
 
-//		while(HAL_UART_Receive(&huart1, &c,1, 100 ) == HAL_OK){	}
 		__enable_irq();
-		NVIC_SystemReset();
+		if(flash_max == 5){
+			NVIC_SystemReset();
+		}
 
 }
 
@@ -355,7 +359,6 @@ void make_menu_entry( MENU_ENTRY **dst, char *name, int type){
 
 void buildMenuFromPath( MENU_ENTRY *d )  {
 	int count = 0;
-	uint8_t c;
 	_Bool loadStore = FALSE;
 	_Bool is_entry_row;
 	uint8_t pos = 0;
@@ -395,7 +398,7 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 					make_menu_entry(&dst, "(GO BACK)", Leave_Menu); // TODO Delete last Char or All?
 					make_menu_entry(&dst, "(DEL CHAR)", Delete_Keyboard_Char); // TODO Delete last Char or All?
 					char Key[2] = "0";
-					for (char i=32; i < 96; i++){
+					for (char i=32; i < 100; i++){
 						Key[0] = i;
 						make_menu_entry(&dst, Key, Keyboard_Char);
 					}
@@ -474,7 +477,7 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 				make_menu_entry(&dst, "(GO BACK)", Leave_Menu); // TODO Delete last Char or All?
 				make_menu_entry(&dst, "(DEL CHAR)", Delete_Keyboard_Char); // TODO Delete last Char or All?
 				char Key[2] = "0";
-				for (char i=32; i < 96; i++){
+				for (char i=32; i < 100; i++){
 					Key[0] = i;
 					make_menu_entry(&dst, Key, Keyboard_Char);
 				}
@@ -521,6 +524,9 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 				make_menu_entry(&dst, "Enter", Menu_Action);
 			}
 		}
+	}else if(strncmp(MENU_TEXT_INBUILD_ROMS, curPath, sizeof(MENU_TEXT_INBUILD_ROMS) - 1) == 0 ){
+		make_menu_entry(&dst, "..", Leave_Menu);
+		flash_file_list(&dst, &num_menu_entries);
 	}else if(d->type == Menu_Action){ // if actual Entry is of type Menu_Action..
 		if(strncmp(MENU_TEXT_FIRMWARE_UPDATE, curPath, sizeof(MENU_TEXT_FIRMWARE_UPDATE) - 1) == 0 ){
 
@@ -530,8 +536,17 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 			__disable_irq();  // Disable interrupts
 			HAL_FLASH_Unlock();
 			// do Flashing in ram !!
-			do_firmware_update(d->filesize, (uint8_t *)http_request_header);
+			do_flash_update(d->filesize, (uint8_t *)http_request_header, ADDR_FLASH_SECTOR_0);
+		} else if(strncmp(MENU_TEXT_INBUILD_ROM_UPDATE, curPath, sizeof(MENU_TEXT_INBUILD_ROM_UPDATE) - 1) == 0 ){
+			if( esp8266_PlusStore_API_prepare_request("&r=1") == FALSE){
+		    	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
+			}
+			__disable_irq();  // Disable interrupts
+			HAL_FLASH_Unlock();
+			// do Flashing in ram !!
+			do_flash_update(d->filesize, (uint8_t *)http_request_header, ADDR_FLASH_SECTOR_5);
 		}
+
     	curPath[0] = '\0';
 	}else{
 		loadStore = TRUE;
@@ -590,9 +605,13 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
     }
 
     if(strlen(curPath) == 0){
-		make_menu_entry(&dst, MENU_TEXT_SETUP, Sub_Menu);
+    	if(	flash_has_inbuild_roms() )
+    		make_menu_entry(&dst, MENU_TEXT_INBUILD_ROMS, Sub_Menu);
+
+    	make_menu_entry(&dst, MENU_TEXT_SETUP, Sub_Menu);
 	}
 }
+
 
 CART_TYPE identify_cartridge( MENU_ENTRY *d )
 {
@@ -604,7 +623,7 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
     strcat(curPath, d->entryname);
 
 	// Test if connected to AP
-    if(esp8266_is_connected() == FALSE){
+    if(d->type == Cart_File && esp8266_is_connected() == FALSE ){
     	return cart_type;
     }
 
@@ -628,7 +647,11 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 		goto close;
 	}
 
-    image_size = esp8266_PlusStore_API_file_request( buffer, curPath, 0, d->filesize );
+	if(d->type == Cart_File )
+		image_size = esp8266_PlusStore_API_file_request( buffer, curPath, 0, d->filesize );
+	else
+		image_size = flash_file_request( buffer, d->filesize );
+
 
 	cart_type.withPlusFunctions = isProbablyPLS(image_size, buffer);
 	cart_type.withSuperChip =  isProbablySC(image_size, buffer);
@@ -878,7 +901,7 @@ int main(void)
 
     } else {
       MENU_ENTRY *d = &menu_entries[ret];
-      if (d->type == Cart_File){
+      if (d->type == Cart_File || d->type == Offline_cart_File){
     	  // selection is a rom file
         cart_type = identify_cartridge(d);
         HAL_Delay(200);

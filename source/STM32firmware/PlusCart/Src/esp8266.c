@@ -12,7 +12,6 @@
 #include <stdio.h>
 #include <string.h>
 #include "stm32_udid.h"
-#include "global.h"
 #include "esp8266.h"
 
 char stm32_udid[] = UDID_TEMPLATE;

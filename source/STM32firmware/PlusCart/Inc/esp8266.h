@@ -10,6 +10,7 @@
  */
 
 #include <stdint.h>
+#include "global.h"
 
 
 #ifndef ESP8266_H
@@ -59,22 +60,6 @@ typedef struct {
 	uint32_t stop;
 } http_range;
 
-enum MENU_ENTRY_Type {
-	Root_Menu = -1,
-	Leave_Menu,
-	Sub_Menu,
-	Cart_File,
-	Input_Field,
-	Keyboard_Char,
-	Menu_Action,
-	Delete_Keyboard_Char
-};
-
-typedef struct {
-	enum MENU_ENTRY_Type type;
-	char entryname[33];
-	uint32_t filesize;
-} MENU_ENTRY;
 
 /** Should be written by the user for input from / output to the ESP module **/
 
