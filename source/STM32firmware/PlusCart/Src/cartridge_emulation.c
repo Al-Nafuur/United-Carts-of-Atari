@@ -8,6 +8,7 @@
 /*************************************************************************
  * Cartridge Emulation
  *************************************************************************/
+#include <string.h> // for new DCP emulation
 #include <ctype.h>
 #include <stdlib.h>
 #include "cartridge_emulation.h"
@@ -844,44 +845,88 @@ void emulate_E7_cartridge()
  * - Kevin Horton's 2600 Mappers (http://blog.kevtris.org/blogfiles/Atari 2600 Mappers.txt)
  *
  * Note this is not a full implementation of DPC, but is enough to run Pitfall II and the music sounds ok.
+ *
+ * updated to DirtyHairy's implementation at:
+ * https://github.com/DirtyHairy/UnoCart-2600/blob/master/source/STM32firmware/Atari2600Cart/src/cartridge_dpc.c
+ *
+ * using ccmram here should not be a problem, as long as we don't exit emulation and return to Cart menu.
+ *
  */
 
-void emulate_DPC_cartridge()
+#define UPDATE_MUSIC_COUNTER { \
+    uint32_t systick = SysTick->VAL; \
+	if (systick > systick_lastval) music_counter++; \
+	systick_lastval = systick; \
+}
+
+#define CCM_RAM ((uint8_t*)0x10000000)
+
+#define RESET_ADDR addr = addr_prev = 0xffff;
+
+void emulate_DPC_cartridge( uint32_t image_size)
 {
-	setup_cartridge_image();
-
 	SysTick_Config(SystemCoreClock / 21000);	// 21KHz
-	__disable_irq();	// Disable interrupts
 
-	unsigned char prevRom = 0, prevRom2 = 0;
-	int soundAmplitudeIndex = 0;
-	unsigned char soundAmplitudes[8] = {0x00, 0x04, 0x05, 0x09, 0x06, 0x0a, 0x0b, 0x0f};
+	uint32_t systick_lastval = 0;
+	uint32_t music_counter = 0;
 
-	uint16_t addr, addr_prev = 0, data = 0, data_prev = 0;
-	unsigned char *bankPtr = &cart_rom[0], *DpcDisplayPtr = &cart_rom[8*1024];
+	uint32_t dpctop_music = 0;
+	uint32_t dpcbottom_music  = 0;
 
-	unsigned char DpcTops[8], DpcBottoms[8], DpcFlags[8];
-	uint16_t DpcCounters[8];
-	int DpcMusicModes[3], DpcMusicFlags[3];
+	uint8_t music_flags = 0;
+	uint8_t music_modes = 0;
+
+	uint8_t prev_rom = 0, prev_rom2 = 0;
+
+	uint16_t addr, addr_prev, data = 0, data_prev = 0;
+	unsigned char *bankPtr = buffer, *DpcDisplayPtr = buffer + 8*1024;
+	RESET_ADDR;
 
 	// Initialise the DPC's random number generator register (must be non-zero)
-	int DpcRandom = 1;
+	uint32_t DpcRandom = 1;
+
+    uint8_t* ccm = CCM_RAM;
+
+    uint8_t* soundAmplitudes = ccm;
+    soundAmplitudes[0] = 0x00;
+    soundAmplitudes[1] = 0x04;
+    soundAmplitudes[2] = 0x05;
+    soundAmplitudes[3] = 0x09;
+    soundAmplitudes[4] = 0x06;
+    soundAmplitudes[5] = 0x0a;
+    soundAmplitudes[6] = 0x0b;
+    soundAmplitudes[7] = 0x0f;
+    ccm += 8;
+
+    uint8_t* DpcTops = ccm;
+    ccm += 8;
+
+    uint8_t* DpcBottoms = ccm;
+    ccm += 8;
+
+    uint8_t* DpcFlags = ccm;
+    ccm += 8;
+
+    uint16_t* DpcCounters = (void*)ccm;
+    ccm += 16;
+
+    memcpy(ccm, buffer, image_size);
+    uint8_t* buffer_ptr = ccm;
+    ccm += image_size;
 
 	// Initialise the DPC registers
 	for(int i = 0; i < 8; ++i)
 		DpcTops[i] = DpcBottoms[i] = DpcCounters[i] = DpcFlags[i] = 0;
 
-	DpcMusicModes[0] = DpcMusicModes[1] = DpcMusicModes[2] = 0;
-	DpcMusicFlags[0] = DpcMusicFlags[1] = DpcMusicFlags[2] = 0;
+    if (!reboot_into_cartridge()) {
+        return ;
+    }
 
-
-	uint32_t lastSysTick = SysTick->VAL;
-	uint32_t DpcClocks = 0;
+    __disable_irq();	// Disable interrupts
 
 	while (1)
 	{
-		while ((addr = ADDR_IN) != addr_prev)
-			addr_prev = addr;
+		while ((addr = ADDR_IN) != addr_prev) addr_prev = addr;
 
 		// got a stable address
 		if (addr & 0x1000)
@@ -889,14 +934,8 @@ void emulate_DPC_cartridge()
 
 			if (addr < 0x1040)
 			{	// DPC read
-				int index = addr & 0x07;
-				int function = (addr >> 3) & 0x07;
-
-				// Update flag register for selected data fetcher
-				if((DpcCounters[index] & 0x00ff) == DpcTops[index])
-					DpcFlags[index] = 0xff;
-				else if((DpcCounters[index] & 0x00ff) == DpcBottoms[index])
-					DpcFlags[index] = 0x00;
+				unsigned char index = addr & 0x07;
+				unsigned char function = (addr >> 3) & 0x07;
 
 				unsigned char result = 0;
 				switch (function)
@@ -911,10 +950,7 @@ void emulate_DPC_cartridge()
 						}
 						else
 						{	// sound
-							soundAmplitudeIndex = (DpcMusicModes[0] & DpcMusicFlags[0]);
-							soundAmplitudeIndex |=  (DpcMusicModes[1] & DpcMusicFlags[1]);
-							soundAmplitudeIndex |=  (DpcMusicModes[2] & DpcMusicFlags[2]);
-							result = soundAmplitudes[soundAmplitudeIndex];;
+							result = soundAmplitudes[music_modes & music_flags];
 						}
 						break;
 					}
@@ -941,19 +977,35 @@ void emulate_DPC_cartridge()
 				DATA_OUT = ((uint16_t)result);
 				SET_DATA_MODE_OUT
 				// wait for address bus to change
-				while (ADDR_IN == addr) ;
-				SET_DATA_MODE_IN
 
 				// Clock the selected data fetcher's counter if needed
-				if ((index < 5) || ((index >= 5) && (!DpcMusicModes[index - 5])))
+				if ((index < 5) || ((index >= 5) && (!(music_modes & (1 << (index - 5)))))) {
 					DpcCounters[index] = (DpcCounters[index] - 1) & 0x07ff;
+
+					// Update flag register for selected data fetcher
+					if((DpcCounters[index] & 0x00ff) == DpcTops[index])
+						DpcFlags[index] = 0xff;
+					else if((DpcCounters[index] & 0x00ff) == DpcBottoms[index])
+						DpcFlags[index] = 0x00;
+				}
+
+                UPDATE_MUSIC_COUNTER;
+
+				while (ADDR_IN == addr) ;
+				SET_DATA_MODE_IN;
+				RESET_ADDR;
 			}
 			else if (addr < 0x1080)
 			{	// DPC write
-				int index = addr & 0x07;
-				int function = (addr >> 3) & 0x07;
+				unsigned char index = addr & 0x07;
+				unsigned char function = (addr >> 3) & 0x07;
+				unsigned char ctr = DpcCounters[index] & 0xff;
+
+                UPDATE_MUSIC_COUNTER;
 
 				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+				RESET_ADDR;
+
 				unsigned char value = data_prev;
 				switch (function)
 				{
@@ -961,26 +1013,47 @@ void emulate_DPC_cartridge()
 					{	// DFx top count
 						DpcTops[index] = value;
 						DpcFlags[index] = 0x00;
+
+						if(ctr == value)
+							DpcFlags[index] = 0xff;
+
+						if (index >= 0x05)
+							dpctop_music = (dpctop_music & ~(0x000000ff << (8*(index - 0x05)))) | ((uint32_t)value << (8*(index - 0x05)));
+
 						break;
 					}
 
 					case 0x01:
 					{	// DFx bottom count
 						DpcBottoms[index] = value;
+
+						if(ctr == value)
+							DpcFlags[index] = 0x00;
+
+						if (index >= 0x05)
+							dpcbottom_music = (dpcbottom_music & ~(0x000000ff << (8*(index - 0x05)))) | ((uint32_t)value << (8*(index - 0x05)));
+
 						break;
 					}
 
 					case 0x02:
 					{	// DFx counter low
 						DpcCounters[index] = (DpcCounters[index] & 0x0700) | value;
+
+						if (value == DpcTops[index])
+							DpcFlags[index] = 0xff;
+						else if(value == DpcBottoms[index])
+							DpcFlags[index] = 0x00;
+
 						break;
 					}
 
 					case 0x03:
 					{	// DFx counter high
-						DpcCounters[index] = ((uint16_t)(value & 0x07))  | (DpcCounters[index] & 0xff);
-						if(index >= 5)
-							DpcMusicModes[index - 5] = (value & 0x10) ? 0x7 : 0;
+						DpcCounters[index] = (((uint16_t)(value & 0x07)) << 8 ) | ctr;
+
+						if (index >= 0x05) music_modes = (music_modes & ~(0x01 << (index - 0x05))) | ((value & 0x10) >> (0x09 - index));
+
 						break;
 					}
 
@@ -994,44 +1067,46 @@ void emulate_DPC_cartridge()
 			else
 			{	// check bank-switch
 				if (addr == 0x1FF8)
-					bankPtr = &cart_rom[0];
+					bankPtr = buffer_ptr;
 				else if (addr == 0x1FF9)
-					bankPtr = &cart_rom[4*1024];
+					bankPtr = buffer_ptr + 4*1024;
 
 				// normal rom access
 				DATA_OUT = ((uint16_t)bankPtr[addr&0xFFF]);
-				SET_DATA_MODE_OUT
-				prevRom2 = prevRom;
-				prevRom = bankPtr[addr&0xFFF];
-				// wait for address bus to change
+				SET_DATA_MODE_OUT;
+
+				prev_rom2 = prev_rom;
+				prev_rom = bankPtr[addr&0xFFF];
+
+				UPDATE_MUSIC_COUNTER;
+
 				while (ADDR_IN == addr) ;
-				SET_DATA_MODE_IN
+				RESET_ADDR;
+				SET_DATA_MODE_IN;
 			}
-		}
-		else if((prevRom2 & 0xec) == 0x84) // Only do this when ZP write since there will be a full cycle available there
-		{	// non cartridge access - e.g. sta wsync
-			while (ADDR_IN == addr) {
-				// should the DPC clock be incremented?
-				uint32_t sysTick = SysTick->VAL;
-				if (sysTick > lastSysTick)
-				{	// the 21KHz clock has wrapped, so we increase the DPC clock
-					DpcClocks++;
-					// update the music flags here, since there isn't enough time when the music register
-					// is being read.
-					DpcMusicFlags[0] = (DpcClocks % (DpcTops[5] + 1))
-							> DpcBottoms[5] ? 1 : 0;
-					DpcMusicFlags[1] = (DpcClocks % (DpcTops[6] + 1))
-							> DpcBottoms[6] ? 2 : 0;
-					DpcMusicFlags[2] = (DpcClocks % (DpcTops[7] + 1))
-							> DpcBottoms[7] ? 4 : 0;
-				}
-				lastSysTick = sysTick;
-			}
+		} else if (((prev_rom2 & 0b11011100) == 0b10000100) && prev_rom == addr) {
+			music_flags = \
+				((music_counter % (dpctop_music & 0xff)) > (dpcbottom_music & 0xff) ? 1 : 0) |
+				((music_counter % ((dpctop_music >> 8) & 0xff)) > ((dpcbottom_music >> 8 ) & 0xff) ? 2 : 0) |
+				((music_counter % ((dpctop_music >> 16) & 0xff)) > ((dpcbottom_music >> 16) & 0xff) ? 4 : 0);
+
+				UPDATE_MUSIC_COUNTER;
+
+			while (ADDR_IN == addr);
+			RESET_ADDR;
 		}
 	}
+
 	__enable_irq();
 }
 
+
+/* Pink Panther cartridge emulation
+ *
+ * from DirtyHairy's implementation at:
+ * https://github.com/DirtyHairy/UnoCart-2600/blob/master/source/STM32firmware/Atari2600Cart/src/cartridge_pp.c
+ *
+ */
 static void setupSegments( uint8_t** segments, uint8_t zero, uint8_t one, uint8_t two, uint8_t three) {
     segments[0] = buffer + (zero << 10);
     segments[1] = buffer + (one  << 10);

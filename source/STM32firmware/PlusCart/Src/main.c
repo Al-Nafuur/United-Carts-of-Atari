@@ -789,7 +789,7 @@ void emulate_cartridge(CART_TYPE cart_type)
 	else if (cart_type.base_type == base_type_E7)
 		emulate_E7_cartridge();
 	else if (cart_type.base_type == base_type_DPC)
-		emulate_DPC_cartridge();
+		emulate_DPC_cartridge(cart_size_bytes);
 	else if (cart_type.base_type == base_type_AR)
 		emulate_supercharger_cartridge(curPath, cart_size_bytes, buffer, tv_mode);
 	else if (cart_type.base_type == base_type_PP)
