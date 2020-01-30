@@ -5,6 +5,11 @@
  *      Author: Wolfgang Stubig <w.stubig@firmaplus.de>
  */
 
+#include <string.h>
+#include "cartridge_detection.h"
+
+
+
 /*************************************************************************
  * Cartridge Type Detection
  *************************************************************************/
@@ -219,5 +224,25 @@ int isProbablyE7(int size, unsigned char *bytes)
 		if(searchForBytes(bytes, size, signature[i], 3, 1))
 			return 1;
 	return 0;
+}
+
+int isProbablyBF(unsigned char *tail)
+{
+	return !memcmp(tail + 8, "BFBF", 4);
+}
+
+int isProbablyBFSC(unsigned char *tail)
+{
+	return !memcmp(tail + 8, "BFSC", 4);
+}
+
+int isProbablyDF(unsigned char *tail)
+{
+	return !memcmp(tail + 8, "DFBF", 4);
+}
+
+int isProbablyDFSC(unsigned char *tail)
+{
+	return !memcmp(tail + 8, "DFSC", 4);
 }
 

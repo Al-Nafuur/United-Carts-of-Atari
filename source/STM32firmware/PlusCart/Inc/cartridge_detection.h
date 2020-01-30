@@ -18,5 +18,9 @@ int isProbably0840(int, unsigned char *);
 int isProbablyCV(int, unsigned char *);
 int isProbablyEF(int, unsigned char *);
 int isProbablyE7(int, unsigned char *);
+int isProbablyBF(unsigned char *);
+int isProbablyBFSC(unsigned char *);
+int isProbablyDF(unsigned char *);
+int isProbablyDFSC(unsigned char *);
 
 #endif // CARTRIDGE_DETECTION_H
