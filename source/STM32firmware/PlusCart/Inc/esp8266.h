@@ -23,9 +23,11 @@ extern "C" {
 /** API connect/request **/
 #define  API_ATCMD_1  "AT+CIPSTART=\"TCP\",\"" PLUSSTORE_API_HOST "\",80\r\n"
 #define  API_ATCMD_2  "AT+CIPSEND\r\n"
-#define  API_ATCMD_3  "GET /api.php?c=0&p="
+#define  API_ATCMD_3  "GET /api.php?p="
 #define  API_ATCMD_4  " HTTP/1.0\r\nHost: " PLUSSTORE_API_HOST "\r\nPlusStore-ID: v" VERSION " "
-#define  API_ATCMD_5  "\r\nConnection: keep-alive\r\n\r\n"
+#define  API_ATCMD_5  "\r\nConnection: keep-alive\r\n"
+#define  API_ATCMD_6a "Range: bytes="
+#define  API_ATCMD_6b "\r\n"
 
 /** Some constants **/
 #define UDID_TEMPLATE "000000000000000000000000"
@@ -50,7 +52,6 @@ extern "C" {
 #define MAX_RANGE_SIZE           4096
 #define RANGE_BOUNDARY_SIZE        19
 #define RANGE_BOUNDARY_TEMPLATE  '_','_','_','_','_','_','_','_','_','_','_','_','_'
-//"_____________"
 
 #define TRUE    1
 #define FALSE   0
@@ -67,7 +68,7 @@ void Initialize_ESP8266(void);
 
 /** Function prototypes **/
 
-_Bool esp8266_PlusStore_API_prepare_request(char *);
+_Bool esp8266_PlusStore_API_prepare_request(char *, _Bool);
 
 int connect_PlusROM_API(void);
 
@@ -95,10 +96,10 @@ _Bool esp8266_is_connected(void);
 void esp8266_disconnect(void);
 
 // Print a string to the output
-void _esp8266_print(unsigned char *);
+void esp8266_print(unsigned char *);
 
 // Wait for any response on the input
-unsigned long _esp8266_wait_response(uint16_t);
+unsigned long esp8266_wait_response(uint16_t);
 
 void generate_udid_string(void);
 
