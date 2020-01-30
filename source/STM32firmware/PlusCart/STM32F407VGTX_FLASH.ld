@@ -64,7 +64,9 @@ MEMORY
 {
     CCMRAM	(xrw)	: ORIGIN = 0x10000000,	LENGTH = 64K
     RAM	(xrw)	: ORIGIN = 0x20000000,	LENGTH = 128K
-    FLASH	(rx)	: ORIGIN = 0x8000000,	LENGTH = 1024K
+    VECTOR (rx) : ORIGIN = 0x8000000, LENGTH = 16K
+    EEPROM (rx) : ORIGIN = 0x8004000, LENGTH = 16K
+    FLASH (rx) : ORIGIN = 0x8008000, LENGTH = 1024K-32K
 }
 
 /* Sections */
@@ -76,7 +78,23 @@ SECTIONS
     . = ALIGN(4);
     KEEP(*(.isr_vector)) /* Startup code */
     . = ALIGN(4);
-  } >FLASH
+  } >VECTOR
+
+  /* The program code and other data into "FLASH" Rom type memory */
+  .flash0 :
+  {
+    . = ALIGN(4);
+    *(.flash0)           /* .flash0 sections (code) */
+    . = ALIGN(4);
+  } >VECTOR
+
+  
+  .eeprom :
+  {
+    . = ALIGN(4);
+    *(.eeprom)
+    . = ALIGN(4);
+  } >EEPROM
 
   /* The program code and other data into "FLASH" Rom type memory */
   .text :
