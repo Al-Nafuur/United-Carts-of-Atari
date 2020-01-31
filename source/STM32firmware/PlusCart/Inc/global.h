@@ -4,16 +4,14 @@
 #include <stdint.h>
 #include "stm32f4xx_hal.h"
 
-#define VERSION                   "0.10.2"
+#define VERSION                   "0.11.0"
 #define PLUSSTORE_API_HOST        "pluscart.firmaplus.de"
 
 extern UART_HandleTypeDef huart1;
-extern uint8_t c;
 extern char http_request_header[];
 
 extern uint8_t buffer[];
 extern unsigned int cart_size_bytes;
-extern uint8_t tv_mode;
 
 enum MENU_ENTRY_Type {
 	Root_Menu = -1,
@@ -24,14 +22,23 @@ enum MENU_ENTRY_Type {
 	Keyboard_Char,
 	Menu_Action,
 	Delete_Keyboard_Char,
-	Offline_cart_File
+	Offline_Cart_File
 };
 
 typedef struct {
 	enum MENU_ENTRY_Type type;
 	char entryname[33];
 	uint32_t filesize;
+	uint32_t flash_base_address;
 } MENU_ENTRY;
 
+typedef struct {
+	uint8_t tv_mode;
+	uint8_t first_free_flash_sector;
+	char secret_key[10];
+} USER_SETTINGS;
+
+
+extern USER_SETTINGS user_settings;
 
 #endif // GLOBAL_H

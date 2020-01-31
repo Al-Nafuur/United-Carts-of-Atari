@@ -9,6 +9,9 @@
   * (c) 2019 Wolfgang Stubig (Al_Nafuur)
   * based on: UnoCart2600 by Robin Edwards (ElectroTrains)
   *           https://github.com/robinhedwards/UnoCart-2600
+  *           and
+  *           UnoCart2600 fork by Christian Speckner (DirtyHairy)
+  *           https://github.com/DirtyHairy/UnoCart-2600
   ******************************************************************************
   * This program is free software: you can redistribute it and/or modify
   * it under the terms of the GNU General Public License as published by
@@ -83,7 +86,6 @@ EXT_TO_CART_TYPE_MAP ext_to_cart_type_map[]__attribute__((section(".ccmram"))) =
 	{0,{0,0,0}}
 };
 
-#define HTTP_REQUEST_CHUNK_PARAM_POS    sizeof(API_ATCMD_3) - 5
 
 /* USER CODE END PD */
 
@@ -98,18 +100,15 @@ UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
 uint8_t c;
-int num_menu_entries = 0; // how many entries in the current menu
-char http_request_header[512]__attribute__((section(".ccmram")));
+int num_menu_entries = 0;
+char http_request_header[512];
 
 uint8_t buffer[BUFFER_SIZE * 1024];
 unsigned int cart_size_bytes;
-uint8_t tv_mode;
 
+USER_SETTINGS user_settings;
 
-
-char curPath[256]__attribute__((section(".ccmram")));
-
-extern FLASH_ProcessTypeDef pFlash;
+char curPath[256];
 
 
 
@@ -121,8 +120,6 @@ static void MX_GPIO_Init(void);
 static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
-HAL_StatusTypeDef FLASH_WaitInRAMForLastOperationWithMaxDelay() __attribute__((section(".data#")));
-void do_flash_update(uint32_t filesize, uint8_t *http_request_header, uint32_t Address)__attribute__((section(".data#")));
 
 
 /* USER CODE END PFP */
@@ -130,200 +127,6 @@ void do_flash_update(uint32_t filesize, uint8_t *http_request_header, uint32_t A
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-
-HAL_StatusTypeDef FLASH_WaitInRAMForLastOperationWithMaxDelay()
-{
-  /* Wait for the FLASH operation to complete by polling on BUSY flag to be reset.
-     Even if the FLASH operation fails, the BUSY flag will be reset and an error
-     flag will be set */
-  while(__HAL_FLASH_GET_FLAG(FLASH_FLAG_BSY) != RESET)
-  {
-  }
-
-  /* Check FLASH End of Operation flag  */
-  if (__HAL_FLASH_GET_FLAG(FLASH_FLAG_EOP) != RESET)
-  {
-    /* Clear FLASH End of Operation pending bit */
-    __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_EOP);
-  }
-#if defined(FLASH_SR_RDERR)
-  if(__HAL_FLASH_GET_FLAG((FLASH_FLAG_OPERR | FLASH_FLAG_WRPERR | FLASH_FLAG_PGAERR | \
-                           FLASH_FLAG_PGPERR | FLASH_FLAG_PGSERR | FLASH_FLAG_RDERR)) != RESET)
-#else
-  if(__HAL_FLASH_GET_FLAG((FLASH_FLAG_OPERR | FLASH_FLAG_WRPERR | FLASH_FLAG_PGAERR | \
-                           FLASH_FLAG_PGPERR | FLASH_FLAG_PGSERR)) != RESET)
-#endif /* FLASH_SR_RDERR */
-  {
-    /*Save the error code*/
-    return HAL_ERROR;
-  }
-
-  /* If there is no error flag set */
-  return HAL_OK;
-
-}
-
-
-void do_flash_update(uint32_t filesize, uint8_t *http_request_header, uint32_t Address){
-
-	uint32_t count=0;
-	uint8_t c;  // ToDo use global c !!
-	uint32_t flash_max = 5;
-	HAL_StatusTypeDef status;
-
-
-	//HAL_FLASHEx_Erase();
-	// Process Locked
-	// __HAL_LOCK(&pFlash);
-	pFlash.Lock = HAL_LOCKED;
-
-	// Wait for last operation to be completed
-	if(FLASH_WaitInRAMForLastOperationWithMaxDelay() == HAL_OK)
-	{
-		count = Address == ADDR_FLASH_SECTOR_0 ? FLASH_SECTOR_0:FLASH_SECTOR_5;
-		flash_max = count + 5U;
-	      for( ; count < flash_max; count++)
-	      {
-//	        FLASH_Erase_Sector(count, (uint8_t) FLASH_VOLTAGE_RANGE_3);
-	    	  CLEAR_BIT(FLASH->CR, FLASH_CR_PSIZE);
-	    	  FLASH->CR |= FLASH_PSIZE_WORD;
-	    	  CLEAR_BIT(FLASH->CR, FLASH_CR_SNB);
-	    	  FLASH->CR |= FLASH_CR_SER | (count << FLASH_CR_SNB_Pos);
-	    	  FLASH->CR |= FLASH_CR_STRT;
-
-	        /* Wait for last operation to be completed */
-	        status = FLASH_WaitInRAMForLastOperationWithMaxDelay();
-
-	        /* If the erase operation is completed, disable the SER and SNB Bits */
-	        CLEAR_BIT(FLASH->CR, (FLASH_CR_SER | FLASH_CR_SNB));
-
-	        if(status != HAL_OK)
-	        {
-	          /* In case of error, stop erase procedure and return the faulty sector*/
-	          break;
-	        }
-	      }
-
-
-	}else{
-		return; // or try flashing anyway ??
-	}
-
-	  /* Process Unlocked */
-	  __HAL_UNLOCK(&pFlash);
-
-//end HAL_FLASHEx_Erase();
-
-	    /* Flush the caches to be sure of the data consistency */
-	  __HAL_FLASH_DATA_CACHE_DISABLE();
-	  __HAL_FLASH_INSTRUCTION_CACHE_DISABLE();
-
-	  __HAL_FLASH_DATA_CACHE_RESET();
-	  __HAL_FLASH_INSTRUCTION_CACHE_RESET();
-
-	  __HAL_FLASH_INSTRUCTION_CACHE_ENABLE();
-	  __HAL_FLASH_DATA_CACHE_ENABLE();
-
-
-	  //__HAL_LOCK(&pFlash);
-
-	  pFlash.Lock = HAL_LOCKED;
-		FLASH_WaitInRAMForLastOperationWithMaxDelay();
-
-	  uint8_t chunks = ( filesize + 4095 )  / 4096;         //  use Real HTTP Range requests??
-	    uint16_t lastChunkSize = filesize % 4096;
-	    while(chunks != 0 ){
-	    	count = 0;
-			while(1){ // todo set and break on timeout ?
-				if(( huart1.Instance->SR & UART_FLAG_TXE) == UART_FLAG_TXE){ // ! (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_TXE) ) ){
-					huart1.Instance->DR = http_request_header[count++]; // & (uint8_t)0xFF);
-					if(http_request_header[count] == '\0')
-						break;
-				}
-			}
-	    	count = 0;
-
-	    	// Skip HTTP Header
-	    	while(1){ // todo set and break on timeout ?
-                if(( huart1.Instance->SR & UART_FLAG_RXNE) == UART_FLAG_RXNE){ // ! (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_TXE) ) ){
-					if( (uint8_t)huart1.Instance->DR == '\n' ){
-						if (count == 1)
-							break;
-						count = 0;
-					}else{
-						count++;
-					}
-                }
-	    	}
-
-	    	// Now for the HTTP Body
-			count = 0;
-	    	while(count < 4096 && (chunks != 1 || count < lastChunkSize )){
-                if(( huart1.Instance->SR & UART_FLAG_RXNE) == UART_FLAG_RXNE){ // ! (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_TXE) ) ){
-                    c = (uint8_t)huart1.Instance->DR; // & (uint8_t)0xFF);
-
-//HAL_FLASH_Program();
-                    /* Program the user Flash area byte by byte
-					(area defined by FLASH_USER_START_ADDR and FLASH_USER_END_ADDR) ***********/
-
-                    /* Wait for last operation to be completed */
-                    if(FLASH_WaitInRAMForLastOperationWithMaxDelay() == HAL_OK)
-                    {
-                        /*Program byte (8-bit) at a specified address.*/
-                        // FLASH_Program_Byte(Address, (uint8_t) c);
-                        CLEAR_BIT(FLASH->CR, FLASH_CR_PSIZE);
-                        FLASH->CR |= FLASH_PSIZE_BYTE;
-                        FLASH->CR |= FLASH_CR_PG;
-
-                        *(__IO uint8_t*)Address = c;
-                        // end FLASH_Program_Byte(Address, (uint8_t) c);
-
-                      /* Wait for last operation to be completed */
-                      FLASH_WaitInRAMForLastOperationWithMaxDelay();
-
-                      /* If the program operation is completed, disable the PG Bit */
-                      FLASH->CR &= (~FLASH_CR_PG);
-					  Address++;
-					  // end HAL_FLASH_Program
-                    }else{
-                    	return;
-                    }
-					count++;
-                }
-	    	}
-
-	    	chunks--;
-	    	http_request_header[HTTP_REQUEST_CHUNK_PARAM_POS]++;
-	    	if(http_request_header[HTTP_REQUEST_CHUNK_PARAM_POS] == 58)
-	    		http_request_header[HTTP_REQUEST_CHUNK_PARAM_POS] = 65;
-	    	else if(http_request_header[HTTP_REQUEST_CHUNK_PARAM_POS] == 91)
-	    		http_request_header[HTTP_REQUEST_CHUNK_PARAM_POS] = 97;
-
-	    	count = 0;
-	    	while(count++ < 20000000){
-
-	    	} // won't work at __disable_irq(); !!
-
-	    	count = 0;
-	    }
-        __HAL_UNLOCK(&pFlash);
-
-        // End Transparent Transmission
-    	count = 0;
-		while(1){ // todo set and break on timeout ?
-			if(( huart1.Instance->SR & UART_FLAG_TXE) == UART_FLAG_TXE){ // ! (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_TXE) ) ){
-				huart1.Instance->DR = '+'; //ATCMD6[count++]; // & (uint8_t)0xFF);
-				if(count++ == 2)
-					break;
-			}
-		}
-
-		__enable_irq();
-		if(flash_max == 5){
-			NVIC_SystemReset();
-		}
-
-}
 
 
 /*************************************************************************
@@ -356,7 +159,7 @@ void make_menu_entry( MENU_ENTRY **dst, char *name, int type){
 	(*dst)++;
 	num_menu_entries++;
 }
-
+void buildMenuFromPath( MENU_ENTRY *d )__attribute__((section(".flash0"))) ;
 void buildMenuFromPath( MENU_ENTRY *d )  {
 	int count = 0;
 	_Bool loadStore = FALSE;
@@ -373,6 +176,9 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 			make_menu_entry(&dst, MENU_TEXT_WIFI_SETUP, Sub_Menu);
 			make_menu_entry(&dst, MENU_TEXT_TV_MODE_SETUP, Sub_Menu);
 			//make_menu_entry(&dst, MENU_TEXT_PRIVATE_KEY, Sub_Menu);
+			if(	flash_has_downloaded_roms() )
+			    		make_menu_entry(&dst, MENU_TEXT_DELETE_OFFLINE_ROMS, Menu_Action);
+
         	set_menu_status_msg("Ver. " VERSION "  ");
 			loadStore = TRUE;
 		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_WIFI_SETUP, sizeof(MENU_TEXT_WIFI_SETUP) - 1) == 0 ){
@@ -414,30 +220,17 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 			}
 		}else if( strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_TV_MODE_SETUP, sizeof(MENU_TEXT_TV_MODE_SETUP) - 1) == 0 ){
 			if(d->type == Menu_Action){
-				HAL_FLASH_Unlock();
+				uint8_t new_tv_mode = TV_MODE_NTSC;
 				if(strcmp(&curPath[sizeof(MENU_TEXT_SETUP) + sizeof(MENU_TEXT_TV_MODE_SETUP)], MENU_TEXT_TV_MODE_PAL) == 0){
-					set_tv_mode(TV_MODE_PAL);
-					if(tv_mode != TV_MODE_PAL){
-						FLASH_Erase_Sector(FLASH_SECTOR_11, (uint8_t) FLASH_VOLTAGE_RANGE_3); // TODO use User-Option Bytes for TV Mode (0x1FFF C000) bits 0-1 are unused, but don't change RDP, BOR WDG and RST!
-						HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, FLASH_CONFIG_ADDRESS, ((uint32_t)TV_MODE_PAL) );
-					}
-					tv_mode = TV_MODE_PAL;
+					new_tv_mode = TV_MODE_PAL;
 				}else if(strcmp(&curPath[sizeof(MENU_TEXT_SETUP) + sizeof(MENU_TEXT_TV_MODE_SETUP)], MENU_TEXT_TV_MODE_PAL60) == 0){
-					set_tv_mode(TV_MODE_PAL60);
-					if(tv_mode != TV_MODE_PAL60){
-						FLASH_Erase_Sector(FLASH_SECTOR_11, (uint8_t) FLASH_VOLTAGE_RANGE_3);
-						HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, FLASH_CONFIG_ADDRESS, ((uint32_t)TV_MODE_PAL60) );
-					}
-					tv_mode = TV_MODE_PAL60;
-				}else{ // if(strcmp(&curPath[sizeof(MENU_TEXT_SETUP) + sizeof(MENU_TEXT_TV_MODE_SETUP)], MENU_TEXT_TV_MODE_NTSC) == 0)
-					set_tv_mode(TV_MODE_NTSC);
-					if(tv_mode != TV_MODE_NTSC){
-						FLASH_Erase_Sector(FLASH_SECTOR_11, (uint8_t) FLASH_VOLTAGE_RANGE_3);
-						HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, FLASH_CONFIG_ADDRESS, ((uint32_t)TV_MODE_NTSC) );
-					}
-					tv_mode = TV_MODE_NTSC;
+					new_tv_mode = TV_MODE_PAL60;
 				}
-				HAL_FLASH_Lock();
+				set_tv_mode(new_tv_mode);
+				if(user_settings.tv_mode != new_tv_mode){
+					user_settings.tv_mode = new_tv_mode;
+					flash_set_eeprom_user_settings(user_settings);
+				}
 	        	curPath[0] = '\0';
 			}else{
 				make_menu_entry(&dst, "(GO Back)", Leave_Menu);
@@ -448,7 +241,7 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 
 		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_PLUS_CONNECT, sizeof(MENU_TEXT_PLUS_CONNECT) - 1) == 0 ){
 			if(d->type == Menu_Action){ // if actual Entry is of type Menu_Action -> Connect user
-				if( esp8266_PlusStore_API_prepare_request(curPath) == FALSE){
+				if( esp8266_PlusStore_API_prepare_request(curPath, FALSE) == FALSE){
 	            	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
 					return;
 				}
@@ -484,7 +277,7 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 				make_menu_entry(&dst, "Enter", Menu_Action);
 			}
 		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_PLUS_REMOVE, sizeof(MENU_TEXT_PLUS_REMOVE) - 1) == 0 ){
-			if( esp8266_PlusStore_API_prepare_request(curPath) == FALSE){
+			if( esp8266_PlusStore_API_prepare_request(curPath, FALSE) == FALSE){
             	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
 				return;
 			}
@@ -504,6 +297,14 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 
         	curPath[0] = '\0';
 
+		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_DELETE_OFFLINE_ROMS, sizeof(MENU_TEXT_DELETE_OFFLINE_ROMS) - 1) == 0 ){
+			HAL_FLASH_Unlock();
+	        for( count = FLASH_SECTOR_5; count <= FLASH_SECTOR_11; count++){
+		        FLASH_Erase_Sector((uint32_t) count, (uint8_t) FLASH_VOLTAGE_RANGE_3);
+		    }
+			HAL_FLASH_Lock();
+    		set_menu_status_msg(STATUS_MESSAGE_OFFLINE_ROMS_DELETED);
+        	curPath[0] = '\0';
 		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_PRIVATE_KEY, sizeof(MENU_TEXT_PRIVATE_KEY) - 1) == 0 ){
 			if(d->type == Menu_Action){ // if actual Entry is of type Menu_Action -> Save Private key
 				set_menu_status_msg(STATUS_MESSAGE_PRIVATE_KEY_SAVED);
@@ -524,27 +325,26 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 				make_menu_entry(&dst, "Enter", Menu_Action);
 			}
 		}
-	}else if(strncmp(MENU_TEXT_INBUILD_ROMS, curPath, sizeof(MENU_TEXT_INBUILD_ROMS) - 1) == 0 ){
+	}else if(strncmp(MENU_TEXT_OFFLINE_ROMS, curPath, sizeof(MENU_TEXT_OFFLINE_ROMS) - 1) == 0 ){
 		make_menu_entry(&dst, "..", Leave_Menu);
 		flash_file_list(&dst, &num_menu_entries);
 	}else if(d->type == Menu_Action){ // if actual Entry is of type Menu_Action..
 		if(strncmp(MENU_TEXT_FIRMWARE_UPDATE, curPath, sizeof(MENU_TEXT_FIRMWARE_UPDATE) - 1) == 0 ){
-
-			if( esp8266_PlusStore_API_prepare_request("&u=1") == FALSE){
+			if( esp8266_PlusStore_API_prepare_request("&u=1", TRUE) == FALSE){
 		    	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
 			}
-			__disable_irq();  // Disable interrupts
+		    strcat(http_request_header, (char *)"     0-  4095\r\n\r\n");
+			__disable_irq();
 			HAL_FLASH_Unlock();
-			// do Flashing in ram !!
-			do_flash_update(d->filesize, (uint8_t *)http_request_header, ADDR_FLASH_SECTOR_0);
-		} else if(strncmp(MENU_TEXT_INBUILD_ROM_UPDATE, curPath, sizeof(MENU_TEXT_INBUILD_ROM_UPDATE) - 1) == 0 ){
-			if( esp8266_PlusStore_API_prepare_request("&r=1") == FALSE){
+			do_flash_update(d->filesize, (uint8_t *)http_request_header, ADDR_FLASH_SECTOR_0, 0);
+		} else if(strncmp(MENU_TEXT_OFFLINE_ROM_UPDATE, curPath, sizeof(MENU_TEXT_OFFLINE_ROM_UPDATE) - 1) == 0 ){
+			if( esp8266_PlusStore_API_prepare_request("&r=1", TRUE) == FALSE){
 		    	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
 			}
-			__disable_irq();  // Disable interrupts
+		    strcat(http_request_header, (char *)"     0-  4095\r\n\r\n");
+			__disable_irq();
 			HAL_FLASH_Unlock();
-			// do Flashing in ram !!
-			do_flash_update(d->filesize, (uint8_t *)http_request_header, ADDR_FLASH_SECTOR_5);
+			do_flash_update(d->filesize, (uint8_t *)http_request_header, ADDR_FLASH_SECTOR_5, 0);
 		}
 
     	curPath[0] = '\0';
@@ -555,7 +355,7 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 	// Test we should load store and if connected to AP
     if(	loadStore || strlen(curPath) == 0 ){
     	if(esp8266_is_connected() == TRUE){
-			if( esp8266_PlusStore_API_prepare_request(curPath) == FALSE){
+			if( esp8266_PlusStore_API_prepare_request(curPath, FALSE) == FALSE){
             	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
 				return;
 			}
@@ -605,8 +405,8 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
     }
 
     if(strlen(curPath) == 0){
-    	if(	flash_has_inbuild_roms() )
-    		make_menu_entry(&dst, MENU_TEXT_INBUILD_ROMS, Sub_Menu);
+    	if(	flash_has_downloaded_roms() )
+    		make_menu_entry(&dst, MENU_TEXT_OFFLINE_ROMS, Sub_Menu);
 
     	make_menu_entry(&dst, MENU_TEXT_SETUP, Sub_Menu);
 	}
@@ -647,10 +447,40 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 		goto close;
 	}
 
+
+	uint32_t buffer_load = d->filesize > (BUFFER_SIZE * 1024)?(BUFFER_SIZE * 1024):d->filesize;
+	uint8_t *tail = NULL;
 	if(d->type == Cart_File )
-		image_size = esp8266_PlusStore_API_file_request( buffer, curPath, 0, d->filesize );
+		image_size = esp8266_PlusStore_API_file_request( buffer, curPath, 0, buffer_load );
 	else
-		image_size = flash_file_request( buffer, d->filesize );
+		image_size = flash_file_request( buffer, d->flash_base_address, 0, buffer_load );
+
+	uint32_t not_loaded_bytes = d->filesize - buffer_load ;
+	if( not_loaded_bytes > 0){
+		uint32_t ccm_load = not_loaded_bytes > (CCM_RAM_SIZE * 1024)?(CCM_RAM_SIZE * 1024):not_loaded_bytes;
+		if(d->type == Cart_File )
+			image_size += esp8266_PlusStore_API_file_request( CCM_RAM, curPath, buffer_load, ccm_load );
+		else
+			image_size += flash_file_request( CCM_RAM, d->flash_base_address, buffer_load, ccm_load );
+
+		tail = &CCM_RAM[ccm_load - 16];
+
+		not_loaded_bytes -= ccm_load;
+		if( not_loaded_bytes > 0){
+			if(d->type == Cart_File ){
+				cart_type.flash_part_address = (0x08020000 + 128 * 1024 * ( user_settings.first_free_flash_sector - 5));
+				esp8266_PlusStore_API_prepare_request(curPath, TRUE);
+			    strcat(http_request_header, (char *)"     0-  4095\r\n\r\n");
+				__disable_irq();
+				HAL_FLASH_Unlock();
+				do_flash_update(not_loaded_bytes, (uint8_t *)http_request_header, cart_type.flash_part_address, (buffer_load + ccm_load)  );
+			}else{
+				cart_type.flash_part_address = d->flash_base_address + buffer_load + ccm_load;
+			}
+			image_size += not_loaded_bytes;
+		}
+	}
+
 
 
 	cart_type.withPlusFunctions = isProbablyPLS(image_size, buffer);
@@ -733,6 +563,19 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 		else
 			cart_type.base_type = base_type_F0;
 	}
+	else if (image_size == 128 * 1024) {
+		if (isProbablyDF(tail))
+			cart_type.base_type = base_type_DF;
+		else if (isProbablyDFSC(tail))
+			cart_type.base_type = base_type_DFSC;
+	}
+	else if (image_size == 256 * 1024)
+	{
+		if (isProbablyBF(tail))
+			cart_type.base_type = base_type_BF;
+		else if (isProbablyBFSC(tail))
+			cart_type.base_type = base_type_BFSC;
+	}
 
 	close:
 
@@ -791,17 +634,17 @@ void emulate_cartridge(CART_TYPE cart_type)
 	else if (cart_type.base_type == base_type_DPC)
 		emulate_DPC_cartridge(cart_size_bytes);
 	else if (cart_type.base_type == base_type_AR)
-		emulate_supercharger_cartridge(curPath, cart_size_bytes, buffer, tv_mode);
+		emulate_supercharger_cartridge(curPath, cart_size_bytes, buffer, user_settings.tv_mode);
 	else if (cart_type.base_type == base_type_PP)
 		emulate_pp_cartridge( buffer + 8*1024);
-//	else if (cart_type.base_type == base_type_DF)
-//		emulate_df_cartridge(cartridge_image_path, cart_size_bytes, buffer);
-//	else if (cart_type.base_type == base_type_DFSC)
-//		emulate_dfsc_cartridge(cartridge_image_path, cart_size_bytes, buffer);
-//	else if (cart_type.base_type == base_type_BF)
-//		emulate_bf_cartridge(cartridge_image_path, cart_size_bytes, buffer);
-//	else if (cart_type.base_type == base_type_BFSC)
-//		emulate_bfsc_cartridge(cartridge_image_path, cart_size_bytes, buffer);
+	else if (cart_type.base_type == base_type_DF)
+		emulate_df_cartridge();
+	else if (cart_type.base_type == base_type_DFSC)
+		emulate_dfsc_cartridge();
+	else if (cart_type.base_type == base_type_BF)
+		emulate_bf_cartridge(cart_type.flash_part_address);
+	else if (cart_type.base_type == base_type_BFSC)
+		emulate_bfsc_cartridge(cart_type.flash_part_address);
 
 }
 
@@ -868,8 +711,9 @@ int main(void)
   //  MX_USART1_UART_Init(); /* USART1_Init is done later at before  wifi init
   /* USER CODE BEGIN 2 */
 
-  tv_mode = *(__IO uint32_t*)FLASH_CONFIG_ADDRESS > TV_MODE_PAL60 ? TV_MODE_NTSC : *(__IO uint32_t*)FLASH_CONFIG_ADDRESS;
-  set_tv_mode(tv_mode);
+  user_settings = flash_get_eeprom_user_settings();
+  set_tv_mode(user_settings.tv_mode);
+ //		  user_settings.free_flash_address = &eeprom_junk[1];
 
   // set up status area
   set_menu_status_msg("BY W.STUBIG ");
@@ -901,13 +745,19 @@ int main(void)
 
     } else {
       MENU_ENTRY *d = &menu_entries[ret];
-      if (d->type == Cart_File || d->type == Offline_cart_File){
-    	  // selection is a rom file
-        cart_type = identify_cartridge(d);
-        HAL_Delay(200);
-        if (cart_type.base_type != base_type_None){
-            emulate_cartridge(cart_type);
-        }
+      if (d->type == Cart_File || d->type == Offline_Cart_File){
+    	// selection is a rom file
+    	uint32_t max_romsize = (((BUFFER_SIZE + CCM_RAM_SIZE) * 1024) + (12 - user_settings.first_free_flash_sector) * 128 * 1024 );
+    	if(d->filesize > max_romsize ){
+            set_menu_status_msg(STATUS_MESSAGE_NOT_ENOUGH_MENORY);
+    	}else{
+            cart_type = identify_cartridge(d);
+            HAL_Delay(200);
+            if (cart_type.base_type != base_type_None){
+                emulate_cartridge(cart_type);
+            }
+    	}
+
         int len = strlen(curPath);
       	while (len && curPath[--len] != '/');
       	curPath[len] = 0;

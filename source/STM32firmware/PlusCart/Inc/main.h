@@ -9,6 +9,9 @@
   * (c) 2019 Wolfgang Stubig (Al_Nafuur)
   * based on: UnoCart2600 by Robin Edwards (ElectroTrains)
   *           https://github.com/robinhedwards/UnoCart-2600
+  *           and
+  *           UnoCart2600 fork by Christian Speckner (DirtyHairy)
+  *           https://github.com/DirtyHairy/UnoCart-2600
   ******************************************************************************
   * This program is free software: you can redistribute it and/or modify
   * it under the terms of the GNU General Public License as published by
@@ -66,13 +69,16 @@ enum cart_base_type{
 	base_type_AR,
 	base_type_PP,
 	base_type_DF,
-	base_type_BF
+	base_type_DFSC,
+	base_type_BF,
+	base_type_BFSC
 };
 
 typedef struct {
 	enum cart_base_type base_type;
 	_Bool withSuperChip;
 	_Bool withPlusFunctions;
+	uint32_t flash_part_address;
 } CART_TYPE;
 
 typedef struct {
@@ -107,8 +113,10 @@ void Error_Handler(void);
 #define FALSE 0
 
 #define BUFFER_SIZE				96   // kilobytes
+#define CCM_RAM_SIZE            64   // kilobytes
 
-#define MENU_TEXT_INBUILD_ROMS              "Offline ROMs"
+#define MENU_TEXT_OFFLINE_ROMS              "Offline ROMs"
+#define MENU_TEXT_DELETE_OFFLINE_ROMS       "Erase O ROMs"
 #define MENU_TEXT_SETUP 	                "Setup"
 #define MENU_TEXT_WIFI_SETUP 	            "WiFi Setup"
 #define MENU_TEXT_TV_MODE_SETUP             "Set TV Mode"
@@ -117,7 +125,7 @@ void Error_Handler(void);
 #define MENU_TEXT_TV_MODE_NTSC              "NTSC"
 #define MENU_TEXT_PRIVATE_KEY               "Private Key"
 #define MENU_TEXT_FIRMWARE_UPDATE           "** Update **"
-#define MENU_TEXT_INBUILD_ROM_UPDATE        "*Update ROMs"
+#define MENU_TEXT_OFFLINE_ROM_UPDATE        "* Flash ROMs"
 #define MENU_TEXT_PLUS_CONNECT              "Plus connect"
 #define MENU_TEXT_PLUS_REMOVE               "Plus remove"
 
@@ -127,27 +135,13 @@ void Error_Handler(void);
 #define STATUS_MESSAGE_PLUS_CONNECT         "Insert email"
 #define STATUS_MESSAGE_PLUS_CONNECTED       "Connected   "
 #define STATUS_MESSAGE_PLUS_CREATED         "User created"
-#define STATUS_MESSAGE_PLUS_CONNECT_FAILED  "Failed      "
+#define STATUS_MESSAGE_PLUS_CONNECT_FAILED  "Failed!     "
 #define STATUS_MESSAGE_PLUS_REMOVED         "Cart removed"
 #define STATUS_MESSAGE_PRIVATE_KEY          "Insert Key  "
 #define STATUS_MESSAGE_PRIVATE_KEY_SAVED    "Key saved   "
+#define STATUS_MESSAGE_OFFLINE_ROMS_DELETED "ROMs Erased "
+#define STATUS_MESSAGE_NOT_ENOUGH_MENORY    "ROM Too Big!"
 
-
-#define FLASH_CONFIG_ADDRESS     ((uint32_t)0x080FFFFC) /* Base @ of last word in last sector */
-
-/* Base address of the Flash sectors */
-#define ADDR_FLASH_SECTOR_0     ((uint32_t)0x08000000) /* Base @ of Sector 0, 16 Kbytes */
-#define ADDR_FLASH_SECTOR_1     ((uint32_t)0x08004000) /* Base @ of Sector 1, 16 Kbytes */
-#define ADDR_FLASH_SECTOR_2     ((uint32_t)0x08008000) /* Base @ of Sector 2, 16 Kbytes */
-#define ADDR_FLASH_SECTOR_3     ((uint32_t)0x0800C000) /* Base @ of Sector 3, 16 Kbytes */
-#define ADDR_FLASH_SECTOR_4     ((uint32_t)0x08010000) /* Base @ of Sector 4, 64 Kbytes */
-#define ADDR_FLASH_SECTOR_5     ((uint32_t)0x08020000) /* Base @ of Sector 5, 128 Kbytes */
-#define ADDR_FLASH_SECTOR_6     ((uint32_t)0x08040000) /* Base @ of Sector 6, 128 Kbytes */
-#define ADDR_FLASH_SECTOR_7     ((uint32_t)0x08060000) /* Base @ of Sector 7, 128 Kbytes */
-#define ADDR_FLASH_SECTOR_8     ((uint32_t)0x08080000) /* Base @ of Sector 8, 128 Kbytes */
-#define ADDR_FLASH_SECTOR_9     ((uint32_t)0x080A0000) /* Base @ of Sector 9, 128 Kbytes */
-#define ADDR_FLASH_SECTOR_10    ((uint32_t)0x080C0000) /* Base @ of Sector 10, 128 Kbytes */
-#define ADDR_FLASH_SECTOR_11    ((uint32_t)0x080E0000) /* Base @ of Sector 11, 128 Kbytes */
 
 /* USER CODE END Private defines */
 
