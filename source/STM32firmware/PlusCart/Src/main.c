@@ -110,6 +110,7 @@ USER_SETTINGS user_settings;
 
 char curPath[256];
 
+MENU_ENTRY menu_entries[NUM_MENU_ITEMS ]__attribute__((section(".ccmram")));
 
 
 /* USER CODE END PV */
@@ -118,7 +119,9 @@ char curPath[256];
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART1_UART_Init(void);
+
 /* USER CODE BEGIN PFP */
+void buildMenuFromPath( MENU_ENTRY * )__attribute__((section(".flash0"))) ;
 
 
 
@@ -132,8 +135,6 @@ static void MX_USART1_UART_Init(void);
 /*************************************************************************
  * Menu Handling
  *************************************************************************/
-
-MENU_ENTRY menu_entries[NUM_MENU_ITEMS ]__attribute__((section(".ccmram")));
 
 char *get_filename_ext(char *filename) {
 	char *dot = strrchr(filename, '.');
@@ -159,7 +160,18 @@ void make_menu_entry( MENU_ENTRY **dst, char *name, int type){
 	(*dst)++;
 	num_menu_entries++;
 }
-void buildMenuFromPath( MENU_ENTRY *d )__attribute__((section(".flash0"))) ;
+void make_keyboard(MENU_ENTRY **dst){
+	make_menu_entry(&(*dst), "(GO BACK)", Leave_Menu); // TODO Delete last Char or All?
+	make_menu_entry(&(*dst), "(DEL CHAR)", Delete_Keyboard_Char); // TODO Delete last Char or All?
+	char Key[2] = "0";
+	for (char i=32; i < 100; i++){
+		Key[0] = i;
+		make_menu_entry(&(*dst), Key, Keyboard_Char);
+	}
+	make_menu_entry(&(*dst), "Enter", Menu_Action);
+
+}
+
 void buildMenuFromPath( MENU_ENTRY *d )  {
 	int count = 0;
 	_Bool loadStore = FALSE;
@@ -201,14 +213,7 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 			    	}
 					curPath[0] = '\0';
 				}else{
-					make_menu_entry(&dst, "(GO BACK)", Leave_Menu); // TODO Delete last Char or All?
-					make_menu_entry(&dst, "(DEL CHAR)", Delete_Keyboard_Char); // TODO Delete last Char or All?
-					char Key[2] = "0";
-					for (char i=32; i < 100; i++){
-						Key[0] = i;
-						make_menu_entry(&dst, Key, Keyboard_Char);
-					}
-					make_menu_entry(&dst, "Enter", Menu_Action);
+					make_keyboard(&dst);
 				}
 
 			}else{
@@ -266,15 +271,7 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 				if(strcmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_PLUS_CONNECT) == 0){
 					set_menu_status_msg(STATUS_MESSAGE_PLUS_CONNECT);
 				}
-
-				make_menu_entry(&dst, "(GO BACK)", Leave_Menu); // TODO Delete last Char or All?
-				make_menu_entry(&dst, "(DEL CHAR)", Delete_Keyboard_Char); // TODO Delete last Char or All?
-				char Key[2] = "0";
-				for (char i=32; i < 100; i++){
-					Key[0] = i;
-					make_menu_entry(&dst, Key, Keyboard_Char);
-				}
-				make_menu_entry(&dst, "Enter", Menu_Action);
+				make_keyboard(&dst);
 			}
 		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_PLUS_REMOVE, sizeof(MENU_TEXT_PLUS_REMOVE) - 1) == 0 ){
 			if( esp8266_PlusStore_API_prepare_request(curPath, FALSE) == FALSE){
@@ -314,21 +311,13 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 				if(strcmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_PRIVATE_KEY ) == 0){
 					set_menu_status_msg(STATUS_MESSAGE_PRIVATE_KEY);
 				}
-
-				make_menu_entry(&dst, "(GO BACK)", Leave_Menu); // TODO Delete last Char or All?
-				make_menu_entry(&dst, "(DEL CHAR)", Delete_Keyboard_Char); // TODO Delete last Char or All?
-				char Key[2] = "0";
-				for (char i=32; i < 96; i++){
-					Key[0] = i;
-					make_menu_entry(&dst, Key, Keyboard_Char);
-				}
-				make_menu_entry(&dst, "Enter", Menu_Action);
+				make_keyboard( &dst);
 			}
 		}
 	}else if(strncmp(MENU_TEXT_OFFLINE_ROMS, curPath, sizeof(MENU_TEXT_OFFLINE_ROMS) - 1) == 0 ){
 		make_menu_entry(&dst, "..", Leave_Menu);
-		flash_file_list(&dst, &num_menu_entries);
-	}else if(d->type == Menu_Action){ // if actual Entry is of type Menu_Action..
+		flash_file_list(&curPath[sizeof(MENU_TEXT_OFFLINE_ROMS) - 1], &dst, &num_menu_entries);
+	}else if(d->type == Menu_Action){
 		if(strncmp(MENU_TEXT_FIRMWARE_UPDATE, curPath, sizeof(MENU_TEXT_FIRMWARE_UPDATE) - 1) == 0 ){
 			if( esp8266_PlusStore_API_prepare_request("&u=1", TRUE) == FALSE){
 		    	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
@@ -404,7 +393,7 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 
     }
 
-    if(strlen(curPath) == 0){
+    if(strlen(curPath) == 0){// d->type == Root_Menu !!
     	if(	flash_has_downloaded_roms() )
     		make_menu_entry(&dst, MENU_TEXT_OFFLINE_ROMS, Sub_Menu);
 
@@ -428,7 +417,7 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
     }
 
     // select type by file extension?
-	char *ext = get_filename_ext(curPath);
+	char *ext = get_filename_ext(d->entryname);
 	EXT_TO_CART_TYPE_MAP *p = ext_to_cart_type_map;
 	while (p->ext) {
 		if (strcasecmp(ext, p->ext) == 0) {
@@ -672,6 +661,11 @@ void createMenuForAtari( MENU_ENTRY *d )
 	}
 }
 
+void truncate_curPath(){
+    int len = strlen(curPath);
+  	while (len && curPath[--len] != '/');
+  	curPath[len] = 0;
+}
 
 /* USER CODE END 0 */
 
@@ -758,16 +752,13 @@ int main(void)
             }
     	}
 
-        int len = strlen(curPath);
-      	while (len && curPath[--len] != '/');
-      	curPath[len] = 0;
+    	truncate_curPath();
+
       } else {
         // selection is a directory or Menu_Action, or Keyboard_Char
   		if (d->type == Leave_Menu){
-  		  // go back
-  		  int len = strlen(curPath);
-  		  while (len && curPath[--len] != '/');
-  		  curPath[len] = 0;
+  		  // go back clear_curPath();//
+  		  truncate_curPath();
   		  buffer[0] = 0; // Reset Keyboard input field
   		} else if(d->type == Delete_Keyboard_Char){
     		  int len = strlen(curPath);

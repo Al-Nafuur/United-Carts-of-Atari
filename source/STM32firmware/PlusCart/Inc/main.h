@@ -109,8 +109,6 @@ void Error_Handler(void);
 
 /* Private defines -----------------------------------------------------------*/
 /* USER CODE BEGIN Private defines */
-#define TRUE 1
-#define FALSE 0
 
 #define BUFFER_SIZE				96   // kilobytes
 #define CCM_RAM_SIZE            64   // kilobytes

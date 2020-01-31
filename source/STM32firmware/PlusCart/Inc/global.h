@@ -7,6 +7,10 @@
 #define VERSION                   "0.11.0"
 #define PLUSSTORE_API_HOST        "pluscart.firmaplus.de"
 
+#define TRUE 1
+#define FALSE 0
+
+
 extern UART_HandleTypeDef huart1;
 extern char http_request_header[];
 

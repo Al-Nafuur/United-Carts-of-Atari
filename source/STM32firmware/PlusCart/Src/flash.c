@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdlib.h>
 
 #include "stm32f4xx_hal.h"
 #include "flash.h"
@@ -278,44 +279,68 @@ uint32_t flash_file_request(uint8_t *ext_buffer, uint32_t base_address, uint32_t
     for ( i = 0; i < length; i++) {
         ext_buffer[i] = (*(__IO uint8_t*)(base_address + i));
     }
-     return length;
+    return length;
 }
-
 
 _Bool flash_has_downloaded_roms(){
     return user_settings.first_free_flash_sector > 5;
 }
 
-void flash_file_list( MENU_ENTRY **dst , int *num_p){
-    uint32_t base_adress = (uint32_t)( DOWNLOAD_AREA_START_ADDRESS), length = 0, r;
-    uint8_t pos = 0, c;
+void flash_file_list( char *path, MENU_ENTRY **dst , int *num_p){
+    uint32_t base_adress = (uint32_t)( DOWNLOAD_AREA_START_ADDRESS), length, r;
+    uint8_t pos, c, path_len = strlen(path);
+    char act_tar_file_path_name[100];
+    _Bool is_dir, is_file;
+    char *tmp_path = (char*) calloc((path_len +2) , sizeof(char));
+    if(path_len > 0 ){
+        strcpy(tmp_path, &path[1]);
+        strcat(tmp_path, "/");
+    }
 
     c =  (*(__IO uint8_t*)(base_adress));
 
-    while(c != 0xff && *num_p < MAX_FLASH_ROM_FILES){
-        while (c != '\0' && pos < 32){ // get the name (first 12 chars)
-            (*dst)->entryname[pos] = c;
-            ++pos;
-            c =  (*(__IO uint8_t*)(base_adress + pos));
-        }
-        (*dst)->entryname[pos] = '\0';
-        (*dst)->type = Offline_Cart_File;
-        (*dst)->flash_base_address = base_adress;
-
+    while(c != 0xff && *num_p < MAX_FLASH_ROM_FILES){ // NUM_MENU_ITEMS and c < 127 ? Ascii ?
+        pos = 0;
         length = get_filesize(base_adress);
-        (*dst)->filesize = length;
+        is_dir = ((*(__IO uint8_t*)(base_adress + 156)) == '5');
+        is_file = is_dir ?  FALSE : ((*(__IO uint8_t*)(base_adress + 156)) == '0');
 
-        (*dst)++;
-        (*num_p)++;
+
+        if(is_dir || is_file){ // ignore hard/symbolic link, (block) device files and named pipes
+            while (c != '\0' && pos < 100){ // get path and name (first 100 chars)
+            	act_tar_file_path_name[pos++] = c;
+                c =  (*(__IO uint8_t*)(base_adress + pos));
+            }
+            act_tar_file_path_name[pos] = '\0';
+            if(act_tar_file_path_name[--pos] == '/')// last char in filename is '/'
+            	act_tar_file_path_name[pos] = '\0';
+
+            if(strncmp(tmp_path, act_tar_file_path_name, path_len ) == 0 ){
+            	char *act_tar_filename = &act_tar_file_path_name[ path_len ];
+            	if( !( strchr( act_tar_filename, '/') ) ){
+            		strncpy((*dst)->entryname, act_tar_filename, 33);
+                    (*dst)->type = is_dir?Sub_Menu:Offline_Cart_File;
+                    (*dst)->flash_base_address = base_adress;
+
+                    (*dst)->filesize = length;
+
+                    (*dst)++;
+                    (*num_p)++;
+            	}
+            }
+        }
+
+        // move to next (possible) tar entry (base_adress)
         base_adress += TAR_HEADER_SIZE + length;
         // padding for next tar block !!
         r = base_adress % TAR_BLOCK_SIZE;
         if(r){
             base_adress += (TAR_BLOCK_SIZE - r);
         }
-        pos = 0;
         c =  (*(__IO uint8_t*)(base_adress));
     }
+
+    free(tmp_path);
 }
 
 /* Private function -----------------------------------------------------------*/
