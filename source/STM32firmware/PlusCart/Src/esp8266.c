@@ -105,12 +105,12 @@ uint32_t esp8266_PlusStore_API_file_request(uint8_t *ext_buffer, char *path, uin
 	http_range range[1];
 
 	for (uint32_t i = 0; i < request_count; i++) {
-		range[0].start = i * MAX_RANGE_SIZE;
+		range[0].start = start_pos + ( i * MAX_RANGE_SIZE);
 		range[0].stop = range[0].start + (MAX_RANGE_SIZE -1);
 		if(range[0].stop > max_range_pos){
 			range[0].stop = max_range_pos;
 		}
-		bytes_read += esp8266_PlusStore_API_range_request(path, 1, range, &ext_buffer[range[0].start]);
+		bytes_read += esp8266_PlusStore_API_range_request(path, 1, range, &ext_buffer[(range[0].start - start_pos)]);
 	}
 	return bytes_read;
 }
