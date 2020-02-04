@@ -71,7 +71,8 @@ enum cart_base_type{
 	base_type_DF,
 	base_type_DFSC,
 	base_type_BF,
-	base_type_BFSC
+	base_type_BFSC,
+	base_type_ACE
 };
 
 typedef struct {
@@ -139,6 +140,8 @@ void Error_Handler(void);
 #define STATUS_MESSAGE_PRIVATE_KEY_SAVED    "Key saved   "
 #define STATUS_MESSAGE_OFFLINE_ROMS_DELETED "ROMs Erased "
 #define STATUS_MESSAGE_NOT_ENOUGH_MENORY    "ROM Too Big!"
+#define STATUS_MESSAGE_ROMTYPE_UNSUPPORTED  "Unsupported "
+
 
 
 /* USER CODE END Private defines */
