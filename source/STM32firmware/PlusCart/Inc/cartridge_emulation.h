@@ -3,44 +3,11 @@
 
 #include "cartridge_io.h"
 
-/* df dfsc emulation */
-#define CCM_DF_BANKS (32 - RAM_BANKS)
-
-#define CCM_IMAGE_SIZE (CCM_DF_BANKS * 4096)
-
-/* bf, bfsc emulation */
-#define CCM_BF_BANKS (CCM_SIZE_KB / 4)
-#define FLASH_BANKS (64 - RAM_BANKS - CCM_BF_BANKS)
-#define FLASH_IMAGE_SIZE (FLASH_BANKS * 4096)
-#define FLASH_IMAGE_OFFSET ((RAM_BANKS + CCM_BANKS) * 4096)
-
-/* df, dfsc, bf, bfsc shared */
-#define BUFFER_SIZE_KB 96
-#define CCM_SIZE_KB 64
-#define RAM_BANKS ((BUFFER_SIZE_KB / 4) - 1)
-#define AVAILABLE_RAM_BASE (RAM_BANKS * 4096)
-#define CCM_IMAGE_OFFSET (RAM_BANKS * 4096)
-
-#define CCM_SIZE (CCM_SIZE_KB * 1024)
-
-#define STARTUP_BANK_BF 1
-#define STARTUP_BANK_BFSC 15
-
 /* dpc emulation */
 #define RESET_ADDR addr = addr_prev = 0xffff;
 
 /* df, dfsc, bf, bfsc, dpc shared */
 #define CCM_RAM ((uint8_t*)0x10000000)
-
-/*
-typedef struct {
-	uint8_t* banks[32];
-} cartridge_layout;
-*/
-typedef struct {
-    uint8_t* banks[64];
-} cartridge_layout;
-
 
 
 enum Transmission_State{
@@ -200,13 +167,5 @@ void emulate_DPC_cartridge();
 
 /* Pink Panther */
 void emulate_pp_cartridge(uint8_t* ram);
-
-void emulate_dfsc_cartridge();
-void emulate_df_cartridge();
-
-void emulate_bf_cartridge(uint32_t);
-
-void emulate_bfsc_cartridge(uint32_t);
-
 
 #endif // CARTRIDGE_EMULATION_H

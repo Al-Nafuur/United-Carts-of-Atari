@@ -46,6 +46,8 @@
 #include "cartridge_supercharger.h"
 #include "cartridge_detection.h"
 #include "cartridge_emulation.h"
+#include "cartridge_emulation_df.h"
+#include "cartridge_emulation_bf.h"
 
 
 /* USER CODE END Includes */
@@ -83,6 +85,12 @@ EXT_TO_CART_TYPE_MAP ext_to_cart_type_map[]__attribute__((section(".ccmram"))) =
 	{"E7", { base_type_E7, FALSE, FALSE }},
 	{"DPC", { base_type_DPC, FALSE, FALSE }},
 	{"AR",  { base_type_AR, FALSE, FALSE }},
+	{"BF",  { base_type_BF, FALSE, FALSE }},
+	{"BFS",  { base_type_BFSC, FALSE, FALSE }},
+	{"ACE",  { base_type_ACE, FALSE, FALSE }},
+	{"WD",  { base_type_PP, FALSE, FALSE }},
+	{"DF",  { base_type_DF, FALSE, FALSE }},
+	{"DFS",  { base_type_DFSC, FALSE, FALSE }},
 	{0,{0,0,0}}
 };
 
@@ -405,7 +413,6 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 CART_TYPE identify_cartridge( MENU_ENTRY *d )
 {
 
-	unsigned int image_size = 0;
 	CART_TYPE cart_type = { base_type_None, FALSE, FALSE };
 
 	strcat(curPath, "/");
@@ -432,48 +439,29 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 	if (cart_type.base_type == base_type_None && (d->filesize % 8448) == 0)
 		cart_type.base_type = base_type_AR;
 	if (cart_type.base_type == base_type_AR){
-		image_size = d->filesize;
 		goto close;
 	}
 
 
-	uint32_t buffer_load = d->filesize > (BUFFER_SIZE * 1024)?(BUFFER_SIZE * 1024):d->filesize;
-	uint8_t *tail = NULL;
-	if(d->type == Cart_File )
-		image_size = esp8266_PlusStore_API_file_request( buffer, curPath, 0, buffer_load );
-	else
-		image_size = flash_file_request( buffer, d->flash_base_address, 0, buffer_load );
-
-	uint32_t not_loaded_bytes = d->filesize - buffer_load ;
-	if( not_loaded_bytes > 0){
-		uint32_t ccm_load = not_loaded_bytes > (CCM_RAM_SIZE * 1024)?(CCM_RAM_SIZE * 1024):not_loaded_bytes;
-		if(d->type == Cart_File )
-			image_size += esp8266_PlusStore_API_file_request( CCM_RAM, curPath, buffer_load, ccm_load );
-		else
-			image_size += flash_file_request( CCM_RAM, d->flash_base_address, buffer_load, ccm_load );
-
-		tail = &CCM_RAM[ccm_load - 16];
-
-		not_loaded_bytes -= ccm_load;
-		if( not_loaded_bytes > 0){
-			if(d->type == Cart_File ){
-				cart_type.flash_part_address = (0x08020000 + 128 * 1024 * ( user_settings.first_free_flash_sector - 5));
-				esp8266_PlusStore_API_prepare_request(curPath, TRUE);
-			    strcat(http_request_header, (char *)"     0-  4095\r\n\r\n");
-				__disable_irq();
-				HAL_FLASH_Unlock();
-				do_flash_update(not_loaded_bytes, (uint8_t *)http_request_header, cart_type.flash_part_address, (buffer_load + ccm_load)  );
-			}else{
-				cart_type.flash_part_address = d->flash_base_address + buffer_load + ccm_load;
-			}
-			image_size += not_loaded_bytes;
-		}
+	uint32_t bytes_read, bytes_to_read = d->filesize > (BUFFER_SIZE * 1024)?(BUFFER_SIZE * 1024):d->filesize;
+	uint8_t tail[16], bytes_read_tail;
+	if(d->type == Cart_File ){
+		bytes_read = esp8266_PlusStore_API_file_request( buffer, curPath, 0, bytes_to_read );
+		bytes_read_tail = (uint8_t)esp8266_PlusStore_API_file_request( tail, curPath, (d->filesize - 16), 16 );
+	}else{
+		bytes_read = flash_file_request( buffer, d->flash_base_address, 0, bytes_to_read );
+		bytes_read_tail = (uint8_t)flash_file_request( tail, d->flash_base_address, (d->filesize - 16), 16 );
 	}
 
+	if( bytes_read_tail != 16 || bytes_read != bytes_to_read){
+		cart_type.base_type = base_type_None;
+		goto close;
+	}
 
-
-	cart_type.withPlusFunctions = isProbablyPLS(image_size, buffer);
-	cart_type.withSuperChip =  isProbablySC(image_size, buffer);
+	if(d->filesize <=  (BUFFER_SIZE * 1024)){
+		cart_type.withPlusFunctions = isProbablyPLS(d->filesize, buffer);
+		cart_type.withSuperChip =  isProbablySC(d->filesize, buffer);
+	}
 
 	// disconnect here or if cart_type != CART_TYPE_NONE
 	if (cart_type.base_type != base_type_None) goto close;
@@ -481,84 +469,84 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 	// If we don't already know the type (from the file extension), then we
 	// auto-detect the cart type - largely follows code in Stella's CartDetector.cpp
 
-	if (image_size == 2*1024)
+	if (d->filesize == 2*1024)
 	{
-		if (isProbablyCV(image_size, buffer))
+		if (isProbablyCV(d->filesize, buffer))
 			cart_type.base_type = base_type_CV;
 		else
 			cart_type.base_type = base_type_2K;
 	}
-	else if (image_size == 4*1024)
+	else if (d->filesize == 4*1024)
 	{
 		cart_type.base_type = base_type_4K;
 	}
-	else if (image_size == 8*1024)
+	else if (d->filesize == 8*1024)
 	{
 		// First check for *potential* F8
-		int f8 = isPotentialF8(image_size, buffer);
+		int f8 = isPotentialF8(d->filesize, buffer);
 
 		if (memcmp(buffer, buffer + 4096, 4096) == 0)
 			cart_type.base_type = base_type_4K;
-		else if (isProbablyE0(image_size, buffer))
+		else if (isProbablyE0(d->filesize, buffer))
 			cart_type.base_type = base_type_E0;
-		else if (isProbably3E(image_size, buffer))
+		else if (isProbably3E(d->filesize, buffer))
 			cart_type.base_type = base_type_3E;
-		else if (isProbably3F(image_size, buffer))
+		else if (isProbably3F(d->filesize, buffer))
 			cart_type.base_type = base_type_3F;
-		else if (isProbablyFE(image_size, buffer) && !f8)
+		else if (isProbablyFE(d->filesize, buffer) && !f8)
 			cart_type.base_type = base_type_FE;
-		else if (isProbably0840(image_size, buffer))
+		else if (isProbably0840(d->filesize, buffer))
 			cart_type.base_type = base_type_0840;
 		else
 			cart_type.base_type = base_type_F8;
 	}
-	else if (image_size == 8*1024 + 3) {
+	else if (d->filesize == 8*1024 + 3) {
 		cart_type.base_type = base_type_PP;
 	}
-	else if(image_size >= 10240 && image_size <= 10496)
+	else if(d->filesize >= 10240 && d->filesize <= 10496)
 	{  // ~10K - Pitfall II
 		cart_type.base_type = base_type_DPC;
 	}
-	else if (image_size == 12*1024)
+	else if (d->filesize == 12*1024)
 	{
 		cart_type.base_type = base_type_FA;
 	}
-	else if (image_size == 16*1024)
+	else if (d->filesize == 16*1024)
 	{
-		if (isProbablyE7(image_size, buffer))
+		if (isProbablyE7(d->filesize, buffer))
 			cart_type.base_type = base_type_E7;
-		else if (isProbably3E(image_size, buffer))
+		else if (isProbably3E(d->filesize, buffer))
 			cart_type.base_type = base_type_3E;
 		else
 			cart_type.base_type = base_type_F6;
 	}
-	else if (image_size == 32*1024)
+	else if (d->filesize == 32*1024)
 	{
-		if (isProbably3E(image_size, buffer))
+		if (isProbably3E(d->filesize, buffer))
 			cart_type.base_type = base_type_3E;
-		else if (isProbably3F(image_size, buffer))
+		else if (isProbably3F(d->filesize, buffer))
 			cart_type.base_type = base_type_3F;
 		else
 			cart_type.base_type = base_type_F4;
 	}
-	else if (image_size == 64*1024)
+	else if (d->filesize == 64*1024)
 	{
-		if (isProbably3E(image_size, buffer))
+		if (isProbably3E(d->filesize, buffer))
 			cart_type.base_type = base_type_3E;
-		else if (isProbably3F(image_size, buffer))
+		else if (isProbably3F(d->filesize, buffer))
 			cart_type.base_type = base_type_3F;
-		else if (isProbablyEF(image_size, buffer))
+		else if (isProbablyEF(d->filesize, buffer))
 			cart_type.base_type = base_type_EF;
 		else
 			cart_type.base_type = base_type_F0;
 	}
-	else if (image_size == 128 * 1024) {
+	else if (d->filesize == 128 * 1024) {
 		if (isProbablyDF(tail))
 			cart_type.base_type = base_type_DF;
 		else if (isProbablyDFSC(tail))
 			cart_type.base_type = base_type_DFSC;
 	}
-	else if (image_size == 256 * 1024)
+	else if (d->filesize == 256 * 1024)
 	{
 		if (isProbablyBF(tail))
 			cart_type.base_type = base_type_BF;
@@ -569,7 +557,7 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 	close:
 
 	if (cart_type.base_type != base_type_None)
-		cart_size_bytes = image_size;
+		cart_size_bytes = d->filesize;
 
 	return cart_type;
 }
@@ -581,7 +569,7 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
  * Main loop/helper functions
  *************************************************************************/
 
-void emulate_cartridge(CART_TYPE cart_type)
+void emulate_cartridge(CART_TYPE cart_type, MENU_ENTRY *d)
 {
 	int offset = 0;
 	if (cart_type.withPlusFunctions == TRUE ){
@@ -627,14 +615,15 @@ void emulate_cartridge(CART_TYPE cart_type)
 	else if (cart_type.base_type == base_type_PP)
 		emulate_pp_cartridge( buffer + 8*1024);
 	else if (cart_type.base_type == base_type_DF)
-		emulate_df_cartridge();
+		emulate_df_cartridge(curPath, cart_size_bytes, buffer, d);
 	else if (cart_type.base_type == base_type_DFSC)
-		emulate_dfsc_cartridge();
+		emulate_dfsc_cartridge(curPath, cart_size_bytes, buffer, d);
 	else if (cart_type.base_type == base_type_BF)
-		emulate_bf_cartridge(cart_type.flash_part_address);
+		emulate_bf_cartridge(curPath, cart_size_bytes, buffer, d);//cart_type.flash_part_address);
 	else if (cart_type.base_type == base_type_BFSC)
-		emulate_bfsc_cartridge(cart_type.flash_part_address);
-
+		emulate_bfsc_cartridge(curPath, cart_size_bytes, buffer, d);//cart_type.flash_part_address);
+	else if (cart_type.base_type == base_type_ACE)
+		set_menu_status_msg(STATUS_MESSAGE_ROMTYPE_UNSUPPORTED);
 }
 
 void convertMenuNameForCart(unsigned char *dst, char *src)
@@ -748,7 +737,7 @@ int main(void)
             cart_type = identify_cartridge(d);
             HAL_Delay(200);
             if (cart_type.base_type != base_type_None){
-                emulate_cartridge(cart_type);
+                emulate_cartridge(cart_type, d);
             }
     	}
 
