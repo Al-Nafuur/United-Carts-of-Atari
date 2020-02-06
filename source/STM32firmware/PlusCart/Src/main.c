@@ -447,18 +447,21 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 	uint8_t tail[16], bytes_read_tail;
 	if(d->type == Cart_File ){
 		bytes_read = esp8266_PlusStore_API_file_request( buffer, curPath, 0, bytes_to_read );
-		bytes_read_tail = (uint8_t)esp8266_PlusStore_API_file_request( tail, curPath, (d->filesize - 16), 16 );
 	}else{
 		bytes_read = flash_file_request( buffer, d->flash_base_address, 0, bytes_to_read );
-		bytes_read_tail = (uint8_t)flash_file_request( tail, d->flash_base_address, (d->filesize - 16), 16 );
 	}
 
-	if( bytes_read_tail != 16 || bytes_read != bytes_to_read){
-		cart_type.base_type = base_type_None;
-		goto close;
-	}
-
-	if(d->filesize <=  (BUFFER_SIZE * 1024)){
+	if(d->filesize >  (BUFFER_SIZE * 1024)){
+		if(d->type == Cart_File ){
+			bytes_read_tail = (uint8_t)esp8266_PlusStore_API_file_request( tail, curPath, (d->filesize - 16), 16 );
+		}else{
+			bytes_read_tail = (uint8_t)flash_file_request( tail, d->flash_base_address, (d->filesize - 16), 16 );
+		}
+		if( bytes_read_tail != 16 || bytes_read != bytes_to_read){
+			cart_type.base_type = base_type_None;
+			goto close;
+		}
+	}else{
 		cart_type.withPlusFunctions = isProbablyPLS(d->filesize, buffer);
 		cart_type.withSuperChip =  isProbablySC(d->filesize, buffer);
 	}
