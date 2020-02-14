@@ -3,20 +3,30 @@
  * Author:  Wolfgang Stubig <w.stubig@firmaplus.de>
  * Version: v0.0.2
  *
+ * structure based on ESP8266_PIC (v0.1) by Camil Staps <info@camilstaps.nl>
+ * Website: http://github.com/camilstaps/ESP8266_PIC
+ *
  * See:     esp8266.h
  *
  * C library for interfacing the ESP8266 WiFi transceiver module (esp-01)
  * with a STM32F4 microcontroller. Should be used with the HAL Library.
  */
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include "stm32_udid.h"
 #include "esp8266.h"
 
+/* private functions */
+void get_boundary_http_header(char *);
+// Wait for any response on the input
+unsigned long wait_response(uint16_t);
+
+
 char stm32_udid[] = UDID_TEMPLATE;
 
-_Bool esp8266_PlusStore_API_prepare_request(char *path, _Bool prepare_range_request){
+_Bool esp8266_PlusStore_API_connect(){
 	uint8_t c;
 
 
@@ -38,10 +48,13 @@ _Bool esp8266_PlusStore_API_prepare_request(char *path, _Bool prepare_range_requ
     if(HAL_UART_Transmit(&huart1, (uint8_t *) API_ATCMD_2, sizeof(API_ATCMD_2)-1, 10) != HAL_OK)
 		return FALSE;
 
-    // wait for received ">\r\n\" ??
+    // wait for received ">\r\n" ??
     while(HAL_UART_Receive(&huart1, &c, 1, 100 ) == HAL_OK);
 
+    return TRUE;
+}
 
+void esp8266_PlusStore_API_prepare_request_header(char *path, _Bool prepare_range_request){
     // make path http request ready
     for (char* p = path; (p = strchr(p, ' ')); ++p) {
         *p = '+';
@@ -59,23 +72,27 @@ _Bool esp8266_PlusStore_API_prepare_request(char *path, _Bool prepare_range_requ
         strcat(http_request_header, API_ATCMD_6a);
     else
         strcat(http_request_header, API_ATCMD_6b);
-
-
-    return TRUE;
 }
 
+void esp8266_PlusStore_API_close_connection(){
+	uint8_t c;
+    HAL_UART_Transmit(&huart1, (uint8_t *)"+++", sizeof("+++") - 1, 10);
+    while(HAL_UART_Receive(&huart1, &c, 1, 100 ) == HAL_OK);
+}
 
 uint32_t esp8266_PlusStore_API_range_request(char *path, uint32_t range_count, http_range *range, uint8_t *ext_buffer){
 	uint32_t response_size = 0;
+	uint16_t expected_size = 0;
 	uint8_t c;
 	char boundary[] = {'\r','\n','-','-', RANGE_BOUNDARY_TEMPLATE , '\r','\n'};
 
-	esp8266_PlusStore_API_prepare_request(path, TRUE);
+	esp8266_PlusStore_API_prepare_request_header(path, TRUE );
 
 	for (uint32_t i = 0; i < range_count; i++) {
  	    if (i > 0)
             strcat(http_request_header, ",");
         sprintf(http_request_header, "%s%lu-%lu" ,http_request_header, range[i].start, range[i].stop  );
+        expected_size += ( range[i].stop + 1 - range[i].start );
  	}
     strcat(http_request_header, (char *)"\r\n\r\n");
 
@@ -83,15 +100,19 @@ uint32_t esp8266_PlusStore_API_range_request(char *path, uint32_t range_count, h
     if(range_count > 1){
     	get_boundary_http_header(&boundary[4]);
     }
-    skip_http_header(); // skip normal http-header or first boundary + multipart-header
-    while(HAL_UART_Receive(&huart1, &c, 1, 100 ) == HAL_OK){
+    esp8266_skip_http_response_header(); // skip normal http-header or first boundary + multipart-header
+    while( response_size < expected_size ){
+    	if(HAL_UART_Receive(&huart1, &c, 1, 15000 ) != HAL_OK){
+    		break;
+    	}
     	ext_buffer[response_size] = c;
     	if(range_count > 1 && response_size > RANGE_BOUNDARY_SIZE && strncmp((char *) &ext_buffer[response_size - RANGE_BOUNDARY_SIZE], boundary, RANGE_BOUNDARY_SIZE) == 0 ){
    			response_size -= RANGE_BOUNDARY_SIZE;
-       		skip_http_header(); //skip multipart-header
+   			esp8266_skip_http_response_header(); //skip multipart-header
     	}
     	response_size++;
     }
+
     if(range_count > 1 && response_size > RANGE_BOUNDARY_SIZE){
 			response_size -= RANGE_BOUNDARY_SIZE;
     }
@@ -104,6 +125,7 @@ uint32_t esp8266_PlusStore_API_file_request(uint8_t *ext_buffer, char *path, uin
 	uint32_t request_count = ( length + ( MAX_RANGE_SIZE - 1 ) )  / MAX_RANGE_SIZE;
 	http_range range[1];
 
+	esp8266_PlusStore_API_connect();
 	for (uint32_t i = 0; i < request_count; i++) {
 		range[0].start = start_pos + ( i * MAX_RANGE_SIZE);
 		range[0].stop = range[0].start + (MAX_RANGE_SIZE -1);
@@ -112,10 +134,11 @@ uint32_t esp8266_PlusStore_API_file_request(uint8_t *ext_buffer, char *path, uin
 		}
 		bytes_read += esp8266_PlusStore_API_range_request(path, 1, range, &ext_buffer[(range[0].start - start_pos)]);
 	}
+	esp8266_PlusStore_API_close_connection();
 	return bytes_read;
 }
 
-int connect_PlusROM_API(){
+int esp8266_PlusROM_API_connect(){
 	uint8_t c;
 	int offset = strlen((char *)buffer) + 1;
 
@@ -125,7 +148,7 @@ int connect_PlusROM_API(){
     strcat(http_request_header, (char *)"\",80\r\n");
 
     HAL_UART_Transmit(&huart1, (uint8_t*) http_request_header, strlen(http_request_header), 50);
-    while(HAL_UART_Receive(&huart1, &c, 1, 100 ) == HAL_OK){ }
+    while(HAL_UART_Receive(&huart1, &c, 1, 150 ) == HAL_OK){ } // todo wait for "Connected\r\n"
 
 	http_request_header[0] = '\0';
 	strcat(http_request_header, (char *)"POST /");
@@ -138,31 +161,40 @@ int connect_PlusROM_API(){
     offset = strlen(http_request_header);
 
     HAL_UART_Transmit(&huart1, (uint8_t*) API_ATCMD_2, sizeof(API_ATCMD_2)-1, 10);
-    while(HAL_UART_Receive(&huart1, &c, 1, 100 ) == HAL_OK){ }
+    while(HAL_UART_Receive(&huart1, &c, 1, 150 ) == HAL_OK){ } // todo wait for ">\r\n"
     return offset;
 }
 
-void skip_http_header(){
+uint16_t esp8266_skip_http_response_header(){
 	int count = 0;
+	uint16_t content_length = 0;
+	char line[20] = "";
 	uint8_t c;
-	while(HAL_UART_Receive(&huart1, &c, 1, 5000 ) == HAL_OK){
+	while(HAL_UART_Receive(&huart1, &c, 1, 15000 ) == HAL_OK){
        	if( c == '\n' ){
-       		if (count == 1)
+       		if (count == 1){
        			break;
+       		}else if(count > 16 && strncasecmp("content-length: ", line, 16) == 0){
+   		        content_length = (uint16_t) atoi(&line[16]);
+       		}
        		count = 0;
        	}else{
+       		if(count < 20){
+       			line[count] = c;
+       		}
        		count++;
        	}
 	}
+	return content_length;
 }
 
 void get_boundary_http_header(char * buffer){
 	int count = 0;
 	uint8_t c;
-	while(HAL_UART_Receive(&huart1, &c, 1, 5000 ) == HAL_OK){
+	while(HAL_UART_Receive(&huart1, &c, 1, 15000 ) == HAL_OK){
        	if( c == '\n' ){
        		if (count == 1){
-       			skip_http_header(); // first row in multipart response is empty
+       			esp8266_skip_http_response_header(); // first row in multipart response is empty
        			break;
        		}
        		count = 0;
@@ -173,16 +205,6 @@ void get_boundary_http_header(char * buffer){
        		count++;
        	}
 	}
-}
-
-_Bool close_transparent_transmission(){
-	uint8_t c;
-	if( HAL_UART_Transmit(&huart1, (uint8_t*)"+++", 3, 10) != HAL_OK){
-		return FALSE;
-	}
-	while(HAL_UART_Receive(&huart1, &c,1, 100 ) == HAL_OK){
-	}
-	return TRUE;
 }
 
 /**
@@ -199,22 +221,22 @@ void Initialize_ESP8266()
 	do{
 		HAL_Delay(1000);
 	    esp8266_print((unsigned char *)"ATE0\r\n");
-	}while(esp8266_wait_response(100) != ESP8266_OK && count++ < 5);
+	}while(wait_response(100) != ESP8266_OK && count++ < 5);
 
 	//if(count == 4 )
 	// return;
 
     // connect to accesspoint mode
     esp8266_print((unsigned char *)"AT+CWMODE=1\r\n");
-    esp8266_wait_response(100);
+    wait_response(100);
 
 	// Single connection
     esp8266_print((unsigned char *)"AT+CIPMUX=0\r\n");
-    esp8266_wait_response(100);
+    wait_response(100);
 
 	// Transparent transmission mode (without +IPD,xx:)
     esp8266_print((unsigned char *)"AT+CIPMODE=1\r\n");
-    esp8266_wait_response(100);
+    wait_response(100);
 
     // wait for esp to connect..
 	// Test if connected to AP (5 Times with 1s delay, for Startup)
@@ -239,7 +261,7 @@ void Initialize_ESP8266()
  */
 _Bool esp8266_is_started(void) {
     esp8266_print((unsigned char *)"AT\r\n");
-    return (esp8266_wait_response(100) == ESP8266_OK);
+    return (wait_response(100) == ESP8266_OK);
 }
 
 /**
@@ -248,14 +270,14 @@ _Bool esp8266_is_started(void) {
  * This sends the `AT+RST` command to the ESP and waits until there is a
  * response.
  *
- * @return true iff the module restarted properly
+ * @return true if the module restarted properly
  */
 _Bool esp8266_restart(void) {
     esp8266_print((unsigned char *)"AT+RST\r\n");
-    if (esp8266_wait_response(100) != ESP8266_OK) {
+    if (wait_response(100) != ESP8266_OK) {
         return FALSE;
     }
-    return (esp8266_wait_response(5000) == ESP8266_READY);
+    return (wait_response(5000) == ESP8266_READY);
 }
 
 
@@ -267,7 +289,7 @@ _Bool esp8266_wifi_list(MENU_ENTRY **dst, int *num_menu_entries){
     if( HAL_UART_Transmit(&huart1, ATCMD1, sizeof(ATCMD1)-1, 10) != HAL_OK){
 		return FALSE;
 	}
-	if(HAL_UART_Receive(&huart1, &c, 1, 10000 ) == HAL_OK){
+	if(HAL_UART_Receive(&huart1, &c, 1, 15000 ) == HAL_OK){
     	do{
             if(count == 0){ // first char defines if its an entry row with SSID or Header Row
             	is_entry_row = (c == '+' ) ? 1 : 0;
@@ -295,7 +317,7 @@ _Bool esp8266_wifi_list(MENU_ENTRY **dst, int *num_menu_entries){
             }else{
                 count++;
             }
-    	}while(HAL_UART_Receive(&huart1, &c, 1, 100 ) == HAL_OK);
+    	}while(HAL_UART_Receive(&huart1, &c, 1, 150 ) == HAL_OK);
 
     	return TRUE;
 	}
@@ -311,7 +333,7 @@ _Bool esp8266_wifi_connect(char *ssid, char *password ){
     strcat(http_request_header, password);
     strcat(http_request_header, "\"\r\n");
 	HAL_UART_Transmit(&huart1, (uint8_t *) http_request_header, strlen(http_request_header), 50);
-	if(esp8266_wait_response(15000) == ESP8266_OK){
+	if(wait_response(15000) == ESP8266_OK){
     	return TRUE;
     	/*  WIFI CONNECTED<\r><\n>
     	 *  WIFI GOT IP<\r><\n>
@@ -322,32 +344,12 @@ _Bool esp8266_wifi_connect(char *ssid, char *password ){
 	return FALSE;
 }
 
-/**
- * Enable / disable command echoing.
- *
- * Enabling this is useful for debugging: one could sniff the TX line from the
- * ESP8266 with his computer and thus receive both commands and responses.
- *
- * This sends the ATE command to the ESP module.
- *
- * @param echo whether to enable command echoing or not
- */
-void esp8266_echo_commands(_Bool echo) {
-    if (echo) {
-        esp8266_print((unsigned char *)"ATE1\r\n");
-    } else {
-        esp8266_print((unsigned char *)"ATE0\r\n");
-    }
-    esp8266_wait_response(100);
-}
-
-
 _Bool esp8266_is_connected(void){
 	uint8_t count = 0;
 	unsigned char c;
    	esp8266_print((unsigned char *)"AT+CWJAP?\r\n");
 	count = 0;
-   	if(HAL_UART_Receive(&huart1, &c,1, 100 ) == HAL_OK){
+   	if(HAL_UART_Receive(&huart1, &c,1, 150 ) == HAL_OK){
    		while(HAL_UART_Receive(&huart1, &c,1, 10 ) == HAL_OK){
    	   		count++;
    		}
@@ -386,7 +388,7 @@ void esp8266_print(unsigned char *ptr) {
  * @return a constant from esp8266.h describing the status response.
  */
 
-unsigned long esp8266_wait_response(uint16_t timeout) {
+unsigned long wait_response(uint16_t timeout) {
     uint8_t counter = 0;
     unsigned long hash = ESP8266_NO_RESPONSE;
     unsigned char c;

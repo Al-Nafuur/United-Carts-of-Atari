@@ -254,25 +254,24 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 
 		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_PLUS_CONNECT, sizeof(MENU_TEXT_PLUS_CONNECT) - 1) == 0 ){
 			if(d->type == Menu_Action){ // if actual Entry is of type Menu_Action -> Connect user
-				if( esp8266_PlusStore_API_prepare_request(curPath, FALSE) == FALSE){
+				if( esp8266_PlusStore_API_connect() == FALSE){
 	            	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
 					return;
 				}
+				esp8266_PlusStore_API_prepare_request_header(curPath, FALSE );
 	        	HAL_UART_Transmit(&huart1, (uint8_t *)http_request_header, strlen(http_request_header), 50);
 
-	        	skip_http_header();
-	        	while(HAL_UART_Receive(&huart1, &c, 1, 50 ) == HAL_OK){}
-	        	if(c == '0')
+	        	esp8266_skip_http_response_header();
+	        	while(HAL_UART_Receive(&huart1, &c, 1, 100 ) == HAL_OK){}
+	        	if(c == '0'){
 	        		set_menu_status_msg(STATUS_MESSAGE_PLUS_CONNECT_FAILED);
-	        	else if(c == '1')
+	        	}else if(c == '1'){
 	        		set_menu_status_msg(STATUS_MESSAGE_PLUS_CREATED);
-	        	else
+	        	}else{
 	        		set_menu_status_msg(STATUS_MESSAGE_PLUS_CONNECTED);
-
-	        	if( ! close_transparent_transmission() ){
-	            	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
-	        		return;
 	        	}
+
+				esp8266_PlusStore_API_close_connection();
 
 	        	curPath[0] = '\0';
 			}else{
@@ -282,23 +281,22 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 				make_keyboard(&dst);
 			}
 		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_PLUS_REMOVE, sizeof(MENU_TEXT_PLUS_REMOVE) - 1) == 0 ){
-			if( esp8266_PlusStore_API_prepare_request(curPath, FALSE) == FALSE){
+			if( esp8266_PlusStore_API_connect() == FALSE){
             	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
 				return;
 			}
+			esp8266_PlusStore_API_prepare_request_header(curPath, FALSE );
         	HAL_UART_Transmit(&huart1, (uint8_t *)http_request_header, strlen(http_request_header), 50);
 
-        	skip_http_header();
-        	while(HAL_UART_Receive(&huart1, &c, 1, 50 ) == HAL_OK){}
-        	if(c == '0')
+        	esp8266_skip_http_response_header();
+        	while(HAL_UART_Receive(&huart1, &c, 1, 100 ) == HAL_OK){}
+        	if(c == '0'){
         		set_menu_status_msg(STATUS_MESSAGE_PLUS_CONNECT_FAILED);
-        	else
+        	}else{
         		set_menu_status_msg(STATUS_MESSAGE_PLUS_REMOVED);
-
-        	if( ! close_transparent_transmission() ){
-            	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
-        		return;
         	}
+
+			esp8266_PlusStore_API_close_connection();
 
         	curPath[0] = '\0';
 
@@ -327,17 +325,19 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 		flash_file_list(&curPath[sizeof(MENU_TEXT_OFFLINE_ROMS) - 1], &dst, &num_menu_entries);
 	}else if(d->type == Menu_Action){
 		if(strncmp(MENU_TEXT_FIRMWARE_UPDATE, curPath, sizeof(MENU_TEXT_FIRMWARE_UPDATE) - 1) == 0 ){
-			if( esp8266_PlusStore_API_prepare_request("&u=1", TRUE) == FALSE){
+			if( esp8266_PlusStore_API_connect() == FALSE){
 		    	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
 			}
+			esp8266_PlusStore_API_prepare_request_header("&u=1", TRUE);
 		    strcat(http_request_header, (char *)"     0-  4095\r\n\r\n");
 			__disable_irq();
 			HAL_FLASH_Unlock();
 			do_flash_update(d->filesize, (uint8_t *)http_request_header, ADDR_FLASH_SECTOR_0, 0);
 		} else if(strncmp(MENU_TEXT_OFFLINE_ROM_UPDATE, curPath, sizeof(MENU_TEXT_OFFLINE_ROM_UPDATE) - 1) == 0 ){
-			if( esp8266_PlusStore_API_prepare_request("&r=1", TRUE) == FALSE){
+			if( esp8266_PlusStore_API_connect() == FALSE){
 		    	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
 			}
+			esp8266_PlusStore_API_prepare_request_header("&r=1", TRUE);
 		    strcat(http_request_header, (char *)"     0-  4095\r\n\r\n");
 			__disable_irq();
 			HAL_FLASH_Unlock();
@@ -352,15 +352,20 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 	// Test we should load store and if connected to AP
     if(	loadStore || strlen(curPath) == 0 ){
     	if(esp8266_is_connected() == TRUE){
-			if( esp8266_PlusStore_API_prepare_request(curPath, FALSE) == FALSE){
+			if( esp8266_PlusStore_API_connect() == FALSE){
             	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
 				return;
 			}
+			esp8266_PlusStore_API_prepare_request_header(curPath, FALSE);
 
             HAL_UART_Transmit(&huart1, (uint8_t *)http_request_header, strlen(http_request_header), 50);
-        	skip_http_header();
+            uint16_t content_loaded = 0, content_length = esp8266_skip_http_response_header();
         	count = 0;
-        	while(HAL_UART_Receive(&huart1, &c, 1, 50 ) == HAL_OK){
+        	while(content_loaded < content_length){
+        		if(HAL_UART_Receive(&huart1, &c, 1, 15000 ) != HAL_OK){
+        			break;
+        		}
+        		content_loaded++;
         		if(num_menu_entries < NUM_MENU_ITEMS){
                     if(count == 0){ // first char defines if its an entry row (or Header Row)
                     	is_entry_row = (c > '/' && c < ':' ) ? TRUE : FALSE; // First char is entry.type '0' to '9'
@@ -391,10 +396,7 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
         		}
         	}
 
-        	if(! close_transparent_transmission()){
-            	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
-        		return;
-        	}
+			esp8266_PlusStore_API_close_connection();
         }else {
         	set_menu_status_msg(STATUS_MESSAGE_WIFI_NOT_CONNECTED);
     	}
@@ -578,7 +580,7 @@ void emulate_cartridge(CART_TYPE cart_type, MENU_ENTRY *d)
 	if (cart_type.withPlusFunctions == TRUE ){
  		// Read path and hostname in ROM File from 0xf00  till '\0' and
 		// copy to http_request_header
-		offset = connect_PlusROM_API();
+		offset = esp8266_PlusROM_API_connect();
 	}
 
 	if (cart_type.base_type == base_type_2K)

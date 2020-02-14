@@ -3,6 +3,9 @@
  * Author:  Wolfgang Stubig <w.stubig@firmaplus.de>
  * Version: v0.0.1
  *
+ * structure based on ESP8266_PIC (v0.1) by Camil Staps <info@camilstaps.nl>
+ * Website: http://github.com/camilstaps/ESP8266_PIC
+ *
  * See:     esp8266.c
  *
  * C library for interfacing the ESP8266 WiFi transceiver module (esp-01)
@@ -68,13 +71,13 @@ void Initialize_ESP8266(void);
 
 /** Function prototypes **/
 
-_Bool esp8266_PlusStore_API_prepare_request(char *, _Bool);
+_Bool esp8266_PlusStore_API_connect(void);
+void esp8266_PlusStore_API_prepare_request_header(char *, _Bool );
+void esp8266_PlusStore_API_close_connection(void);
 
-int connect_PlusROM_API(void);
+int esp8266_PlusROM_API_connect(void);
 
-void get_boundary_http_header(char *);
-void skip_http_header(void);
-_Bool close_transparent_transmission(void);
+uint16_t esp8266_skip_http_response_header(void);
 
 // Check if the module is started (AT)
 _Bool esp8266_is_started(void);
@@ -86,9 +89,6 @@ _Bool esp8266_wifi_connect(char *, char *);
 uint32_t esp8266_PlusStore_API_range_request( char *, uint32_t, http_range *, uint8_t *);
 uint32_t esp8266_PlusStore_API_file_request( uint8_t *, char *, uint32_t, uint32_t );
 
-// Enabled/disable command echoing (ATE)
-void esp8266_echo_commands(_Bool);
-
 // Is connected to AP (AT+CWJAP?)
 _Bool esp8266_is_connected(void);
 
@@ -97,9 +97,6 @@ void esp8266_disconnect(void);
 
 // Print a string to the output
 void esp8266_print(unsigned char *);
-
-// Wait for any response on the input
-unsigned long esp8266_wait_response(uint16_t);
 
 void generate_udid_string(void);
 
