@@ -167,7 +167,7 @@ void do_flash_update(uint32_t filesize, uint8_t *http_request_header, uint32_t A
     FLASH_WaitInRAMForLastOperationWithMaxDelay();
 
     uint8_t chunks = ( filesize + 4095 )  / 4096;
-    uint16_t lastChunkSize = filesize % 4096;
+    uint16_t lastChunkSize = (filesize % 4096)?(filesize % 4096):4096;
     while(chunks != 0 ){
         http_range_param_pos_counter = http_range_param_pos;
         count = http_range_end;
@@ -183,8 +183,6 @@ void do_flash_update(uint32_t filesize, uint8_t *http_request_header, uint32_t A
             http_request_header[http_range_param_pos_counter--] =  c + '0';
             count = count/10;
         }
-        http_range_start += 4096;
-        http_range_end += chunks>2?4096:lastChunkSize;
 
         count = 0;
         while(1){ // todo set and break on timeout ?
@@ -219,7 +217,8 @@ void do_flash_update(uint32_t filesize, uint8_t *http_request_header, uint32_t A
                 /* Program the user Flash area byte by byte
                 (area defined by FLASH_USER_START_ADDR and FLASH_USER_END_ADDR) ***********/
                 /* Wait for last operation to be completed */
-                if(FLASH_WaitInRAMForLastOperationWithMaxDelay() == HAL_OK){
+                //if(FLASH_WaitInRAMForLastOperationWithMaxDelay() == HAL_OK){
+                FLASH_WaitInRAMForLastOperationWithMaxDelay() ;
                     /*Program byte (8-bit) at a specified address.*/
                     // FLASH_Program_Byte(Address, (uint8_t) c);
                     CLEAR_BIT(FLASH->CR, FLASH_CR_PSIZE);
@@ -236,16 +235,18 @@ void do_flash_update(uint32_t filesize, uint8_t *http_request_header, uint32_t A
                     FLASH->CR &= (~FLASH_CR_PG);
                     Address++;
                     // end HAL_FLASH_Program
-                }else{
-                    return;
-                }
+               // }else{
+                //    return;
+               // }
                 count++;
             }
         }
-        chunks--;
+
+        http_range_start += 4096;
+        http_range_end += (--chunks==1)?lastChunkSize:4096;
 
         count = 0;
-        while(count++ < 20000000){
+        while(count++ < 25000000){
         }
     }
     __HAL_UNLOCK(&pFlash);
