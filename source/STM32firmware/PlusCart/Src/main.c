@@ -54,13 +54,53 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+enum cart_base_type{
+	base_type_None,
+	base_type_2K,
+	base_type_4K,
+	base_type_F8,
+	base_type_F6,
+	base_type_F4,
+	base_type_FE,
+	base_type_3F,
+	base_type_3E,
+	base_type_E0,
+	base_type_0840,
+	base_type_CV,
+	base_type_EF,
+	base_type_F0,
+	base_type_FA,
+	base_type_E7,
+	base_type_DPC,
+	base_type_AR,
+	base_type_PP,
+	base_type_DF,
+	base_type_DFSC,
+	base_type_BF,
+	base_type_BFSC,
+	base_type_ACE
+};
+
+typedef struct {
+	enum cart_base_type base_type;
+	_Bool withSuperChip;
+	_Bool withPlusFunctions;
+	uint32_t flash_part_address;
+} CART_TYPE;
+
+typedef struct {
+	const char *ext;
+	CART_TYPE cart_type;
+} EXT_TO_CART_TYPE_MAP;
 
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+//unsigned const char firmware_ntsc_rom[]__attribute__((section(".flash0")))
+//  EXT_TO_CART_TYPE_MAP ext_to_cart_type_map[]__attribute__((section(".ccmram"))) = {
 
-EXT_TO_CART_TYPE_MAP ext_to_cart_type_map[]__attribute__((section(".ccmram"))) = {
+const EXT_TO_CART_TYPE_MAP ext_to_cart_type_map[]__attribute__((section(".flash01"))) = {
 	{"ROM", { base_type_None, FALSE, FALSE }},
 	{"BIN", { base_type_None, FALSE, FALSE }},
 	{"A26", { base_type_None, FALSE, FALSE }},
@@ -148,17 +188,6 @@ char *get_filename_ext(char *filename) {
 	char *dot = strrchr(filename, '.');
 	if(!dot || dot == filename) return "";
 	return dot + 1;
-}
-
-int is_valid_file(char *filename) {
-	char *ext = get_filename_ext(filename);
-	EXT_TO_CART_TYPE_MAP *p = ext_to_cart_type_map;
-	while (p->ext) {
-		if (strcasecmp(ext, p->ext) == 0)
-			return 1;
-		p++;
-	}
-	return 0;
 }
 
 void make_menu_entry( MENU_ENTRY **dst, char *name, int type){
@@ -342,6 +371,9 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 			__disable_irq();
 			HAL_FLASH_Unlock();
 			do_flash_update(d->filesize, (uint8_t *)http_request_header, ADDR_FLASH_SECTOR_5, 0);
+		} else if(strncmp(MENU_TEXT_WIFI_RECONNECT, curPath, sizeof(MENU_TEXT_WIFI_RECONNECT) - 1) == 0 ){
+
+			loadStore = TRUE;
 		}
 
     	curPath[0] = '\0';
@@ -398,6 +430,8 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 
 			esp8266_PlusStore_API_close_connection();
         }else {
+        	make_menu_entry(&dst, MENU_TEXT_WIFI_RECONNECT, Menu_Action);
+
         	set_menu_status_msg(STATUS_MESSAGE_WIFI_NOT_CONNECTED);
     	}
 
@@ -427,10 +461,11 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 
     // select type by file extension?
 	char *ext = get_filename_ext(d->entryname);
-	EXT_TO_CART_TYPE_MAP *p = ext_to_cart_type_map;
+	const EXT_TO_CART_TYPE_MAP *p = ext_to_cart_type_map;
 	while (p->ext) {
 		if (strcasecmp(ext, p->ext) == 0) {
-			cart_type = p->cart_type;
+			cart_type.base_type = p->cart_type.base_type;
+			cart_type.withSuperChip = p->cart_type.withSuperChip;
 			break;
 		}
 		p++;
@@ -661,6 +696,14 @@ void truncate_curPath(){
   	curPath[len] = 0;
 }
 
+void system_secondary_init(void){
+	  set_menu_status_byte(0);
+	  set_menu_status_msg("BY W.STUBIG ");
+	  generate_udid_string();
+	  MX_USART1_UART_Init();
+	  Initialize_ESP8266();
+	  // set up status area
+}
 /* USER CODE END 0 */
 
 /**
@@ -701,11 +744,7 @@ int main(void)
 
   user_settings = flash_get_eeprom_user_settings();
   set_tv_mode(user_settings.tv_mode);
- //		  user_settings.free_flash_address = &eeprom_junk[1];
 
-  // set up status area
-  set_menu_status_msg("BY W.STUBIG ");
-  set_menu_status_byte(0);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -719,9 +758,7 @@ int main(void)
     	d.filesize = 0;
 
       if(usart_not_init){
-    	  MX_USART1_UART_Init();
-    	  Initialize_ESP8266();
-    	  generate_udid_string();
+    	  system_secondary_init();
 		  usart_not_init = FALSE;
       }
       buffer[0] = 0;
@@ -882,10 +919,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitTypeDef GPIO_InitStruct = {0};
 
   /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOC_CLK_ENABLE();
-//  __HAL_RCC_GPIOH_CLK_ENABLE();
-  __HAL_RCC_GPIOD_CLK_ENABLE();
-// __HAL_RCC_GPIOA_CLK_ENABLE();
+//  __HAL_RCC_GPIOC_CLK_ENABLE();
+  SET_BIT(RCC->AHB1ENR, RCC_AHB1ENR_GPIOCEN);
+//  __HAL_RCC_GPIOD_CLK_ENABLE();
+  SET_BIT(RCC->AHB1ENR, RCC_AHB1ENR_GPIODEN);
+//  READ_BIT(RCC->AHB1ENR, RCC_AHB1ENR_GPIOCEN);
+//  READ_BIT(RCC->AHB1ENR, RCC_AHB1ENR_GPIODEN);
 
   /*Configure GPIO pins : PC0 PC1 PC2 PC3 
                            PC4 PC5 PC6 PC7 */

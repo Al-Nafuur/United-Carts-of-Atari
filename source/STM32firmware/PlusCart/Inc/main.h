@@ -48,44 +48,6 @@ extern "C" {
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
 
-enum cart_base_type{
-	base_type_None,
-	base_type_2K,
-	base_type_4K,
-	base_type_F8,
-	base_type_F6,
-	base_type_F4,
-	base_type_FE,
-	base_type_3F,
-	base_type_3E,
-	base_type_E0,
-	base_type_0840,
-	base_type_CV,
-	base_type_EF,
-	base_type_F0,
-	base_type_FA,
-	base_type_E7,
-	base_type_DPC,
-	base_type_AR,
-	base_type_PP,
-	base_type_DF,
-	base_type_DFSC,
-	base_type_BF,
-	base_type_BFSC,
-	base_type_ACE
-};
-
-typedef struct {
-	enum cart_base_type base_type;
-	_Bool withSuperChip;
-	_Bool withPlusFunctions;
-	uint32_t flash_part_address;
-} CART_TYPE;
-
-typedef struct {
-	const char *ext;
-	CART_TYPE cart_type;
-} EXT_TO_CART_TYPE_MAP;
 
 
 
@@ -118,6 +80,7 @@ void Error_Handler(void);
 #define MENU_TEXT_DELETE_OFFLINE_ROMS       "Erase O ROMs"
 #define MENU_TEXT_SETUP 	                "Setup"
 #define MENU_TEXT_WIFI_SETUP 	            "WiFi Setup"
+#define MENU_TEXT_WIFI_RECONNECT            "WiFi retry"
 #define MENU_TEXT_TV_MODE_SETUP             "Set TV Mode"
 #define MENU_TEXT_TV_MODE_PAL               "PAL"
 #define MENU_TEXT_TV_MODE_PAL60             "PAL 60Hz"
