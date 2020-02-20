@@ -85,6 +85,7 @@ SECTIONS
   {
     . = ALIGN(4);
     *(.flash0)           /* .flash0 sections (code) */
+    *(.flash0*)           /* .flash0 sections (code) */
     . = ALIGN(4);
   } >VECTOR
 
