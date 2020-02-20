@@ -54,9 +54,9 @@ enum Transmission_State{
           } \
           case Send_Prepare_Header: { \
             if (content_len != 0) { \
-                  c = content_len % 10; \
-                  http_request_header[i--] =  c + '0'; \
-                  content_len = content_len/10; \
+              c = content_len % 10; \
+              http_request_header[i--] =  c + '0'; \
+              content_len = content_len/10; \
             }else{ \
               i = 0; \
               huart_state++; \
@@ -64,23 +64,23 @@ enum Transmission_State{
             break; \
           } \
           case Send_Header: { \
-                if(( huart1.Instance->SR & UART_FLAG_TXE) == UART_FLAG_TXE){ \
-                  huart1.Instance->DR = http_request_header[i]; \
-                  if( ++i == header_length ){ \
-                    huart_state++; \
+            if(( huart1.Instance->SR & UART_FLAG_TXE) == UART_FLAG_TXE){ \
+              huart1.Instance->DR = http_request_header[i]; \
+              if( ++i == header_length ){ \
+                huart_state++; \
               } \
-                } \
+            } \
             break; \
           } \
           case Send_Content: { \
-                if(( huart1.Instance->SR & UART_FLAG_TXE) == UART_FLAG_TXE){ \
-                  huart1.Instance->DR = out_buffer[out_buffer_send_pointer]; \
-                  if( out_buffer_send_pointer == out_buffer_write_pointer ){ \
-                    huart_state++; \
+            if(( huart1.Instance->SR & UART_FLAG_TXE) == UART_FLAG_TXE){ \
+              huart1.Instance->DR = out_buffer[out_buffer_send_pointer]; \
+              if( out_buffer_send_pointer == out_buffer_write_pointer ){ \
+                huart_state++; \
               }else{ \
                 out_buffer_send_pointer++; \
               } \
-                } \
+            } \
             break; \
           } \
           case Send_Finished: { \
@@ -92,33 +92,33 @@ enum Transmission_State{
             break; \
           } \
           case Receive_Header: { \
-                if(( huart1.Instance->SR & UART_FLAG_RXNE) == UART_FLAG_RXNE){ \
-                  c = (uint8_t)huart1.Instance->DR; \
-                  if(c == prev_prev_c && c == '\n'){ \
-                    huart_state++; \
-                  }else{ \
-                    prev_prev_c = prev_c; \
-                    prev_c = c; \
-                  } \
-                } \
+            if(( huart1.Instance->SR & UART_FLAG_RXNE) == UART_FLAG_RXNE){ \
+              c = (uint8_t)huart1.Instance->DR; \
+              if(c == prev_prev_c && c == '\n'){ \
+                huart_state++; \
+              }else{ \
+                prev_prev_c = prev_c; \
+                prev_c = c; \
+              } \
+            } \
             break; \
           } \
           case Receive_Length: { \
-                if(( huart1.Instance->SR & UART_FLAG_RXNE) == UART_FLAG_RXNE){ \
-                  c = (uint8_t)huart1.Instance->DR; \
-                  huart_state++; \
-                  if(c == 0) \
-					huart_state++; \
-                } \
+            if(( huart1.Instance->SR & UART_FLAG_RXNE) == UART_FLAG_RXNE){ \
+              c = (uint8_t)huart1.Instance->DR; \
+              huart_state++; \
+              if(c == 0) \
+                huart_state++; \
+            } \
             break; \
           } \
           case Receive_Content: { \
-                if(( huart1.Instance->SR & UART_FLAG_RXNE) == UART_FLAG_RXNE){ \
-                  receive_buffer[receive_buffer_write_pointer++] = (uint8_t)huart1.Instance->DR; \
-                  if(++content_counter == c ){ \
-                        huart_state++; \
-                    } \
-                } \
+            if(( huart1.Instance->SR & UART_FLAG_RXNE) == UART_FLAG_RXNE){ \
+              receive_buffer[receive_buffer_write_pointer++] = (uint8_t)huart1.Instance->DR; \
+              if(++content_counter == c ){ \
+                huart_state++; \
+              } \
+            } \
             break; \
           } \
           case Receive_Finished:{ \
