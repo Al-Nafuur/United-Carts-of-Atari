@@ -216,15 +216,11 @@ void Initialize_ESP8266()
 {
 	int count = 0;
 
-	// Wait for esp bootup, ATE0 -> OK Response 4 Seconds ?
-	HAL_Delay(1500);
+	// esp8266 bootup (usually 300ms), wait for ATE0 -> OK response up to 4 Seconds..
 	do{
 		HAL_Delay(1000);
 	    esp8266_print((unsigned char *)"ATE0\r\n");
-	}while(wait_response(100) != ESP8266_OK && count++ < 5);
-
-	//if(count == 4 )
-	// return;
+	}while(wait_response(100) != ESP8266_OK && count++ < 4);
 
     // connect to accesspoint mode
     esp8266_print((unsigned char *)"AT+CWMODE=1\r\n");
@@ -238,15 +234,12 @@ void Initialize_ESP8266()
     esp8266_print((unsigned char *)"AT+CIPMODE=1\r\n");
     wait_response(100);
 
-    // wait for esp to connect..
-	// Test if connected to AP (5 Times with 1s delay, for Startup)
+    // wait for esp8266 to connect..
+	// Test if connected to AP (6 times with 1s delay, for startup)
 	count = 0;
-    while( ++count < 5){
-    	if (esp8266_is_connected()){// check for "No AP\r\n" boot faster!
-    		break;
-    	}
+    do{
 		HAL_Delay(1000);
-    }
+    }while( esp8266_is_connected() == FALSE && count++ < 6);
 
 }
 //________UART module Initialized__________//
