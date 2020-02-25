@@ -148,6 +148,7 @@ int esp8266_PlusROM_API_connect(){
     strcat(http_request_header, (char *)"\",80\r\n");
 
     HAL_UART_Transmit(&huart1, (uint8_t*) http_request_header, strlen(http_request_header), 50);
+    HAL_UART_Receive(&huart1, &c, 1, 5000 ); // wait up to 5 seconds for first byte
     while(HAL_UART_Receive(&huart1, &c, 1, 150 ) == HAL_OK){ } // todo wait for "Connected\r\n"
 
 	http_request_header[0] = '\0';
@@ -160,7 +161,8 @@ int esp8266_PlusROM_API_connect(){
     strcat(http_request_header, (char *)"\r\nContent-Length:    \r\n\r\n");
     offset = strlen(http_request_header);
 
-    HAL_UART_Transmit(&huart1, (uint8_t*) API_ATCMD_2, sizeof(API_ATCMD_2)-1, 10);
+    HAL_UART_Transmit(&huart1, (uint8_t*) API_ATCMD_2, sizeof(API_ATCMD_2)-1, 20);
+    HAL_UART_Receive(&huart1, &c, 1, 5000 ); // wait up to 5 seconds for first byte
     while(HAL_UART_Receive(&huart1, &c, 1, 150 ) == HAL_OK){ } // todo wait for ">\r\n"
     return offset;
 }
