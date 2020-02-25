@@ -9,6 +9,8 @@
 ; Modified for PlusROM functions
 ;  by Wolfgang Stubig (Al_Nafuur)
 ; Last Update: 29.12.2019 (v0.1.0)
+;  Bugfixes by Thomas Jentzsch (JTZ)
+; Last Update: 25.02.2020 (v0.1.1)
 
 ; PAL conversion notes:
 ; The conversion is only minimal, but (unlike Activision) Atari at least
@@ -64,9 +66,12 @@
 ORIGINAL        = 1             ; original or DC version
 NTSC            = 0             ; compiling for NTSC or PAL mode
 COPYRIGHT       = 1             ; compiling version with copyright screen
+FAST_COPYRIGHT  = 1
 GARBAGE         = 0             ; unused code in copyrighted version has garbage
                                 ; (slightly different in PAL version)
 SADISTROIDS     = 0             ; enable for ultra fast asteroids
+
+PLUSROM         = 1             ; PlusROM functions for high score saving
 
 
 ;===============================================================================
@@ -328,18 +333,22 @@ tmpVar      = $f2
 
 bswVec      = $f7               ;           jmp vector used for bankswitching
 
+  IF PLUSROM
 WriteToBuffer     equ $1ff0
 WriteSendBuffer   equ $1ff1
 ReceiveBuffer     equ $1ff2
 ReceiveBufferSize equ $1ff3
+  ENDIF
 
 ;===============================================================================
 ; R O M - C O D E (Bank 0)
 ;===============================================================================
 
     ORG $d000
-	.byte "api.php", #0
-	.byte "highscore.firmaplus.de", #0
+  IF PLUSROM
+    .byte "api.php", #0
+    .byte "highscore.firmaplus.de", #0
+  ENDIF
 
 Ld000:
     jmp    START1           ; 3
@@ -452,7 +461,6 @@ XPosP0_l SUBROUTINE         ;       @14
     lda    #$00             ; 2
     jmp    EndXPosP0        ; 3
 
-
 Ld083 SUBROUTINE
     ldx    #0               ; 2
     lda    (ptr3,x)         ; 6         HMSizeTbl,x
@@ -530,8 +538,9 @@ Ld0c0:
 exitKernelW1:
     jmp    ExitKernelW      ; 3
 
-
-    ;align 256, 0            ;           3 unused bytes
+  IF PLUSROM = 0
+    align 256, 0            ;           3 unused bytes
+  ENDIF
 
 EndXPosP0 SUBROUTINE
     sta    WSYNC            ; 3
@@ -540,7 +549,6 @@ EndXPosP0a:
     sta    GRP0             ; 3
     stx    NUSIZ0           ; 3
     jmp    (jmpVec2)        ; 5
-
 
 XPosP1_r:
     iny                     ; 2
@@ -712,10 +720,16 @@ Ld1cf:
 .exitKernel1:
     jmp    ExitKernel       ; 3
 
-   ; align  256, 0
+  IF PLUSROM = 0
+    align  256, 0
+  ENDIF
 
 .posLeft:
+  IF PLUSROM = 0
     stx    jmpVec2          ; 3
+  ELSE
+    stx.w  jmpVec2          ; 3
+  ENDIF
     lda    #$00             ; 2
     iny                     ; 2
     cpy    #H_KERNEL        ; 2
@@ -817,8 +831,11 @@ DrawScore SUBROUTINE
     sta    PF0              ; 3
     sta    PF1              ; 3
     bcs    OddKernel        ; 2³
+  IF PLUSROM = 0
     bcc    EvenKernel       ; 3
-
+  ELSE
+    jmp    EvenKernel       ; 3     bcc takes 4 cycles!
+  ENDIF
 ; ********** O D D   K E R N E L (part 2/2) **********
 OddKernel:
 ; this kernel displays the asteroids
@@ -2175,6 +2192,10 @@ ShowCopyright SUBROUTINE
     sta    TIM64T           ; 4
     inc    .loopCnt         ; 5
     beq   .exitLoop         ; 2³        beq !!!
+  IF FAST_COPYRIGHT
+    bit    INPT4
+    bpl    .exitLoop
+  ENDIF
     jmp    .loopCopyright   ; 3
 
 .exitLoop:
@@ -3134,7 +3155,7 @@ Sattelite:
   ENDIF
 
     ORG     $dfe0
-    
+
 SwitchBank1:
     sta    BANK1            ; 4
     jmp    (bswVec)         ; 5
@@ -3157,8 +3178,8 @@ SwitchBank1:
 
     ORG     $e000
     RORG    $f000
-	.byte "api.php", #0
-	.byte "highscore.firmaplus.de", #0
+    .byte "api.php", #0
+    .byte "highscore.firmaplus.de", #0
 
 Lf100 = $f100
 
@@ -3167,13 +3188,25 @@ OverScan:
     txs                     ; 2
   IF NTSC
     lda    #$24             ; 2
-  ELSE
-    lda    #$2c             ; 2
-  ENDIF
     sta    TIM64T           ; 4
     lda    SWCHB            ; 4
     ror                     ; 2
     ror                     ; 2
+  ELSE
+   IF ORIGINAL && !PLUSROM
+    lda    #$2c             ; 2
+    sta    TIM64T           ; 4
+    lda    SWCHB            ; 4
+    ror                     ; 2
+    ror                     ; 2
+   ELSE
+    lda    SWCHB            ; 4     fixes scanline problems
+    ror                     ; 2
+    ror                     ; 2
+    lda    #$2c             ; 2
+    sta    TIM64T           ; 4
+   ENDIF
+  ENDIF
     bcs    .skipSelect      ; 2³
     bit    game             ; 3
     bvs    Lf035            ; 2³
@@ -3702,8 +3735,13 @@ EndSound:
 Lf318:
     lda    INTIM            ; 4
     bne    Lf318            ; 2³
+  IF ORIGINAL
     stx    VBLANK           ; 3
     stx    VSYNC            ; 3
+  ELSE
+    stx    VSYNC            ; 3
+    stx    VBLANK           ; 3
+  ENDIF
     sta    WSYNC            ; 3
     sta    WSYNC            ; 3
     sta    WSYNC            ; 3
@@ -4143,7 +4181,7 @@ Lf5b8:
     lda    #>HMSizeTbl      ; 2
     sta    ptr3+1           ; 3
     sta    ptr4+1           ; 3
-    lda    #>Ld000          ; 2
+    lda    #>Ld083          ; 2
     sta    jmpVec1+1        ; 3
     lda    #>EndXPosP0      ; 2
     sta    jmpVec2+1        ; 3
@@ -4687,14 +4725,16 @@ Lf872:
     tay                     ; 2
 
 ; *** send score ***
+  IF PLUSROM
     lda game
-    sta WriteToBuffer 
+    sta WriteToBuffer
     lda scoreHigh
-    sta WriteToBuffer 
+    sta WriteToBuffer
     lda scoreLow
-    sta WriteToBuffer 
+    sta WriteToBuffer
     lda #1                  ; Asteroids game id in Highscore DB
     sta WriteSendBuffer     ; send request to backend..
+  ENDIF
 
 .hasLifes:
     sty    lifesDir         ; 3
