@@ -4732,7 +4732,11 @@ Lf872:
     sta WriteToBuffer
     lda scoreLow
     sta WriteToBuffer
+   IF SADISTROIDS
+    lda #4                  ; Sadisteroids game id in Highscore DB
+   ELSE
     lda #1                  ; Asteroids game id in Highscore DB
+   ENDIF
     sta WriteSendBuffer     ; send request to backend..
   ENDIF
 
