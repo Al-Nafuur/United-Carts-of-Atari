@@ -8,9 +8,8 @@
 
 ; Modified for PlusROM functions
 ;  by Wolfgang Stubig (Al_Nafuur)
-; Last Update: 29.12.2019 (v0.1.0)
-;  Bugfixes by Thomas Jentzsch (JTZ)
-; Last Update: 25.02.2020 (v0.1.1)
+;  and Thomas Jentzsch (JTZ)
+; Last Update: 28.02.2020 (v0.1.1)
 
 ; PAL conversion notes:
 ; The conversion is only minimal, but (unlike Activision) Atari at least
@@ -54,6 +53,7 @@
 ;   values
 
 
+TIA_BASE_READ_ADDRESS = $30
 
     processor 6502
     include vcs.h
@@ -63,15 +63,15 @@
 ; A S S E M B L E R - S W I T C H E S
 ;===============================================================================
 
-ORIGINAL        = 1             ; original or DC version
+ORIGINAL        = 0             ; original or DC version
 NTSC            = 0             ; compiling for NTSC or PAL mode
 COPYRIGHT       = 1             ; compiling version with copyright screen
 FAST_COPYRIGHT  = 1
 GARBAGE         = 0             ; unused code in copyrighted version has garbage
                                 ; (slightly different in PAL version)
-SADISTROIDS     = 0             ; enable for ultra fast asteroids
+SADISTROIDS     = 1             ; enable for ultra fast asteroids
 
-PLUSROM         = 1             ; PlusROM functions for high score saving
+PLUSROM         = 1             ; PlusROM  high score saving
 
 
 ;===============================================================================
@@ -138,8 +138,15 @@ SPEED_SLOW      = $50   ; 1/5
 SPEED_MEDIUM    = $02   ; 1/2
   ENDIF
  ELSE
-SPEED_SLOW      = $30   ; 1/3
-SPEED_MEDIUM    = $02   ; 1/2
+  IF NTSC
+SPEED_SLOW      = $20   ; 1/2
+SPEED_MEDIUM    = $01   ; 1/1
+;SPEED_SLOW      = $30   ; 1/3
+;SPEED_MEDIUM    = $02   ; 1/2
+  ELSE
+SPEED_SLOW      = $20   ; 1/2
+SPEED_MEDIUM    = $01   ; 1/1
+  ENDIF
  ENDIF
 
   IF NTSC
@@ -339,6 +346,20 @@ WriteSendBuffer   equ $1ff1
 ReceiveBuffer     equ $1ff2
 ReceiveBufferSize equ $1ff3
   ENDIF
+
+
+;======================================================================================
+; M A C R O S
+;======================================================================================
+
+   MAC NOP_W
+      .byte $0C
+   ENDM
+
+   MAC NOP_B
+      .byte $04
+   ENDM
+
 
 ;===============================================================================
 ; R O M - C O D E (Bank 0)
@@ -1387,12 +1408,43 @@ BS_OverScan:
     jmp    SwitchBank1      ; 3
 
 START0:
+  IF PLUSROM = 0
     lda    #<START1         ; 2
     sta    bswVec           ; 3
     lda    #>START1         ; 2
     sta    bswVec+1         ; 3
     jmp    SwitchBank1      ; 3
+  ELSE
+    sei                     ; 2             disable interrupts, if there are any.
+    cld                     ; 2             clear BCD math bit.
+    ldx    #$ff             ; 2
+    txs                     ; 2
+    inx                     ; 2
+    txa                     ; 2
+Lf9e1:
+    sta    $00,x            ; 4
+    inx                     ; 2
+    bne    Lf9e1            ; 2³
 
+    lda    #Y_ILLEGAL       ; 2
+    sta    yShip            ; 3         disable ship
+    lda    #$34             ; 2
+    sta    randomHi         ; 3
+    sta    randomLo         ; 3
+    lda    #SELECT_FLAG     ; 2
+    sta    flags            ; 3
+    lda    #GAME_OVER       ; 2
+    sta    flags2           ; 3
+   IF COPYRIGHT
+    jmp    ShowCopyright
+   ELSE
+    ldx    #<StartMain      ; 2
+    stx    bswVec           ; 3
+    ldx    #>StartMain      ; 2
+    stx    bswVec+1         ; 3
+    jmp    SwitchBank1      ; 3
+   ENDIF
+  ENDIF
 
     align   256, 0
 
@@ -1431,7 +1483,11 @@ XMoveObj  SUBROUTINE
    IF SADISTROIDS = 0
     .byte " Asteroids DC+ - (C) Copyright 2002 Atari, Thomas Jentzsch "
    ELSE
-    .byte " Sadistroids (C) Copyright 2003 Atari, Thomas Jentzsch "
+    IF PLUSROM = 0
+     .byte " Sadistroids v 1.2- (C) Copyright 2003 Atari, Thomas Jentzsch "
+    ELSE
+     .byte " Sadistroids v 1.2 (PlusROM) - (C) Copyright 2020 Atari, Thomas Jentzsch (JTZ) "
+    ENDIF
    ENDIF
   ENDIF
 
@@ -1771,15 +1827,16 @@ Col5:
    ENDIF
     ENDIF
    ELSE
+    IF PLUSROM = 0
 Col0:
     .byte %00000000 ; |        | $da01
-    .byte %01111001 ; |        | $da82
-    .byte %10000101 ; |        | $da83
-    .byte %10110100 ; |        | $da82
-    .byte %10100100 ; |        | $da83
-    .byte %10110100 ; |        | $da84
-    .byte %10000101 ; |        | $da85
-    .byte %01111000 ; |        | $da00
+    .byte %01111001 ; | XXXX  X| $da82
+    .byte %10000101 ; |X    X X| $da83
+    .byte %10110100 ; |X XX X  | $da82
+    .byte %10100100 ; |X X  X  | $da83
+    .byte %10110100 ; |X XX X  | $da84
+    .byte %10000101 ; |X    X X| $da85
+    .byte %01111000 ; | XXXX   | $da00
     .byte %00000000 ; |        | $da02
     .byte %00000000 ; |        | $da03
     .byte %00000000 ; |        | $da04
@@ -1817,13 +1874,13 @@ Col0:
     .byte %00000000 ; |        | $da1a
 Col1:
     .byte %00000000 ; |        | $da01
-    .byte %11100110 ; |        | $da82
-    .byte %00001001 ; |        | $da83
-    .byte %10001001 ; |        | $da82
-    .byte %01001001 ; |        | $da83
-    .byte %00101001 ; |        | $da84
-    .byte %00101001 ; |        | $da85
-    .byte %11000110 ; |        | $da00
+    .byte %11100110 ; |XXX  XX | $da82
+    .byte %00001001 ; |    X  X| $da83
+    .byte %10001001 ; |X   X  X| $da82
+    .byte %01001001 ; | X  X  X| $da83
+    .byte %00101001 ; |  X X  X| $da84
+    .byte %00101001 ; |  X X  X| $da85
+    .byte %11000110 ; |XX   XX | $da00
     .byte %00000000 ; |        | $da01
     .byte %00000000 ; |        | $da02
     .byte %00000000 ; |        | $da03
@@ -1859,24 +1916,24 @@ Col1:
     .byte %00000000 ; |        | $da33
 Col2:
     .byte %00000000 ; |        | $da01
-    .byte %00110001 ; |        | $da82
-    .byte %01001010 ; |        | $da83
-    .byte %01001000 ; |        | $da82
-    .byte %01001000 ; |        | $da83
-    .byte %01001000 ; |        | $da84
-    .byte %01001010 ; |        | $da85
-    .byte %00110001 ; |        | $da00
+    .byte %00110001 ; |  XX   X| $da82
+    .byte %01001010 ; | X  X X | $da83
+    .byte %01001000 ; | X  X   | $da82
+    .byte %01001000 ; | X  X   | $da83
+    .byte %01001000 ; | X  X   | $da84
+    .byte %01001010 ; | X  X X | $da85
+    .byte %00110001 ; |  XX   X| $da00
     .byte %00000000 ; |        | $da01
     .byte %00000000 ; |        | $da02
     .byte %00000000 ; |        | $da04
     .byte %00000000 ; |        | $da05
     .byte %00000000 ; |        | $da83
     .byte %00000000 ; |        | $da84
-    .byte %00010001 ; |        | $da85
-    .byte %00101001 ; |        | $da34
-    .byte %00101001 ; |        | $da35
-    .byte %00101011 ; |        | $da36
-    .byte %00101001 ; |        | $da37
+    .byte %00010001 ; |   X   X| $da85
+    .byte %00101001 ; |  X X  X| $da34
+    .byte %00101001 ; |  X X  X| $da35
+    .byte %00101011 ; |  X X XX| $da36
+    .byte %00101001 ; |  X X  X| $da37
     .byte %00000000 ; |        | $da38
     .byte %00000000 ; |        | $da38
     .byte %00000000 ; |        | $da39
@@ -1902,24 +1959,24 @@ Col2:
     .byte %00000000 ; |        | $da4d
 Col3:
     .byte %00000000 ; |        | $da04
-    .byte %10001001 ; |        | $da82
-    .byte %01001001 ; |        | $da83
-    .byte %01001001 ; |        | $da82
-    .byte %10001111 ; |        | $da83
-    .byte %01001001 ; |        | $da84
-    .byte %01001001 ; |        | $da85
-    .byte %10000110 ; |        | $da00
+    .byte %10001001 ; |X   X  X| $da82
+    .byte %01001001 ; | X  X  X| $da83
+    .byte %01001001 ; | X  X  X| $da82
+    .byte %10001111 ; |X   XXXX| $da83
+    .byte %01001001 ; | X  X  X| $da84
+    .byte %01001001 ; | X  X  X| $da85
+    .byte %10000110 ; |X    XX | $da00
     .byte %00000000 ; |        | $da01
     .byte %00000000 ; |        | $da02
     .byte %00000000 ; |        | $da03
     .byte %00000000 ; |        | $da05
     .byte %00000000 ; |        | $da82
     .byte %00000000 ; |        | $da83
-    .byte %01011100 ; |        | $da84
-    .byte %00010000 ; |        | $da85
-    .byte %00001000 ; |        | $da4e
-    .byte %00000100 ; |        | $da4f
-    .byte %00011000 ; |        | $da50
+    .byte %01011100 ; | X XXX  | $da84
+    .byte %00010000 ; |   X    | $da85
+    .byte %00001000 ; |    X   | $da4e
+    .byte %00000100 ; |     X  | $da4f
+    .byte %00011000 ; |   XX   | $da50
     .byte %00000000 ; |        | $da51
     .byte %00000000 ; |        | $da52
     .byte %00000000 ; |        | $da53
@@ -1945,13 +2002,13 @@ Col3:
     .byte %00000000 ; |        | $da67
 Col4:
     .byte %00000000 ; |        | $da82
-    .byte %00100100 ; |        | $da83
-    .byte %00100100 ; |        | $da82
-    .byte %00100100 ; |        | $da83
-    .byte %00100111 ; |        | $da84
-    .byte %00100100 ; |        | $da85
-    .byte %00100100 ; |        | $da00
-    .byte %01110011 ; |        | $da01
+    .byte %00100100 ; |  X  X  | $da83
+    .byte %00100100 ; |  X  X  | $da82
+    .byte %00100100 ; |  X  X  | $da83
+    .byte %00100111 ; |  X  XXX| $da84
+    .byte %00100100 ; |  X  X  | $da85
+    .byte %00100100 ; |  X  X  | $da00
+    .byte %01110011 ; | XXX  XX| $da01
     .byte %00000000 ; |        | $da02
     .byte %00000000 ; |        | $da03
     .byte %00000000 ; |        | $da04
@@ -1988,13 +2045,13 @@ Col4:
     .byte %00000000 ; |        | $da81
 Col5:
     .byte %00000000 ; |        | $da01
-    .byte %10100101 ; |        | $da82
-    .byte %10101001 ; |        | $da83
-    .byte %10110001 ; |        | $da82
-    .byte %10111001 ; |        | $da83
-    .byte %10100101 ; |        | $da84
-    .byte %10100101 ; |        | $da85
-    .byte %00111001 ; |        | $da00
+    .byte %10100101 ; |X X  X X| $da82
+    .byte %10101001 ; |X X X  X| $da83
+    .byte %10110001 ; |X XX   X| $da82
+    .byte %10111001 ; |X XXX  X| $da83
+    .byte %10100101 ; |X X  X X| $da84
+    .byte %10100101 ; |X X  X X| $da85
+    .byte %00111001 ; |  XXX  X| $da00
     .byte %00000000 ; |        | $da02
     .byte %00000000 ; |        | $da03
     .byte %00000000 ; |        | $da04
@@ -2029,6 +2086,266 @@ Col5:
     .byte %00000000 ; |        | $da99
     .byte %00000000 ; |        | $da9a
     .byte %00000000 ; |        | $da9b
+   ELSE ;/PLUSROM
+Col0:
+    .byte %00000000 ; |        | $da01
+    .byte %01111001 ; | XXXX  X| $da82
+    .byte %10000101 ; |X    X X| $da83
+    .byte %10110100 ; |X XX X  | $da82
+    .byte %10100100 ; |X X  X  | $da83
+    .byte %10110100 ; |X XX X  | $da84
+    .byte %10000101 ; |X    X X| $da85
+    .byte %01111000 ; | XXXX   | $da00
+    .byte %00000000 ; |        | $da02
+    .byte %00000000 ; |        | $da03
+    .byte %00000000 ; |        | $da04
+    .byte %00000000 ; |        | $da05
+    .byte %00000000 ; |        | $da82
+    .byte %00100010 ; |   X   X| $da85
+    .byte %01010010 ; |  X X  X| $da34
+    .byte %01010010 ; |  X X  X| $da35
+    .byte %01010110 ; |  X X XX| $da36
+    .byte %01010010 ; |  X X  X| $da37
+    .byte %00000000 ; |        | $da83
+    .byte %00000000 ; |        | $da03
+    .byte %00000000 ; |        | $da04
+    .byte %00000000 ; |        | $da05
+    .byte %00000000 ; |        | $da1a
+    .byte %01111000 ; | XXXX   | $da06
+    .byte %01111100 ; | XXXXX  | $da07
+    .byte %00001100 ; |    XX  | $da08
+    .byte %00001100 ; |    XX  | $da09
+    .byte %00001100 ; |    XX  | $da0a
+    .byte %00001100 ; |    XX  | $da0b
+    .byte %00001100 ; |    XX  | $da0c
+    .byte %00011100 ; |   XXX  | $da0d
+    .byte %00011100 ; |   XXX  | $da0e
+    .byte %00111000 ; |  XXX   | $da0f
+    .byte %01110000 ; | XXX    | $da10
+    .byte %01110000 ; | XXX    | $da11
+    .byte %01110000 ; | XXX    | $da12
+    .byte %01110000 ; | XXX    | $da13
+    .byte %01110000 ; | XXX    | $da14
+    .byte %00111000 ; |  XXX   | $da15
+    .byte %00111111 ; |  XXXXXX| $da16
+    .byte %00111111 ; |  XXXXXX| $da17
+    .byte %00011111 ; |   XXXXX| $da18
+    .byte %00000111 ; |     XXX| $da19
+Col1:
+    .byte %00000000 ; |        | $da01
+    .byte %11100110 ; |XXX  XX | $da82
+    .byte %00001001 ; |    X  X| $da83
+    .byte %10001001 ; |X   X  X| $da82
+    .byte %01001001 ; | X  X  X| $da83
+    .byte %00101001 ; |  X X  X| $da84
+    .byte %00101001 ; |  X X  X| $da85
+    .byte %11000110 ; |XX   XX | $da00
+    .byte %00000000 ; |        | $da01
+    .byte %00000000 ; |        | $da02
+    .byte %00000000 ; |        | $da03
+    .byte %00000000 ; |        | $da04
+    .byte %00000000 ; |        | $da05
+    .byte %10111000 ; | X XXX  | $da84
+    .byte %00100000 ; |   X    | $da85
+    .byte %00010011 ; |    X   | $da4e
+    .byte %00001000 ; |     X  | $da4f
+    .byte %00110000 ; |   XX   | $da50
+    .byte %00000000 ; |        | $da82
+    .byte %00000000 ; |        | $da1e
+    .byte %00000000 ; |        | $da33
+    .byte %00110100 ; |  XX X  | $da1f
+    .byte %01110110 ; | XXX XX | $da20
+    .byte %11110110 ; |XXXX XX | $da21
+    .byte %11110111 ; |XXXX XXX| $da22
+    .byte %11110111 ; |XXXX XXX| $da23
+    .byte %10110111 ; |X XX XXX| $da24
+    .byte %10110101 ; |X XX X X| $da25
+    .byte %10110101 ; |X XX X X| $da26
+    .byte %11110101 ; |XXXX X X| $da27
+    .byte %11110101 ; |XXXX X X| $da28
+    .byte %11110111 ; |XXXX XXX| $da29
+    .byte %01110111 ; | XXX XXX| $da2a
+    .byte %00010110 ; |   X XX | $da2b
+    .byte %10010100 ; |X  X X  | $da2c
+    .byte %11010000 ; |XX X    | $da2d
+    .byte %01110000 ; | XXX    | $da2e
+    .byte %00110000 ; |  XX    | $da2f
+    .byte %00000000 ; |        | $da30
+    .byte %00000000 ; |        | $da31
+    .byte %00000000 ; |        | $da32
+Col2:
+    .byte %00000000 ; |        | $da01
+    .byte %01111001 ; | XXXX  X| $da82
+    .byte %01000010 ; | X    X | $da83
+    .byte %00100010 ; |  X   X | $da82
+    .byte %00010010 ; |   X  X | $da83
+    .byte %00001010 ; |    X X | $da84
+    .byte %01001010 ; | X  X X | $da85
+    .byte %00110001 ; |  XX   X| $da00
+    .byte %00000000 ; |        | $da01
+    .byte %00000000 ; |        | $da02
+    .byte %00000000 ; |        | $da04
+    .byte %00000000 ; |        | $da05
+    .byte %00000000 ; |        | $da83
+    .byte %00100011 ; |   X   X| $da85
+    .byte %00110010 ; |  X X  X| $da34
+    .byte %10101010 ; |  X X  X| $da35
+    .byte %00101010 ; |  X X XX| $da36
+    .byte %00110010 ; |  X X  X| $da37
+    .byte %00000000 ; |        | $da84
+    .byte %00000000 ; |        | $da38
+    .byte %00000000 ; |        | $da38
+    .byte %00000000 ; |        | $da39
+    .byte %00000000 ; |        | $da4d
+    .byte %01000000 ; | X      | $da3a
+    .byte %01000000 ; | X      | $da3b
+    .byte %01000000 ; | X      | $da3c
+    .byte %01011000 ; | X XX   | $da3d
+    .byte %01011100 ; | X XXX  | $da3e
+    .byte %01000100 ; | X   X  | $da3f
+    .byte %01001100 ; | X  XX  | $da40
+    .byte %01011101 ; | X XXX X| $da41
+    .byte %01011001 ; | X XX  X| $da42
+    .byte %01011000 ; | X XX   | $da43
+    .byte %00011100 ; |   XXX  | $da44
+    .byte %01011100 ; | X XXX  | $da45
+    .byte %11101110 ; |XXX XXX | $da46
+    .byte %10101110 ; |X X XXX | $da47
+    .byte %11100110 ; |XXX  XX | $da48
+    .byte %11000110 ; |XX   XX | $da49
+    .byte %00000000 ; |        | $da4a
+    .byte %00000000 ; |        | $da4b
+    .byte %00000000 ; |        | $da4c
+Col3:
+    .byte %00000000 ; |        | $da04
+    .byte %10001001 ; |X   X  X| $da82
+    .byte %01001001 ; | X  X  X| $da83
+    .byte %01001001 ; | X  X  X| $da82
+    .byte %01001111 ; | X  XXXX| $da83
+    .byte %01001001 ; | X  X  X| $da84
+    .byte %01001001 ; | X  X  X| $da85
+    .byte %10000110 ; |X    XX | $da00
+    .byte %00000000 ; |        | $da01
+    .byte %00000000 ; |        | $da02
+    .byte %00000000 ; |        | $da03
+    .byte %00000000 ; |        | $da05
+    .byte %00000000 ; |        | $da82
+    .byte %10011011 ; | X XXX  | $da84
+    .byte %00101000 ; |   X    | $da85
+    .byte %00101011 ; |    X   | $da4e
+    .byte %00101010 ; |     X  | $da4f
+    .byte %00101001 ; |   XX   | $da50
+    .byte %00000000 ; |        | $da83
+    .byte %00000000 ; |        | $da51
+    .byte %00000000 ; |        | $da52
+    .byte %00000000 ; |        | $da53
+    .byte %00000000 ; |        | $da67
+    .byte %01000001 ; | X     X| $da54
+    .byte %11001001 ; |XX  X  X| $da55
+    .byte %11001001 ; |XX  X  X| $da56
+    .byte %11001011 ; |XX  X XX| $da57
+    .byte %11001011 ; |XX  X XX| $da58
+    .byte %11001111 ; |XX  XXXX| $da59
+    .byte %11001110 ; |XX  XXX | $da5a
+    .byte %11101110 ; |XXX XXX | $da5b
+    .byte %11111111 ; |XXXXXXXX| $da5c
+    .byte %11111011 ; |XXXXX XX| $da5d
+    .byte %11001011 ; |XX  X XX| $da5e
+    .byte %11001111 ; |XX  XXXX| $da5f
+    .byte %11000111 ; |XX   XXX| $da60
+    .byte %11000000 ; |XX      | $da61
+    .byte %11000000 ; |XX      | $da62
+    .byte %11000000 ; |XX      | $da63
+    .byte %11000000 ; |XX      | $da64
+    .byte %00000000 ; |        | $da65
+    .byte %00000000 ; |        | $da66
+Col4:
+    .byte %00000000 ; |        | $da82
+    .byte %00100100 ; |  X  X  | $da83
+    .byte %00100100 ; |  X  X  | $da82
+    .byte %00100100 ; |  X  X  | $da83
+    .byte %00100111 ; |  X  XXX| $da84
+    .byte %00100100 ; |  X  X  | $da85
+    .byte %00100100 ; |  X  X  | $da00
+    .byte %01110011 ; | XXX  XX| $da01
+    .byte %00000000 ; |        | $da02
+    .byte %00000000 ; |        | $da03
+    .byte %00000000 ; |        | $da04
+    .byte %00000000 ; |        | $da05
+    .byte %00000000 ; |        | $da82
+    .byte %00101001 ; |   X   X| $da85
+    .byte %10110010 ; |  X X  X| $da34
+    .byte %10101010 ; |  X X  X| $da35
+    .byte %00101010 ; |  X X XX| $da36
+    .byte %10110001 ; |  X X  X| $da37
+    .byte %00000000 ; |        | $da83
+    .byte %00000000 ; |        | $da6b
+    .byte %00000000 ; |        | $da6c
+    .byte %00000000 ; |        | $da81
+    .byte %00000100 ; |     X  | $da6d
+    .byte %10000100 ; |X    X  | $da6e
+    .byte %10000100 ; |X    X  | $da6f
+    .byte %10100100 ; |X X  X  | $da70
+    .byte %01110100 ; | XXX X  | $da71
+    .byte %01110100 ; | XXX X  | $da72
+    .byte %01010100 ; | X X X  | $da73
+    .byte %01010100 ; | X X X  | $da74
+    .byte %01010100 ; | X X X  | $da75
+    .byte %01110100 ; | XXX X  | $da76
+    .byte %01110000 ; | XXX    | $da77
+    .byte %00110100 ; |  XX X  | $da78
+    .byte %00001110 ; |    XXX | $da79
+    .byte %00001010 ; |    X X | $da7a
+    .byte %00001110 ; |    XXX | $da7b
+    .byte %00001100 ; |    XX  | $da7c
+    .byte %00000000 ; |        | $da7d
+    .byte %00000000 ; |        | $da7e
+    .byte %00000000 ; |        | $da7f
+    .byte %00000000 ; |        | $da80
+Col5:
+    .byte %00000000 ; |        | $da01
+    .byte %10100101 ; |X X  X X| $da82
+    .byte %10101001 ; |X X X  X| $da83
+    .byte %10110001 ; |X XX   X| $da82
+    .byte %10111001 ; |X XXX  X| $da83
+    .byte %10100101 ; |X X  X X| $da84
+    .byte %10100101 ; |X X  X X| $da85
+    .byte %00111001 ; |  XXX  X| $da00
+    .byte %00000000 ; |        | $da02
+    .byte %00000000 ; |        | $da03
+    .byte %00000000 ; |        | $da04
+    .byte %00000000 ; |        | $da05
+    .byte %00000000 ; |        | $da82
+    .byte %00101010 ; | X XXX  | $da84
+    .byte %10101010 ; |   X    | $da85
+    .byte %10101010 ; |    X   | $da4e
+    .byte %10101010 ; |     X  | $da4f
+    .byte %00110110 ; |   XX   | $da50
+    .byte %00000000 ; |        | $da83
+    .byte %00000000 ; |        | $da85
+    .byte %00000000 ; |        | $da86
+    .byte %00000000 ; |        | $da9b
+    .byte %10000000 ; |X       | $da87
+    .byte %11000000 ; |XX      | $da88
+    .byte %11000000 ; |XX      | $da89
+    .byte %11101100 ; |XXX XX  | $da8a
+    .byte %11101110 ; |XXX XXX | $da8b
+    .byte %11100010 ; |XXX   X | $da8c
+    .byte %10100110 ; |X X  XX | $da8d
+    .byte %10101110 ; |X X XXX | $da8e
+    .byte %10101100 ; |X X XX  | $da8f
+    .byte %10101100 ; |X X XX  | $da90
+    .byte %11101110 ; |XXX XXX | $da91
+    .byte %11101110 ; |XXX XXX | $da92
+    .byte %11000111 ; |XX   XXX| $da93
+    .byte %10000111 ; |X    XXX| $da94
+    .byte %00000011 ; |      XX| $da95
+    .byte %00000011 ; |      XX| $da96
+    .byte %00000000 ; |        | $da97
+    .byte %00000000 ; |        | $da98
+    .byte %00000000 ; |        | $da99
+    .byte %00000000 ; |        | $da9a
+   ENDIF ; /PLUSROM
   ENDIF
 
   IF GARBAGE
@@ -2129,7 +2446,11 @@ ShowCopyright SUBROUTINE
     lda    #33              ; 2
    ENDIF
   ELSE
+   IF SADISTROIDS = 0
     lda    #54              ; 2
+   ELSE
+    lda    #44-10           ; 2
+  ENDIF
   ENDIF
     sta    TIM64T           ; 4
 .waitVBlank:
@@ -2187,7 +2508,11 @@ ShowCopyright SUBROUTINE
     lda    #26
    ENDIF
   ELSE
+   IF SADISTROIDS = 0
     lda    #45              ; 2
+   ELSE
+    lda    #37+9            ; 2
+   ENDIF
   ENDIF
     sta    TIM64T           ; 4
     inc    .loopCnt         ; 5
@@ -2598,8 +2923,11 @@ HMSizeTbl:
     .byte $00|$8|DOUBLE_SIZE    ; $de00
     .byte $00|$8|DOUBLE_SIZE
     .byte $00|$8|DOUBLE_SIZE
-;    .byte $10|$8|DOUBLE_SIZE
+   IF SADISTROIDS = 0
     .byte $00|$0|DOUBLE_SIZE
+   ELSE
+    .byte $10|$8|DOUBLE_SIZE
+   ENDIF
     .byte $00|$0|DOUBLE_SIZE
     .byte $00|$0|DOUBLE_SIZE
     .byte $00|$0|DOUBLE_SIZE
@@ -3154,7 +3482,9 @@ Sattelite:
     ORG $dff0
   ENDIF
 
-    ORG     $dfe0
+  IF PLUSROM
+    ORG     $dfe9
+  ENDIF
 
 SwitchBank1:
     sta    BANK1            ; 4
@@ -3162,7 +3492,7 @@ SwitchBank1:
 
   IF GARBAGE
    IF NTSC
-    .byte $44, $bb, $44, $b9
+    .byte $44, $bb, $44, $00 ;$b9
    ELSE
     .byte $44, $bb, $44, $ff
    ENDIF
@@ -3178,8 +3508,11 @@ SwitchBank1:
 
     ORG     $e000
     RORG    $f000
+
+  IF PLUSROM
     .byte "api.php", #0
     .byte "highscore.firmaplus.de", #0
+  ENDIF
 
 Lf100 = $f100
 
@@ -3249,7 +3582,11 @@ Lf041:
     lda    AdjustToTbl,x    ; 4
     sta    game             ; 3
 .noAdjust:
+  IF PLUSROM = 0
     jmp    .skipReset       ; 3
+  ELSE
+    bne    .skipReset       ; 3
+  ENDIF
 
 .skipSelect:
     lda    game             ; 3
@@ -3345,7 +3682,11 @@ Lf0ce:
     ora    dirShot2         ; 3
     ora    dirShotUfo       ; 3
     bne    .checkCollisions ; 2³+1       yes,
+  IF PLUSROM = 0
     jmp    .endCollisions   ; 3
+  ELSE
+    beq    .endCollisionsJmp; 3
+  ENDIF
 
 Lf0df:
     lda    flags2           ; 3
@@ -4083,9 +4424,12 @@ Lf498:
     inc    yUFO             ; 5         up (4)
     lda    yUFO             ; 3
     cmp    #H_KERNEL-10     ; 2
+  IF PLUSROM = 0
     bne    Lf536            ; 2³
     beq    .invertUFOdir    ; 3
-
+  ELSE
+    NOP_W
+  ENDIF
 .downUFO:
     dec    yUFO             ; 5
     bne    Lf536            ; 2³
@@ -4112,9 +4456,14 @@ Lf536:
     ror                     ; 2
     jsr    DoXMove          ; 6         move UFO/Sattelite
     lda    xUFO             ; 3
+  IF PLUSROM = 0
     cmp    #186             ; 2
     bne    Lf568            ; 2³
     lda    #$00             ; 2
+  ELSE
+    eor    #186             ; 2
+    bne    Lf568            ; 2³
+  ENDIF
     sta    $c6              ; 3
     lda    soundBits        ; 3
     and    #~[SOUND_ENEMY|SOUND_UFO]; 2
@@ -4228,6 +4577,7 @@ Lf5ed:
     sta    flags2           ; 3
 .screensaver:
     lda    frameCntHi       ; 3
+;  IF PLUSROM = 0
     rol                     ; 2
     adc    #$00             ; 2
     rol                     ; 2
@@ -4236,6 +4586,13 @@ Lf5ed:
     adc    #$00             ; 2
     rol                     ; 2
     adc    #$00             ; 2
+;  ELSE
+;    rol
+;    rol
+;    rol
+;    rol
+;    rol
+;  ENDIF
     and    #$f7             ; 2
     sta    COLUBK           ; 3
     sta    ssColor          ; 3
@@ -4257,10 +4614,12 @@ CheckJoystick SUBROUTINE
   ELSE
     and    #$f0
     sta    .joystick        ; 3        -> joystick 1
+   IF PLUSROM = 0
     bit    $f3
     bit    $f3
     bit    $f3
     bit    $f3
+   ENDIF
   ENDIF
     bit    flags2           ; 3         shield enabled?
     bvc    Lf669            ; 2³         no
@@ -4415,7 +4774,11 @@ Lf682:
     ldy    #1               ; 2
     bit    flags            ; 3         player 2?
     bmi    .player2         ; 2³         yes,
+   IF PLUSROM = 0
     ldy    #0               ; 2
+   ELSE
+    dey
+   ENDIF
 .player2:
   IF ORIGINAL
     lda    INPT4,y          ; 4         check fire button of current player
@@ -4548,9 +4911,10 @@ Lf797a:
     dex                     ; 2
     bpl    .loopThrust      ; 2³
     bmi    .skipFriction    ; 3
-    ds 7, 0
+    ds 7-2, 0
 
 .noThrust:
+    lda    soundBits        ; 3
     and    #~SOUND_THRUST   ; 2
     sta    soundBits        ; 3
   ENDIF
@@ -4732,10 +5096,10 @@ Lf872:
     sta WriteToBuffer
     lda scoreLow
     sta WriteToBuffer
-   IF SADISTROIDS
-    lda #4                  ; Sadisteroids game id in Highscore DB
-   ELSE
+   IF SADISTROIDS = 0
     lda #1                  ; Asteroids game id in Highscore DB
+   ELSE
+    lda #4
    ENDIF
     sta WriteSendBuffer     ; send request to backend..
   ENDIF
@@ -4960,6 +5324,7 @@ Lf9cc:
 
 
 START1:
+  IF PLUSROM = 0
     sei                     ; 2             disable interrupts, if there are any.
     cld                     ; 2             clear BCD math bit.
     ldx    #$ff             ; 2
@@ -4980,14 +5345,22 @@ Lf9e1:
     sta    flags            ; 3
     lda    #GAME_OVER       ; 2
     sta    flags2           ; 3
-  IF COPYRIGHT
+   IF COPYRIGHT
     lda    #<ShowCopyright  ; 2
     sta    bswVec           ; 3
     lda    #>ShowCopyright  ; 2
     sta    bswVec+1         ; 3
     jmp    SwitchBank0      ; 3
-  ELSE
+   ELSE
     bne    StartMain        ; 3
+   ENDIF
+  ELSE
+    ; move startup code to bank 0
+    lda    #<START0         ; 2
+    sta    bswVec           ; 3
+    lda    #>START0         ; 2
+    sta    bswVec+1         ; 3
+    jmp    SwitchBank0      ; 3
   ENDIF
 
 StartNewGame:
@@ -4995,6 +5368,7 @@ StartNewGame:
     sta    flags            ; 3
 StartMain:
     sta    soundTimer1      ; 3
+  IF PLUSROM = 0
     lda    #$fe             ; 2
     sta    ptr3+1           ; 3
     sta    ptr4+1           ; 3
@@ -5005,6 +5379,22 @@ StartMain:
     sta    jmpVec1+1        ; 3
     lda    #>Lf100          ; 2
     sta    jmpVec2+1        ; 3
+  ELSE
+    ldx    #$fe             ; 2
+    stx    ptr3+1           ; 3
+    stx    ptr4+1           ; 3
+    inx                     ; 2
+    stx    ptr1+1           ; 3
+    stx    ptr2+1           ; 3
+    ldx    #>OverScan       ; 2
+    stx    jmpVec1+1        ; 3
+   IF ((>OverScan + 1) & $1f) = (>Ld1cf & $1f)
+    inx                     ; 2         >Ld1cf
+   ELSE
+    ldx    #>Ld1cf          ; 2
+   ENDIF
+    stx    jmpVec2+1        ; 3
+  ENDIF
     jsr    SetupAsteroids   ; 6
     lda    #SPEED_SLOW|SPEED_MEDIUM; 2
     sta    gameSpeed        ; 3
@@ -6035,7 +6425,6 @@ CheckDriving SUBROUTINE
     ror                     ; 2
     rts
 
-
 NextLeftTab:
     .byte   %01
     .byte   %11
@@ -6043,19 +6432,36 @@ NextLeftTab:
     .byte   %10
   ENDIF
 
-    ORG     $efe0, 0
-    RORG    $ffe0
+  IF PLUSROM = 0
+    ORG     $eff0, 0
+    RORG    $fff0
 
 SwitchBank0:
     sta    BANK0            ; 4
     jmp    (bswVec)         ; 5
 
-    ORG     $eff6, 0
-    RORG    $fff6
-  IF NTSC
+   IF NTSC
     .byte $00, $00, $44, $00
-  ELSE
+   ELSE
     .byte $00, $00, $ff, $00
-  ENDIF
+   ENDIF
 
     .word START1, START1, START1
+  ELSE
+    ORG     $efe9, 0
+    RORG    $ffe9
+
+SwitchBank0:
+    sta    BANK0            ; 4
+    jmp    (bswVec)         ; 5
+
+    ds      1, 0            ; avoid                 $1fef
+    ds      4, 0            ; PlusROM hotspots      $1ff0..$1ff3
+
+    ds      4, 0            ; unused                $1ff4..$1ff7
+
+    ds 2, 0                 ; bank switch hotspots  $1ff8..$1ff9
+
+    .word   0               ; unused IRQ vector     $1ffa..$1ffb
+    .word   START1, START1
+  ENDIF
