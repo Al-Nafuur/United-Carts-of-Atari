@@ -175,7 +175,7 @@ UFO_COL         = SHIP2_COL         ; !!!
 SHIP1_COL       = PLAYER1_COL+8
 SHIP2_COL       = PLAYER2_COL+6
 SATTELITE_COL   = BLUE2+$2+$a
-UFO_COL         = SHIP2_COL+6       ; !!!
+UFO_COL         = SHIP2_COL         ; !!!
    ENDIF
   ENDIF
 
