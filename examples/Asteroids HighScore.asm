@@ -64,7 +64,7 @@ TIA_BASE_READ_ADDRESS = $30
 ;===============================================================================
 
 ORIGINAL        = 0             ; original or DC version
-NTSC            = 0             ; compiling for NTSC or PAL mode
+NTSC            = 1             ; compiling for NTSC or PAL mode
 COPYRIGHT       = 1             ; compiling version with copyright screen
 FAST_COPYRIGHT  = 1
 GARBAGE         = 0             ; unused code in copyrighted version has garbage
@@ -166,10 +166,17 @@ SATTELITE_COL   = BLUE2+$c
 UFO_COL         = OCHRE_GREEN+$c
   ELSE
 ; but why didn't they for PAL too?
+   IF ORIGINAL
 SHIP1_COL       = PLAYER1_COL
 SHIP2_COL       = PLAYER2_COL
 SATTELITE_COL   = BLUE2+$2
 UFO_COL         = SHIP2_COL         ; !!!
+   ELSE
+SHIP1_COL       = PLAYER1_COL+8
+SHIP2_COL       = PLAYER2_COL+6
+SATTELITE_COL   = BLUE2+$2+$a
+UFO_COL         = SHIP2_COL+6       ; !!!
+   ENDIF
   ENDIF
 
 ID_SHIP         = 4
@@ -2433,8 +2440,14 @@ ShowCopyright SUBROUTINE
 .waitOverscan:
     lda    INTIM            ; 4
     bne    .waitOverscan    ; 2³
+  IF ORIGINAL
     stx    VBLANK           ; 3
     stx    VSYNC            ; 3
+  ELSE
+    sta    WSYNC
+    stx    VSYNC            ; 3
+    stx    VBLANK           ; 3
+  ENDIF
     sta    WSYNC            ; 3
     sta    WSYNC            ; 3
     sta    WSYNC            ; 3
@@ -2505,13 +2518,13 @@ ShowCopyright SUBROUTINE
    IF SADISTROIDS = 0
     lda    #36              ; 2
    ELSE
-    lda    #26
+    lda    #26-1
    ENDIF
   ELSE
    IF SADISTROIDS = 0
     lda    #45              ; 2
    ELSE
-    lda    #37+9            ; 2
+    lda    #37+9-1          ; 2
    ENDIF
   ENDIF
     sta    TIM64T           ; 4
@@ -3062,7 +3075,11 @@ ColTbl:
     .byte BLUE1+6
     .byte OCHRE_GREEN+6
   ELSE
+   IF ORIGINAL
     .byte BLUE2+2
+   ELSE
+    .byte BLUE2+4
+   ENDIF
     .byte MAGENTA+4
     .byte BROWN+6
     .byte MAGENTA2+6
@@ -3520,7 +3537,11 @@ OverScan:
     ldx    #$ff             ; 2
     txs                     ; 2
   IF NTSC
+   IF ORIGINAL
     lda    #$24             ; 2
+   ELSE
+    lda    #$24-1           ; 2
+   ENDIF
     sta    TIM64T           ; 4
     lda    SWCHB            ; 4
     ror                     ; 2
@@ -3536,7 +3557,7 @@ OverScan:
     lda    SWCHB            ; 4     fixes scanline problems
     ror                     ; 2
     ror                     ; 2
-    lda    #$2c             ; 2
+    lda    #$2c-1           ; 2
     sta    TIM64T           ; 4
    ENDIF
   ENDIF
@@ -4080,6 +4101,7 @@ Lf318:
     stx    VBLANK           ; 3
     stx    VSYNC            ; 3
   ELSE
+    sta    WSYNC
     stx    VSYNC            ; 3
     stx    VBLANK           ; 3
   ENDIF
@@ -4577,22 +4599,16 @@ Lf5ed:
     sta    flags2           ; 3
 .screensaver:
     lda    frameCntHi       ; 3
-;  IF PLUSROM = 0
+    rol                     ; 2
+  IF PLUSROM = 0
+    adc    #$00             ; 2
+  ENDIF
     rol                     ; 2
     adc    #$00             ; 2
     rol                     ; 2
     adc    #$00             ; 2
     rol                     ; 2
     adc    #$00             ; 2
-    rol                     ; 2
-    adc    #$00             ; 2
-;  ELSE
-;    rol
-;    rol
-;    rol
-;    rol
-;    rol
-;  ENDIF
     and    #$f7             ; 2
     sta    COLUBK           ; 3
     sta    ssColor          ; 3
