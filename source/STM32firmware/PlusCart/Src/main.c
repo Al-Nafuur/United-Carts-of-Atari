@@ -170,6 +170,7 @@ static void MX_USART1_UART_Init(void);
 
 /* USER CODE BEGIN PFP */
 void buildMenuFromPath( MENU_ENTRY * )__attribute__((section(".flash0"))) ;
+void append_entry_to_path(MENU_ENTRY *);
 
 
 
@@ -452,7 +453,7 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 	CART_TYPE cart_type = { base_type_None, FALSE, FALSE };
 
 	strcat(curPath, "/");
-    strcat(curPath, d->entryname);
+	append_entry_to_path(d);
 
 	// Test if connected to AP
     if(d->type == Cart_File && esp8266_is_connected() == FALSE ){
@@ -697,13 +698,50 @@ void truncate_curPath(){
 }
 
 void system_secondary_init(void){
-	  set_menu_status_byte(0);
-	  set_menu_status_msg("BY W.STUBIG ");
-	  generate_udid_string();
-	  MX_USART1_UART_Init();
-	  Initialize_ESP8266();
-	  // set up status area
+	set_menu_status_byte(0);
+	set_menu_status_msg("BY W.STUBIG ");
+	generate_udid_string();
+	MX_USART1_UART_Init();
+	Initialize_ESP8266();
+	// set up status area
 }
+
+void append_entry_to_path(MENU_ENTRY *d){
+
+	if(d->type == Cart_File
+		|| ( d->type == Sub_Menu
+			&& strncmp(MENU_TEXT_SETUP, curPath, sizeof(MENU_TEXT_SETUP) - 1) != 0
+			&& strncmp(MENU_TEXT_OFFLINE_ROMS, curPath, sizeof(MENU_TEXT_OFFLINE_ROMS) - 1) != 0
+			)
+	){
+	    char encode_chars[] = " =+&#%";
+	    int i = 0, t, len = strlen(d->entryname);
+	    char tmp[] = "00";
+	    while(i < len){
+	        if(strchr(encode_chars, d->entryname[i])) {
+		        t = 1;
+		        uint8_t seq = (uint8_t)d->entryname[i];
+	        	do {
+	        		tmp[t] = (seq % 16) + '0';
+	        		if (tmp[t] > '9')
+	        		    tmp[t] += 7;
+	        		t--;
+	        		seq /= 16;
+	        	} while (seq);
+	            strcat(curPath, "%");
+	            strcat(curPath, tmp);
+
+	        }else{
+	            strncat(curPath, &d->entryname[i], 1);
+	        }
+	        i++;
+	    }
+	}else{
+		strcat(curPath, d->entryname);
+	}
+}
+
+
 /* USER CODE END 0 */
 
 /**
@@ -807,7 +845,7 @@ int main(void)
     		    strcat(curPath, "/");
   		  }
 
-  		  strcat(curPath, d->entryname);
+  		  append_entry_to_path(d);
   		  if(d->type == Keyboard_Char){
   			  strcat((char *)buffer, d->entryname);
   			  if(strlen((char *)buffer) > 12){

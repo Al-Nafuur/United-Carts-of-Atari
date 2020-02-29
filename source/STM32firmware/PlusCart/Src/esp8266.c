@@ -55,10 +55,6 @@ _Bool esp8266_PlusStore_API_connect(){
 }
 
 void esp8266_PlusStore_API_prepare_request_header(char *path, _Bool prepare_range_request){
-    // make path http request ready
-    for (char* p = path; (p = strchr(p, ' ')); ++p) {
-        *p = '+';
-    }
 
     http_request_header[0] = '\0';
 
