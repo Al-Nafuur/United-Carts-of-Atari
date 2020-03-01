@@ -223,9 +223,9 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 		//char *  curPathPos = (char *) &curPath[sizeof(MENU_TEXT_SETUP)];
 		if(strlen(curPath) == sizeof(MENU_TEXT_SETUP) - 1 ){
 			make_menu_entry(&dst, "(GO Back)", Leave_Menu);
-			make_menu_entry(&dst, MENU_TEXT_WIFI_SETUP, Sub_Menu);
-			make_menu_entry(&dst, MENU_TEXT_TV_MODE_SETUP, Sub_Menu);
-			//make_menu_entry(&dst, MENU_TEXT_PRIVATE_KEY, Sub_Menu);
+			make_menu_entry(&dst, MENU_TEXT_WIFI_SETUP, Setup_Menu);
+			make_menu_entry(&dst, MENU_TEXT_TV_MODE_SETUP, Setup_Menu);
+			//make_menu_entry(&dst, MENU_TEXT_PRIVATE_KEY, Setup_Menu);
 			if(	flash_has_downloaded_roms() )
 			    		make_menu_entry(&dst, MENU_TEXT_DELETE_OFFLINE_ROMS, Menu_Action);
 
@@ -440,9 +440,9 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 
     if(strlen(curPath) == 0){// d->type == Root_Menu !!
     	if(	flash_has_downloaded_roms() )
-    		make_menu_entry(&dst, MENU_TEXT_OFFLINE_ROMS, Sub_Menu);
+    		make_menu_entry(&dst, MENU_TEXT_OFFLINE_ROMS, Offline_Sub_Menu);
 
-    	make_menu_entry(&dst, MENU_TEXT_SETUP, Sub_Menu);
+    	make_menu_entry(&dst, MENU_TEXT_SETUP, Setup_Menu);
 	}
 }
 
@@ -687,7 +687,7 @@ void createMenuForAtari( MENU_ENTRY *d )
 		unsigned char *dst = menu_ram + i*12;
 		convertMenuNameForCart(dst, menu_entries[i].entryname);
 		// set the high-bit of the first character if Submenu or Upmenu
-		if (menu_entries[i].type == Sub_Menu || menu_entries[i].type == Leave_Menu) *dst += 0x80;
+		if (menu_entries[i].type < Cart_File || menu_entries[i].type > Offline_Cart_File) *dst += 0x80;
 	}
 }
 
@@ -708,12 +708,7 @@ void system_secondary_init(void){
 
 void append_entry_to_path(MENU_ENTRY *d){
 
-	if(d->type == Cart_File
-		|| ( d->type == Sub_Menu
-			&& strncmp(MENU_TEXT_SETUP, curPath, sizeof(MENU_TEXT_SETUP) - 1) != 0
-			&& strncmp(MENU_TEXT_OFFLINE_ROMS, curPath, sizeof(MENU_TEXT_OFFLINE_ROMS) - 1) != 0
-			)
-	){
+	if(d->type == Cart_File || d->type == Sub_Menu	){
 	    char encode_chars[] = " =+&#%";
 	    int i = 0, t, len = strlen(d->entryname);
 	    char tmp[] = "00";

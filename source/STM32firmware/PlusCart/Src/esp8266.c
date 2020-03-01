@@ -284,7 +284,7 @@ _Bool esp8266_wifi_list(MENU_ENTRY **dst, int *num_menu_entries){
     	do{
             if(count == 0){ // first char defines if its an entry row with SSID or Header Row
             	is_entry_row = (c == '+' ) ? 1 : 0;
-                (*dst)->type = Sub_Menu;
+                (*dst)->type = Setup_Menu;
                 (*dst)->filesize = 0U;
                 pos=0;
                 while(pos < 32){

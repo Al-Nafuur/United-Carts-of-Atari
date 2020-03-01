@@ -320,7 +320,7 @@ void flash_file_list( char *path, MENU_ENTRY **dst , int *num_p){
             	char *act_tar_filename = &act_tar_file_path_name[ path_len ];
             	if( !( strchr( act_tar_filename, '/') ) ){
             		strncpy((*dst)->entryname, act_tar_filename, 33);
-                    (*dst)->type = is_dir?Sub_Menu:Offline_Cart_File;
+                    (*dst)->type = is_dir?Offline_Sub_Menu:Offline_Cart_File;
                     (*dst)->flash_base_address = base_adress;
 
                     (*dst)->filesize = length;
