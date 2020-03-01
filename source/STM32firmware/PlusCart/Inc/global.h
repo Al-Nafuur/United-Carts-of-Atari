@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include "stm32f4xx_hal.h"
 
-#define VERSION                   "0.11.11"
+#define VERSION                   "0.11.12"
 #define PLUSSTORE_API_HOST        "pluscart.firmaplus.de"
 
 #define TRUE 1
@@ -26,7 +26,9 @@ enum MENU_ENTRY_Type {
 	Keyboard_Char,
 	Menu_Action,
 	Delete_Keyboard_Char,
-	Offline_Cart_File
+	Offline_Cart_File,
+	Offline_Sub_Menu,
+	Setup_Menu
 };
 
 typedef struct {
