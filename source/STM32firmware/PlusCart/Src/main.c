@@ -444,6 +444,9 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 
     	make_menu_entry(&dst, MENU_TEXT_SETUP, Setup_Menu);
 	}
+    if(num_menu_entries == 0){
+		make_menu_entry(&dst, "..", Leave_Menu);
+    }
 }
 
 
