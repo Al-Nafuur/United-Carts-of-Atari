@@ -21,7 +21,8 @@
 /* private functions */
 void get_boundary_http_header(char *);
 // Wait for any response on the input
-unsigned long wait_response(uint16_t);
+uint64_t wait_response(uint32_t);
+void set_standard_mode(void);
 
 
 char stm32_udid[] = UDID_TEMPLATE;
@@ -218,19 +219,9 @@ void Initialize_ESP8266()
 	do{
 		HAL_Delay(1000);
 	    esp8266_print((unsigned char *)"ATE0\r\n");
-	}while(wait_response(100) != ESP8266_OK && count++ < 4);
+	}while(wait_response(200) != ESP8266_OK && count++ < 4);
 
-    // connect to accesspoint mode
-    esp8266_print((unsigned char *)"AT+CWMODE=1\r\n");
-    wait_response(100);
-
-	// Single connection
-    esp8266_print((unsigned char *)"AT+CIPMUX=0\r\n");
-    wait_response(100);
-
-	// Transparent transmission mode (without +IPD,xx:)
-    esp8266_print((unsigned char *)"AT+CIPMODE=1\r\n");
-    wait_response(100);
+	set_standard_mode();
 
     // wait for esp8266 to connect..
 	// Test if connected to AP (6 times with 1s delay, for startup)
@@ -242,6 +233,19 @@ void Initialize_ESP8266()
 }
 //________UART module Initialized__________//
 
+void set_standard_mode(void){
+    // connect to accesspoint mode
+    esp8266_print((unsigned char *)"AT+CWMODE=1\r\n");
+    wait_response(200);
+
+	// Single connection
+    esp8266_print((unsigned char *)"AT+CIPMUX=0\r\n");
+    wait_response(200);
+
+	// Transparent transmission mode (without +IPD,xx:)
+    esp8266_print((unsigned char *)"AT+CIPMODE=1\r\n");
+    wait_response(200);
+}
 
 /**
  * Check if the module is started
@@ -252,23 +256,29 @@ void Initialize_ESP8266()
  */
 _Bool esp8266_is_started(void) {
     esp8266_print((unsigned char *)"AT\r\n");
-    return (wait_response(100) == ESP8266_OK);
+    return (wait_response(200) == ESP8266_OK);
 }
 
 /**
- * Restart the module
+ * Restart or Restore the module
  *
- * This sends the `AT+RST` command to the ESP and waits until there is a
+ * This sends the `AT+RST` or `AT+RESTORE` command to the ESP and waits until there is a
  * response.
  *
- * @return true if the module restarted properly
+ * @return true if the module restarted / reseted properly
  */
-_Bool esp8266_restart(void) {
-    esp8266_print((unsigned char *)"AT+RST\r\n");
-    if (wait_response(100) != ESP8266_OK) {
-        return FALSE;
-    }
-    return (wait_response(5000) == ESP8266_READY);
+_Bool esp8266_reset(_Bool factory_reset) {
+    if(factory_reset)
+		esp8266_print((unsigned char *)"AT+RESTORE\r\n");
+	else
+	    esp8266_print((unsigned char *)"AT+RST\r\n");
+
+    wait_response(200); // == ESP8266_OK
+    wait_response(5000); // == ESP8266_READY
+	esp8266_print((unsigned char *)"ATE0\r\n");
+	wait_response(200);
+	set_standard_mode();
+	return TRUE;
 }
 
 
@@ -335,6 +345,17 @@ _Bool esp8266_wifi_connect(char *ssid, char *password ){
 	return FALSE;
 }
 
+_Bool esp8266_wps_connect(){
+    esp8266_print((unsigned char *)"AT+WPS=1\r\n");
+
+	if(wait_response(1000) == ESP8266_OK){
+		if(wait_response(130000) == ESP8266_WPS_SUCCESS){
+			return TRUE;
+ 		}
+	}
+	return FALSE;
+}
+
 _Bool esp8266_is_connected(void){
 	uint8_t count = 0;
 	unsigned char c;
@@ -379,35 +400,37 @@ void esp8266_print(unsigned char *ptr) {
  * @return a constant from esp8266.h describing the status response.
  */
 
-unsigned long wait_response(uint16_t timeout) {
+uint64_t wait_response(uint32_t timeout) {
     uint8_t counter = 0;
-    unsigned long hash = ESP8266_NO_RESPONSE;
+    uint64_t hash = ESP8266_NO_RESPONSE;
     unsigned char c;
 
     while(HAL_UART_Receive(&huart1, &c, 1, timeout ) == HAL_OK){
 		if(c == '\n'){
-			if(counter < 8){
+			if(counter < 30){ // wps success,connecting ap ...== 29 !
 				switch (hash){
-					case (unsigned long)ESP8266_OK:
-					case (unsigned long)ESP8266_CONNECT:
-					case (unsigned long)ESP8266_CLOSED:
-					case (unsigned long)ESP8266_READY:
-					case (unsigned long)ESP8266_ERROR:
-					case (unsigned long)ESP8266_FAIL:
-//					case (unsigned long)ESP8266_WIFI_DISCONNECT:
-//					case (unsigned long)ESP8266_WIFI_CONNECTED:
-//					case (unsigned long)ESP8266_WIFI_GOT_IP:
-//					case (unsigned long)ESP8266_BUSY_SENDING:
-//					case (unsigned long)ESP8266_BUSY_PROCESSING:
+					case (uint64_t)ESP8266_OK:
+					case (uint64_t)ESP8266_CONNECT:
+					case (uint64_t)ESP8266_CLOSED:
+					case (uint64_t)ESP8266_READY:
+					case (uint64_t)ESP8266_ERROR:
+					case (uint64_t)ESP8266_FAIL:
+					case (uint64_t)ESP8266_WPS_SUCCESS:
+//					case (uint64_t)ESP8266_WIFI_DISCONNECT:
+//					case (uint64_t)ESP8266_WIFI_CONNECTED:
+//					case (uint64_t)ESP8266_WIFI_GOT_IP:
+//					case (uint64_t)ESP8266_BUSY_SENDING:
+//					case (uint64_t)ESP8266_BUSY_PROCESSING:
 						return hash;
+					default:
 						break;
 				}
 			}
 			counter = 0;
 			hash = ESP8266_NO_RESPONSE;
-		}else if( counter < 8 && c != '\r'){
+		}else if( counter < 30 && c != '\r'){
 			counter++;
-	        hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+			hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
 		}
 	}
 	return hash;

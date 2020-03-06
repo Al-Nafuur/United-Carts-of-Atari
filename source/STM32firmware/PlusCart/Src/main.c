@@ -223,9 +223,12 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 		//char *  curPathPos = (char *) &curPath[sizeof(MENU_TEXT_SETUP)];
 		if(strlen(curPath) == sizeof(MENU_TEXT_SETUP) - 1 ){
 			make_menu_entry(&dst, "(GO Back)", Leave_Menu);
-			make_menu_entry(&dst, MENU_TEXT_WIFI_SETUP, Setup_Menu);
 			make_menu_entry(&dst, MENU_TEXT_TV_MODE_SETUP, Setup_Menu);
-			//make_menu_entry(&dst, MENU_TEXT_PRIVATE_KEY, Setup_Menu);
+			make_menu_entry(&dst, MENU_TEXT_WIFI_SETUP, Setup_Menu);
+			make_menu_entry(&dst, MENU_TEXT_WPS_CONNECT, Menu_Action);
+			//make_menu_entry(&dst, MENU_TEXT_PRIVATE_KEY, Input_Field);
+			make_menu_entry(&dst, MENU_TEXT_ESP8266_RESTORE, Menu_Action);
+
 			if(	flash_has_downloaded_roms() )
 			    		make_menu_entry(&dst, MENU_TEXT_DELETE_OFFLINE_ROMS, Menu_Action);
 
@@ -338,10 +341,25 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 			HAL_FLASH_Lock();
     		set_menu_status_msg(STATUS_MESSAGE_OFFLINE_ROMS_DELETED);
         	curPath[0] = '\0';
+		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_WPS_CONNECT, sizeof(MENU_TEXT_WPS_CONNECT) - 1) == 0 ){
+	    	if(esp8266_wps_connect()){
+	        	set_menu_status_msg(STATUS_MESSAGE_WIFI_CONNECTED);
+	    	}else{
+	        	set_menu_status_msg(STATUS_MESSAGE_WIFI_NOT_CONNECTED);
+	    	}
+			curPath[0] = '\0';
+			HAL_Delay(2000);
+		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_ESP8266_RESTORE, sizeof(MENU_TEXT_ESP8266_RESTORE) - 1) == 0 ){
+	    	if(esp8266_reset(TRUE)){
+	        	set_menu_status_msg(STATUS_MESSAGE_DONE);
+	    	}else{
+	        	set_menu_status_msg(STATUS_MESSAGE_FAILED);
+	    	}
+			curPath[0] = '\0';
+
 		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_PRIVATE_KEY, sizeof(MENU_TEXT_PRIVATE_KEY) - 1) == 0 ){
 			if(d->type == Menu_Action){ // if actual Entry is of type Menu_Action -> Save Private key
 				set_menu_status_msg(STATUS_MESSAGE_PRIVATE_KEY_SAVED);
-
 	        	curPath[0] = '\0';
 			}else{
 				if(strcmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_PRIVATE_KEY ) == 0){
@@ -431,8 +449,8 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 
 			esp8266_PlusStore_API_close_connection();
         }else {
-        	make_menu_entry(&dst, MENU_TEXT_WIFI_RECONNECT, Menu_Action);
-
+        	if(strlen(curPath) == 0)
+        		make_menu_entry(&dst, MENU_TEXT_WIFI_RECONNECT, Menu_Action);
         	set_menu_status_msg(STATUS_MESSAGE_WIFI_NOT_CONNECTED);
     	}
 
@@ -477,7 +495,7 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 
 	// Supercharger cartridges get special treatment, since we don't load the entire
 	// file into the buffer here
-	if (cart_type.base_type == base_type_None && (d->filesize % 8448) == 0)
+	if (cart_type.base_type == base_type_None && ( (d->filesize % 8448) == 0 || d->filesize == 6144))
 		cart_type.base_type = base_type_AR;
 	if (cart_type.base_type == base_type_AR){
 		goto close;

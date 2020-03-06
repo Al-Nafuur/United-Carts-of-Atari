@@ -38,8 +38,9 @@ extern "C" {
 /* Hash Values of ESP8266 Response messages */
 #define ESP8266_NO_RESPONSE                    5381UL // initial hash value
 #define ESP8266_OK                          5862591UL // OK
-#define ESP8266_READY                  210726483418UL // Ready
-#define ESP8266_ERROR                  210672417103UL // Error
+
+#define ESP8266_READY                  210726483418UL // ready
+#define ESP8266_ERROR                  210672417103UL // ERROR
 //#define ESP8266_WIFI_DISCONNECT 8577780109829502590UL
 //#define ESP8266_WIFI_CONNECTED 12557760956336869543UL
 //#define ESP8266_WIFI_GOT_IP    13849395132461575191UL
@@ -48,6 +49,8 @@ extern "C" {
 #define ESP8266_CONNECT             229419557091567UL
 #define ESP8266_CLOSED                6952104274271UL
 #define ESP8266_FAIL                     6384029761UL
+#define ESP8266_WPS_SUCCESS    13356836868472365895UL // wps success,connecting ap ...
+
 
 #define HAL_UART_TIMEOUT_SEND    50
 #define HAL_UART_TIMEOUT_RECEIVE 10
@@ -82,9 +85,10 @@ uint16_t esp8266_skip_http_response_header(void);
 // Check if the module is started (AT)
 _Bool esp8266_is_started(void);
 // Restart module (AT+RST)
-_Bool esp8266_restart(void);
+_Bool esp8266_reset(_Bool);
 _Bool esp8266_wifi_list(MENU_ENTRY **, int *);
 _Bool esp8266_wifi_connect(char *, char *);
+_Bool esp8266_wps_connect(void);
 
 uint32_t esp8266_PlusStore_API_range_request( char *, uint32_t, http_range *, uint8_t *);
 uint32_t esp8266_PlusStore_API_file_request( uint8_t *, char *, uint32_t, uint32_t );

@@ -81,6 +81,7 @@ void Error_Handler(void);
 #define MENU_TEXT_SETUP 	                "Setup"
 #define MENU_TEXT_WIFI_SETUP 	            "WiFi Setup"
 #define MENU_TEXT_WIFI_RECONNECT            "WiFi retry"
+#define MENU_TEXT_WPS_CONNECT               "WPS Connect"
 #define MENU_TEXT_TV_MODE_SETUP             "Set TV Mode"
 #define MENU_TEXT_TV_MODE_PAL               "PAL"
 #define MENU_TEXT_TV_MODE_PAL60             "PAL 60Hz"
@@ -90,6 +91,8 @@ void Error_Handler(void);
 #define MENU_TEXT_OFFLINE_ROM_UPDATE        "* Flash ROMs"
 #define MENU_TEXT_PLUS_CONNECT              "Plus connect"
 #define MENU_TEXT_PLUS_REMOVE               "Plus remove"
+
+#define MENU_TEXT_ESP8266_RESTORE           "Factory RSET"
 
 #define STATUS_MESSAGE_WIFI_NOT_CONNECTED   "No WiFi     "
 #define STATUS_MESSAGE_WIFI_CONNECTED       "WiFi connect"
@@ -104,6 +107,8 @@ void Error_Handler(void);
 #define STATUS_MESSAGE_OFFLINE_ROMS_DELETED "ROMs Erased "
 #define STATUS_MESSAGE_NOT_ENOUGH_MENORY    "ROM Too Big!"
 #define STATUS_MESSAGE_ROMTYPE_UNSUPPORTED  "Unsupported "
+#define STATUS_MESSAGE_DONE                 "Done        "
+#define STATUS_MESSAGE_FAILED               "Failed      "
 
 
 
