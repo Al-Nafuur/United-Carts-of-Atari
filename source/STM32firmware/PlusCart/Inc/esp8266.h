@@ -75,7 +75,7 @@ void Initialize_ESP8266(void);
 /** Function prototypes **/
 
 _Bool esp8266_PlusStore_API_connect(void);
-void esp8266_PlusStore_API_prepare_request_header(char *, _Bool );
+void esp8266_PlusStore_API_prepare_request_header(char *, _Bool, _Bool );
 void esp8266_PlusStore_API_close_connection(void);
 
 int esp8266_PlusROM_API_connect(void);

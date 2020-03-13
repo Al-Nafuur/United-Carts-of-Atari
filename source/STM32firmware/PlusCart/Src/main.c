@@ -291,7 +291,7 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 	            	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
 					return;
 				}
-				esp8266_PlusStore_API_prepare_request_header(curPath, FALSE );
+				esp8266_PlusStore_API_prepare_request_header(curPath, FALSE, TRUE );
 	        	HAL_UART_Transmit(&huart1, (uint8_t *)http_request_header, strlen(http_request_header), 50);
 
 	        	esp8266_skip_http_response_header();
@@ -318,10 +318,10 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
             	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
 				return;
 			}
-			esp8266_PlusStore_API_prepare_request_header(curPath, FALSE );
+			esp8266_PlusStore_API_prepare_request_header(curPath, FALSE, TRUE );
         	HAL_UART_Transmit(&huart1, (uint8_t *)http_request_header, strlen(http_request_header), 50);
 
-        	esp8266_skip_http_response_header();
+            esp8266_skip_http_response_header();
         	while(HAL_UART_Receive(&huart1, &c, 1, 100 ) == HAL_OK){}
         	if(c == '0'){
         		set_menu_status_msg(STATUS_MESSAGE_PLUS_CONNECT_FAILED);
@@ -376,7 +376,7 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 			if( esp8266_PlusStore_API_connect() == FALSE){
 		    	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
 			}
-			esp8266_PlusStore_API_prepare_request_header("&u=1", TRUE);
+			esp8266_PlusStore_API_prepare_request_header("&u=1", TRUE, FALSE);
 		    strcat(http_request_header, (char *)"     0-  4095\r\n\r\n");
 			__disable_irq();
 			HAL_FLASH_Unlock();
@@ -385,7 +385,7 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 			if( esp8266_PlusStore_API_connect() == FALSE){
 		    	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
 			}
-			esp8266_PlusStore_API_prepare_request_header("&r=1", TRUE);
+			esp8266_PlusStore_API_prepare_request_header("&r=1", TRUE, FALSE);
 		    strcat(http_request_header, (char *)"     0-  4095\r\n\r\n");
 			__disable_irq();
 			HAL_FLASH_Unlock();
@@ -407,7 +407,7 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
             	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
 				return;
 			}
-			esp8266_PlusStore_API_prepare_request_header(curPath, FALSE);
+			esp8266_PlusStore_API_prepare_request_header(curPath, FALSE, FALSE);
 
             HAL_UART_Transmit(&huart1, (uint8_t *)http_request_header, strlen(http_request_header), 50);
             uint16_t content_loaded = 0, content_length = esp8266_skip_http_response_header();

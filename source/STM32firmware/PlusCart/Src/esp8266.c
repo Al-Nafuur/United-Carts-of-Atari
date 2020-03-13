@@ -55,7 +55,14 @@ _Bool esp8266_PlusStore_API_connect(){
     return TRUE;
 }
 
-void esp8266_PlusStore_API_prepare_request_header(char *path, _Bool prepare_range_request){
+void esp8266_PlusStore_API_prepare_request_header(char *path, _Bool prepare_range_request, _Bool basic_uri_encode){
+
+	if(basic_uri_encode){
+		for (char* p = path; (p = strchr(p, ' ')); ++p) {
+			*p = '+';
+		}
+	}
+
 
     http_request_header[0] = '\0';
 
@@ -83,7 +90,7 @@ uint32_t esp8266_PlusStore_API_range_request(char *path, uint32_t range_count, h
 	uint8_t c;
 	char boundary[] = {'\r','\n','-','-', RANGE_BOUNDARY_TEMPLATE , '\r','\n'};
 
-	esp8266_PlusStore_API_prepare_request_header(path, TRUE );
+	esp8266_PlusStore_API_prepare_request_header(path, TRUE, FALSE );
 
 	for (uint32_t i = 0; i < range_count; i++) {
  	    if (i > 0)

@@ -39,7 +39,7 @@ static bool setup_cartridge_image(const char* filename, uint32_t image_size, uin
 	if(d->type == Cart_File ){
 	    flash_part_address = (0x08020000 + 128 * 1024 * ( user_settings.first_free_flash_sector - 5));
 		esp8266_PlusStore_API_connect();
-		esp8266_PlusStore_API_prepare_request_header((char *)filename, TRUE );
+		esp8266_PlusStore_API_prepare_request_header((char *)filename, TRUE, FALSE );
 
 	    strcat(http_request_header, (char *)"     0-  4095\r\n\r\n");
 		__disable_irq();
