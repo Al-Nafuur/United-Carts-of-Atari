@@ -96,9 +96,11 @@ void flash_set_eeprom_user_settings(USER_SETTINGS user_settings){
 }
 
 
-
 /* write to flash with multiple HTTP range requests */
-void do_flash_update(uint32_t filesize, uint8_t *http_request_header, uint32_t Address, uint32_t http_range_start){
+void flash_download(uint32_t filesize, uint8_t *http_request_header, uint32_t Address, uint32_t http_range_start){
+
+    if(Address < ADDR_FLASH_SECTOR_5) // we don't flash firmware area here!
+    	return;
 
     uint8_t c;
     uint16_t http_range_param_pos_counter, http_range_param_pos = strlen((char *)http_request_header) - 5;
@@ -113,13 +115,11 @@ void do_flash_update(uint32_t filesize, uint8_t *http_request_header, uint32_t A
 
     // Wait for last operation to be completed
     if(FLASH_WaitInRAMForLastOperationWithMaxDelay() == HAL_OK){
-        uint32_t sectors[7] = { FLASH_SECTOR_0, FLASH_SECTOR_2, FLASH_SECTOR_3, FLASH_SECTOR_4 };
-        if(Address >= ADDR_FLASH_SECTOR_5){
-        	uint8_t start_sector = get_sector( Address);
-            flash_max = 12 - start_sector;
-            for(count = 0 ; count < flash_max; count++){
-                sectors[count] = count + start_sector;
-            }
+        uint32_t sectors[7];
+        uint8_t start_sector = get_sector( Address);
+        flash_max = 12 - start_sector;
+        for(count = 0 ; count < flash_max; count++){
+            sectors[count] = count + start_sector;
         }
 
 
@@ -262,13 +262,108 @@ void do_flash_update(uint32_t filesize, uint8_t *http_request_header, uint32_t A
     }
 
     __enable_irq();
-    if(Address < ADDR_FLASH_SECTOR_5){ // Last flashed address below sector 5 -> firmware update
-        NVIC_SystemReset();
+    // flash new usersettings .. (if not BFSC or BF !!)
+    user_settings.first_free_flash_sector = get_sector(Address) + 1;
+    flash_set_eeprom_user_settings(user_settings);
+}
+
+
+/* write (firmware) to flash from buffer */
+void flash_firmware_update(uint32_t filesize){
+
+    uint32_t count;
+    uint32_t Address = ADDR_FLASH_SECTOR_0;
+    HAL_StatusTypeDef status;
+
+
+    //HAL_FLASHEx_Erase();
+    // Process Locked
+    // __HAL_LOCK(&pFlash);
+    pFlash.Lock = HAL_LOCKED;
+
+    // Wait for last operation to be completed
+    if(FLASH_WaitInRAMForLastOperationWithMaxDelay() == HAL_OK){
+        uint32_t sectors[4] = { FLASH_SECTOR_0, FLASH_SECTOR_2, FLASH_SECTOR_3, FLASH_SECTOR_4 };
+
+        for( count = 0 ; count < 4; count++){
+//          FLASH_Erase_Sector(count, (uint8_t) FLASH_VOLTAGE_RANGE_3);
+            CLEAR_BIT(FLASH->CR, FLASH_CR_PSIZE);
+            FLASH->CR |= FLASH_PSIZE_WORD;
+            CLEAR_BIT(FLASH->CR, FLASH_CR_SNB);
+            FLASH->CR |= FLASH_CR_SER | (sectors[count] << FLASH_CR_SNB_Pos);
+            FLASH->CR |= FLASH_CR_STRT;
+
+            /* Wait for last operation to be completed */
+            status = FLASH_WaitInRAMForLastOperationWithMaxDelay();
+
+            /* If the erase operation is completed, disable the SER and SNB Bits */
+            CLEAR_BIT(FLASH->CR, (FLASH_CR_SER | FLASH_CR_SNB));
+
+            if(status != HAL_OK){
+                /* In case of error, stop erase procedure and return the faulty sector*/
+                // break; Todo wat nu
+            }
+        }
     }else{
-        // flash new usersettings .. (if not BFSC or BF !!)
-        user_settings.first_free_flash_sector = get_sector(Address) + 1;
-        flash_set_eeprom_user_settings(user_settings);
+        return; // or try flashing anyway ??
     }
+
+    /* Process Unlocked */
+    __HAL_UNLOCK(&pFlash);
+    //end HAL_FLASHEx_Erase();
+
+    /* Flush the caches to be sure of the data consistency */
+    __HAL_FLASH_DATA_CACHE_DISABLE();
+    __HAL_FLASH_INSTRUCTION_CACHE_DISABLE();
+
+    __HAL_FLASH_DATA_CACHE_RESET();
+    __HAL_FLASH_INSTRUCTION_CACHE_RESET();
+
+    __HAL_FLASH_INSTRUCTION_CACHE_ENABLE();
+    __HAL_FLASH_DATA_CACHE_ENABLE();
+
+
+    //__HAL_LOCK(&pFlash);
+
+    pFlash.Lock = HAL_LOCKED;
+    FLASH_WaitInRAMForLastOperationWithMaxDelay();
+
+
+        // Now for the HTTP Body
+        count = 0;
+        while(count < filesize ){
+
+                //HAL_FLASH_Program();
+                /* Program the user Flash area byte by byte
+                (area defined by FLASH_USER_START_ADDR and FLASH_USER_END_ADDR) ***********/
+                /* Wait for last operation to be completed */
+                //if(FLASH_WaitInRAMForLastOperationWithMaxDelay() == HAL_OK){
+                FLASH_WaitInRAMForLastOperationWithMaxDelay() ;
+                    /*Program byte (8-bit) at a specified address.*/
+                    // FLASH_Program_Byte(Address, (uint8_t) c);
+                    CLEAR_BIT(FLASH->CR, FLASH_CR_PSIZE);
+                    FLASH->CR |= FLASH_PSIZE_BYTE;
+                    FLASH->CR |= FLASH_CR_PG;
+
+                    *(__IO uint8_t*)Address = buffer[count];
+                    // end FLASH_Program_Byte(Address, (uint8_t) c);
+
+                    /* Wait for last operation to be completed */
+                    FLASH_WaitInRAMForLastOperationWithMaxDelay();
+
+                    /* If the program operation is completed, disable the PG Bit */
+                    FLASH->CR &= (~FLASH_CR_PG);
+                    Address++;
+                    // end HAL_FLASH_Program
+               // }else{
+                //    return;
+               // }
+                count++;
+    }
+    __HAL_UNLOCK(&pFlash);
+
+    __enable_irq();
+    NVIC_SystemReset();
 }
 
 uint32_t flash_file_request(uint8_t *ext_buffer, uint32_t base_address, uint32_t start, uint32_t length ){

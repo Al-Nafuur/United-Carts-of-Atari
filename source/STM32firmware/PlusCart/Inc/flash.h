@@ -57,7 +57,8 @@ extern "C" {
 #define TAR_HEADER_SIZE              512
 #define TAR_BLOCK_SIZE               512
 
-void do_flash_update(uint32_t, uint8_t *, uint32_t, uint32_t)__attribute__((section(".data#")));
+void flash_firmware_update(uint32_t)__attribute__((section(".data#")));
+void flash_download(uint32_t, uint8_t *, uint32_t, uint32_t);
 
 
 uint32_t flash_file_request( uint8_t *, uint32_t, uint32_t, uint32_t );

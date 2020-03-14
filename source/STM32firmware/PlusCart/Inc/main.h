@@ -109,6 +109,7 @@ void Error_Handler(void);
 #define STATUS_MESSAGE_ROMTYPE_UNSUPPORTED  "Unsupported "
 #define STATUS_MESSAGE_DONE                 "Done        "
 #define STATUS_MESSAGE_FAILED               "Failed      "
+#define STATUS_MESSAGE_DOWNLOAD_FAILD       "Downld Faild"
 
 
 

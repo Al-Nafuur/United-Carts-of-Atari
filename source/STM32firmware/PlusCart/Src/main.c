@@ -376,11 +376,17 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 			if( esp8266_PlusStore_API_connect() == FALSE){
 		    	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
 			}
-			esp8266_PlusStore_API_prepare_request_header("&u=1", TRUE, FALSE);
-		    strcat(http_request_header, (char *)"     0-  4095\r\n\r\n");
-			__disable_irq();
-			HAL_FLASH_Unlock();
-			do_flash_update(d->filesize, (uint8_t *)http_request_header, ADDR_FLASH_SECTOR_0, 0);
+	    	curPath[0] = '\0';
+		    strcat(curPath, (char *)"&u=1");
+			uint32_t bytes_read = esp8266_PlusStore_API_file_request( buffer, curPath, 0, d->filesize );
+			if(bytes_read == d->filesize ){
+				__disable_irq();
+				HAL_FLASH_Unlock();
+				flash_firmware_update(d->filesize);
+			}else{
+		    	set_menu_status_msg(STATUS_MESSAGE_DOWNLOAD_FAILD);
+			}
+
 		} else if(strncmp(MENU_TEXT_OFFLINE_ROM_UPDATE, curPath, sizeof(MENU_TEXT_OFFLINE_ROM_UPDATE) - 1) == 0 ){
 			if( esp8266_PlusStore_API_connect() == FALSE){
 		    	set_menu_status_msg(STATUS_MESSAGE_ESP_TIMEOUT);
@@ -389,7 +395,7 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 		    strcat(http_request_header, (char *)"     0-  4095\r\n\r\n");
 			__disable_irq();
 			HAL_FLASH_Unlock();
-			do_flash_update(d->filesize, (uint8_t *)http_request_header, ADDR_FLASH_SECTOR_5, 0);
+			flash_download(d->filesize, (uint8_t *)http_request_header, ADDR_FLASH_SECTOR_5, 0);
 		} else if(strncmp(MENU_TEXT_WIFI_RECONNECT, curPath, sizeof(MENU_TEXT_WIFI_RECONNECT) - 1) == 0 ){
 
 			loadStore = TRUE;
