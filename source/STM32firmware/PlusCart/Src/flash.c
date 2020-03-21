@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "esp8266.h"
 #include "stm32f4xx_hal.h"
 #include "flash.h"
 #include "global.h"
@@ -97,7 +98,7 @@ void flash_set_eeprom_user_settings(USER_SETTINGS user_settings){
 
 
 /* write to flash with multiple HTTP range requests */
-void flash_download(uint32_t filesize, uint8_t *http_request_header, uint32_t Address, uint32_t http_range_start){
+void flash_download(uint32_t filesize, uint32_t Address, uint32_t http_range_start){
 
     if(Address < ADDR_FLASH_SECTOR_5) // we don't flash firmware area here!
     	return;
@@ -184,28 +185,10 @@ void flash_download(uint32_t filesize, uint8_t *http_request_header, uint32_t Ad
             count = count/10;
         }
 
-        count = 0;
-        while(1){ // todo set and break on timeout ?
-            if(( huart1.Instance->SR & UART_FLAG_TXE) == UART_FLAG_TXE){ // ! (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_TXE) ) ){
-                huart1.Instance->DR = http_request_header[count++]; // & (uint8_t)0xFF);
-                if(http_request_header[count] == '\0')
-                    break;
-            }
-        }
-        count = 0;
+        HAL_UART_Transmit(&huart1, (uint8_t*) http_request_header, strlen( http_request_header), 50);
 
         // Skip HTTP Header
-        while(1){ // todo set and break on timeout ?
-            if(( huart1.Instance->SR & UART_FLAG_RXNE) == UART_FLAG_RXNE){ // ! (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_TXE) ) ){
-                if( (uint8_t)huart1.Instance->DR == '\n' ){
-                    if (count == 1)
-                        break;
-                    count = 0;
-                }else{
-                    count++;
-                }
-            }
-        }
+        esp8266_skip_http_response_header();
 
         // Now for the HTTP Body
         count = 0;
@@ -251,17 +234,11 @@ void flash_download(uint32_t filesize, uint8_t *http_request_header, uint32_t Ad
     }
     __HAL_UNLOCK(&pFlash);
 
-    // End Transparent Transmission
-    count = 0;
-    while(1){ // todo set and break on timeout ?
-        if(( huart1.Instance->SR & UART_FLAG_TXE) == UART_FLAG_TXE){ // ! (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_TXE) ) ){
-            huart1.Instance->DR = '+';
-            if(count++ == 2)
-                break;
-        }
-    }
-
     __enable_irq();
+
+    // End Transparent Transmission
+	esp8266_PlusStore_API_close_connection();
+
     // flash new usersettings .. (if not BFSC or BF !!)
     user_settings.first_free_flash_sector = get_sector(Address) + 1;
     flash_set_eeprom_user_settings(user_settings);

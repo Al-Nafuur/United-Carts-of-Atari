@@ -44,7 +44,7 @@ static bool setup_cartridge_image(const char* filename, uint32_t image_size, uin
 	    strcat(http_request_header, (char *)"     0-  4095\r\n\r\n");
 		__disable_irq();
 		HAL_FLASH_Unlock();
-		flash_download(FLASH_IMAGE_SIZE, (uint8_t *)http_request_header, flash_part_address, FLASH_IMAGE_OFFSET );
+		flash_download(FLASH_IMAGE_SIZE, flash_part_address, FLASH_IMAGE_OFFSET );
 	}else{
 		flash_part_address = d->flash_base_address + FLASH_IMAGE_OFFSET;
 	}
