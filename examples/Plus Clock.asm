@@ -56,7 +56,8 @@ RMINS	=	$97	;real minutes
 RHOURS	=	$98	;real hours
 FRAMES	=	$99	;frames counter
 
-	org  $F000
+	org  $1000
+plusrom_api
 	.byte "PlusClock2API.php", #0
 	.byte "pluscart.firmaplus.de", #0
 
@@ -547,10 +548,10 @@ nines	.byte %00100001	;Well... if you're going to use this code in a
 	.byte %10100101	;Actually... if the "Doomsday Machine" is just in 
 	.byte %11100111	;a game, then it's okay to use the code.
 
-	org $fff2
+	org $1ff2
         .byte #0	; Receive Buffer
         .byte #0	; Counter for Receive Buffer
 			
-	org $FFFC	;Unless it's like the movie "War Games" where the
-	.word start	;computer running the game is hooked up to a real
-	.word start	;"Doomsday Machine" then it wouldn't be a good idea.
+	org $1FFC	       ;Unless it's like the movie "War Games" where the
+	.word start	       ;computer running the game is hooked up to a real
+	.word plusrom_api  ;"Doomsday Machine" then it wouldn't be a good idea.

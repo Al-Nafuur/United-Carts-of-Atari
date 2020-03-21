@@ -348,6 +348,7 @@ tmpVar      = $f2
 bswVec      = $f7               ;           jmp vector used for bankswitching
 
   IF PLUSROM
+PlusRomApi        equ $1000
 WriteToBuffer     equ $1ff0
 WriteSendBuffer   equ $1ff1
 ReceiveBuffer     equ $1ff2
@@ -3516,7 +3517,13 @@ SwitchBank1:
   ELSE
     ORG $dffa, 0
   ENDIF
+
+  IF PLUSROM
+    .word   PlusRomApi        ; points to PlusROM API $1ffa..$1ffb
+    .word   START1, START1
+  ELSE
     .word START0, START0, START0
+  ENDIF
 
 
 ;===============================================================================
@@ -6478,6 +6485,6 @@ SwitchBank0:
 
     ds 2, 0                 ; bank switch hotspots  $1ff8..$1ff9
 
-    .word   0               ; unused IRQ vector     $1ffa..$1ffb
+    .word   PlusRomApi      ; points to PlusROM API $1ffa..$1ffb
     .word   START1, START1
   ENDIF

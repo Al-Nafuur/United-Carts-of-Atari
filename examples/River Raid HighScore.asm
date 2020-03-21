@@ -278,6 +278,7 @@ blockLine       = temp3         ;               current displayed line of block 
 maxId           = temp3
 lineNum         = $FD           ;               counter for kernel lines
 
+PlusRomApi        equ $1000
 WriteToBuffer     equ $1ff0
 WriteSendBuffer   equ $1ff1
 ReceiveBuffer     equ $1ff2
@@ -3605,6 +3606,7 @@ SendScoreLoop:
        RTS
 
 
-	org $fffc
+	org $fffa
+       .word PlusRomApi
        .word START
        .word 0

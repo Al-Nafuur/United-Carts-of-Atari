@@ -247,6 +247,7 @@ C5 = digitPointers+6
 
 TimeSave = digitPointers+2
 
+PlusRomApi        equ $1000
 WriteToBuffer     equ $1ff0
 WriteSendBuffer   equ $1ff1
 ReceiveBuffer     equ $1ff2
@@ -4089,7 +4090,7 @@ LDE11: .byte $C9 ; |XX  X  X| $FE11
        ORG $1FF8
        RORG $DFF8
 
-       .word 0,0,START1,0
+       .word 0,PlusRomApi,START1,0
 
 
 
@@ -7183,4 +7184,4 @@ SirenData:
        ORG $2FF8
        RORG $FFF8
 
-       .word 0,0,START2,0
+       .word 0,PlusRomApi,START2,0

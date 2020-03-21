@@ -386,9 +386,10 @@ _CURRENT_BANK   SET {1}
 ;------------------------------------------------------------------------------
 ;                                 MAIN PROGRAM
 ;------------------------------------------------------------------------------
-WriteToBuffer equ $1ff0
-WriteSendBuffer equ $1ff1
-ReceiveBuffer equ $1ff2
+plusrom_api       equ $1000
+WriteToBuffer     equ $1ff0
+WriteSendBuffer   equ $1ff1
+ReceiveBuffer     equ $1ff2
 ReceiveBufferSize equ $1ff3
 
 
@@ -1645,7 +1646,8 @@ Positioning: SUBROUTINE
    
                SEG Vectors
                ORG FIXED_BANK + $7FC
-               RORG $7ffC
+               RORG $7ffA
 
+    .word PlusRomApi
     .word START
     .word START
