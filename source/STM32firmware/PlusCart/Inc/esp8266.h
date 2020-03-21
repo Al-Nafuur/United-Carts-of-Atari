@@ -78,7 +78,7 @@ _Bool esp8266_PlusStore_API_connect(void);
 void esp8266_PlusStore_API_prepare_request_header(char *, _Bool, _Bool );
 void esp8266_PlusStore_API_close_connection(void);
 
-int esp8266_PlusROM_API_connect(void);
+int esp8266_PlusROM_API_connect(unsigned int);
 
 uint16_t esp8266_skip_http_response_header(void);
 

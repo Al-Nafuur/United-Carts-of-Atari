@@ -6,6 +6,7 @@
  */
 
 #include <string.h>
+#include <stdint.h>
 #include "cartridge_detection.h"
 
 
@@ -58,23 +59,27 @@ int searchForBytes(unsigned char *bytes, int size, unsigned char *signature, int
 
 int isProbablyPLS(int size, unsigned char *bytes)
 {
-    int i = 0, hostHasNoDot = 1;
+	uint16_t * nmi_p = (uint16_t * )&bytes[size - 6];
+	int i = nmi_p[0] - 0x1000 , hostHasNoDot = 1;
 
-    while (isValidPathChar(bytes[i]))
+	if(i < 0)
+		return 0;
+
+    while ( i < size && isValidPathChar(bytes[i]))
         i++;
 
-    if(bytes[i] != 0)
+    if( i >= size || bytes[i] != 0)
         return 0;
 
     i++;
-    while (isValidHostChar(bytes[i])){
+    while ( i < size && isValidHostChar(bytes[i])){
     	if(bytes[i] == 46 )
     		hostHasNoDot = 0;
         i++;
     }
 
     // we do not allow dotless hostnames or IP address strings. API on TLD not possible
-    if(bytes[i] != 0 || i < 6 || hostHasNoDot){
+    if( i >= size || bytes[i] != 0 || i < 6 || hostHasNoDot){
         return 0;
     }
 

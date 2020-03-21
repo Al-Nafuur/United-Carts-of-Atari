@@ -145,9 +145,12 @@ uint32_t esp8266_PlusStore_API_file_request(uint8_t *ext_buffer, char *path, uin
 	return bytes_read;
 }
 
-int esp8266_PlusROM_API_connect(){
+int esp8266_PlusROM_API_connect(unsigned int size){
 	uint8_t c;
-	int offset = strlen((char *)buffer) + 1;
+	uint16_t * nmi_p = (uint16_t * )&buffer[size - 6];
+	int i = nmi_p[0] - 0x1000;
+
+	int offset = strlen((char *)&buffer[i]) + 1 + i;
 
 	http_request_header[0] = '\0';
 	strcat(http_request_header, (char *)"AT+CIPSTART=\"TCP\",\"");
@@ -160,7 +163,7 @@ int esp8266_PlusROM_API_connect(){
 
 	http_request_header[0] = '\0';
 	strcat(http_request_header, (char *)"POST /");
-    strcat(http_request_header, (char *)buffer);
+    strcat(http_request_header, (char *)&buffer[i]);
     strcat(http_request_header, (char *)" HTTP/1.0\r\nHost: ");
     strcat(http_request_header, (char *)&buffer[offset]);
     strcat(http_request_header, (char *)"\r\nConnection: keep-alive\r\nContent-Type: application/octet-stream\r\nPlusStore-ID: v" VERSION " ");
