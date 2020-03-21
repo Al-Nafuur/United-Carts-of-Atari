@@ -395,7 +395,7 @@ void buildMenuFromPath( MENU_ENTRY *d )  {
 		    strcat(http_request_header, (char *)"     0-  4095\r\n\r\n");
 			__disable_irq();
 			HAL_FLASH_Unlock();
-			flash_download(d->filesize, (uint8_t *)http_request_header, ADDR_FLASH_SECTOR_5, 0);
+			flash_download(d->filesize, ADDR_FLASH_SECTOR_5, 0);
 		} else if(strncmp(MENU_TEXT_WIFI_RECONNECT, curPath, sizeof(MENU_TEXT_WIFI_RECONNECT) - 1) == 0 ){
 
 			loadStore = TRUE;
@@ -641,9 +641,9 @@ void emulate_cartridge(CART_TYPE cart_type, MENU_ENTRY *d)
 {
 	int offset = 0;
 	if (cart_type.withPlusFunctions == TRUE ){
- 		// Read path and hostname in ROM File from 0xf00  till '\0' and
+ 		// Read path and hostname in ROM File from where NMI points to till '\0' and
 		// copy to http_request_header
-		offset = esp8266_PlusROM_API_connect();
+		offset = esp8266_PlusROM_API_connect(cart_size_bytes);
 	}
 
 	if (cart_type.base_type == base_type_2K)
