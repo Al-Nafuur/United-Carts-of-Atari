@@ -331,6 +331,8 @@ void flash_firmware_update(uint32_t filesize){
                     /* If the program operation is completed, disable the PG Bit */
                     FLASH->CR &= (~FLASH_CR_PG);
                     Address++;
+                    if( Address == ADDR_FLASH_SECTOR_1)
+                    	Address = ADDR_FLASH_SECTOR_2; // Skip user settings area
                     // end HAL_FLASH_Program
                // }else{
                 //    return;
