@@ -87,7 +87,7 @@ static void setup_multiload_map(uint8_t *multiload_map, uint32_t multiload_count
 
 static void setup_rom(uint8_t* rom, int tv_mode) {
 	memset(rom, 0, 0x0800);
-	memcpy(rom, supercharger_bios_bin, supercharger_bios_bin_len);
+	memcpy(rom, supercharger_bios_bin, sizeof(supercharger_bios_bin));
 
 	rom[0x07ff] = rom[0x07fd] = 0xf8;
 	rom[0x07fe] = rom[0x07fc] = 0x07;
