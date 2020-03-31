@@ -182,11 +182,10 @@ SECTIONS
     
   } >RAM AT> FLASH
 
-
    /* Used by the startup to initialize ccmram */
-  _siccmram = LOADADDR(.ccmram);
-   /* Initialized data sections into "CCMRAM" Ram type memory */
-  .ccmram :
+
+   /* Uninitialized data sections into "CCMRAM" Ram type memory */
+  .ccmram (NOLOAD):
   {
     . = ALIGN(4);
     _sccmram = .;       /* create a global symbol at ccmram start */
@@ -195,9 +194,10 @@ SECTIONS
 
     . = ALIGN(4);
     _eccmram = .;       /* create a global symbol at ccmram end */
-  } >CCMRAM AT> FLASH
+  } >CCMRAM
 
-  /* Uninitialized data section into "RAM" Ram type memory */
+
+   /* Uninitialized data section into "RAM" Ram type memory */
   . = ALIGN(4);
   .bss :
   {

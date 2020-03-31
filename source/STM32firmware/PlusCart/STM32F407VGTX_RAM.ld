@@ -164,7 +164,6 @@ SECTIONS
   } >RAM
  
  
-  _siccmram = LOADADDR(.ccmram);
   .ccmram :
   {
     . = ALIGN(4);
@@ -174,7 +173,7 @@ SECTIONS
 
     . = ALIGN(4);
     _eccmram = .;       /* create a global symbol at ccmram end */
-  } >CCMRAM AT> FLASH
+  } >CCMRAM
   
   /* Uninitialized data section into "RAM" Ram type memory */
   . = ALIGN(4);
