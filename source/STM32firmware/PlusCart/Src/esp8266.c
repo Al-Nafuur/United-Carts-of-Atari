@@ -25,7 +25,7 @@ uint64_t wait_response(uint32_t);
 void set_standard_mode(void);
 
 
-char stm32_udid[] = UDID_TEMPLATE;
+char stm32_udid[25];
 
 _Bool esp8266_PlusStore_API_connect(){
 	uint8_t c;
@@ -307,14 +307,13 @@ _Bool esp8266_wifi_list(MENU_ENTRY **dst, int *num_menu_entries){
     	do{
             if(count == 0){ // first char defines if its an entry row with SSID or Header Row
             	is_entry_row = (c == '+' ) ? 1 : 0;
-                (*dst)->type = Setup_Menu;
-                (*dst)->filesize = 0U;
-                pos=0;
-                while(pos < 32){
-                	(*dst)->entryname[pos++] = 30; // ASCII record separator 32x illegal SSID Char..
-                }
-                (*dst)->entryname[32] = '\0';
-                pos = 0;
+            	if(is_entry_row){
+                    (*dst)->type = Setup_Menu;
+                    (*dst)->filesize = 0U;
+                    memset((*dst)->entryname, 30 , 32);
+                    (*dst)->entryname[32] = '\0';
+                    pos = 0;
+            	}
             }else if( is_entry_row ){
             	if( count > 10 && count < 43 ){ // Wifi
             		if (c == '"'){ // TODO howto find not escaped " , and \ in ESP8266 CWLAP response !!
@@ -452,6 +451,8 @@ uint64_t wait_response(uint32_t timeout) {
 void generate_udid_string(){
 	int i;
 	uint8_t c;
+	memset(stm32_udid, '0', 24);
+	stm32_udid[24] = '\0';
 	for (int j = 2; j > -1; j--){
 		uint32_t content_len = STM32_UDID[j];
 		i = (j * 8) + 7;

@@ -32,9 +32,6 @@ extern "C" {
 #define  API_ATCMD_6a "Range: bytes="
 #define  API_ATCMD_6b "\r\n"
 
-/** Some constants **/
-#define UDID_TEMPLATE "000000000000000000000000"
-
 /* Hash Values of ESP8266 Response messages */
 #define ESP8266_NO_RESPONSE                    5381UL // initial hash value
 #define ESP8266_OK                          5862591UL // OK
@@ -70,39 +67,39 @@ typedef struct {
 
 /** Should be written by the user for input from / output to the ESP module **/
 
-void Initialize_ESP8266(void);
+void Initialize_ESP8266(void) __attribute__((section(".flash01")));
 
 /** Function prototypes **/
 
-_Bool esp8266_PlusStore_API_connect(void);
-void esp8266_PlusStore_API_prepare_request_header(char *, _Bool, _Bool );
-void esp8266_PlusStore_API_close_connection(void);
+_Bool esp8266_PlusStore_API_connect(void) __attribute__((section(".flash01")));
+void esp8266_PlusStore_API_prepare_request_header(char *, _Bool, _Bool ) __attribute__((section(".flash01")));
+void esp8266_PlusStore_API_close_connection(void) __attribute__((section(".flash01")));
 
-int esp8266_PlusROM_API_connect(unsigned int);
+int esp8266_PlusROM_API_connect(unsigned int) __attribute__((section(".flash01")));
 
-uint16_t esp8266_skip_http_response_header(void);
+uint16_t esp8266_skip_http_response_header(void) __attribute__((section(".flash01")));
 
 // Check if the module is started (AT)
 _Bool esp8266_is_started(void);
 // Restart module (AT+RST)
-_Bool esp8266_reset(_Bool);
+_Bool esp8266_reset(_Bool) __attribute__((section(".flash01")));
 _Bool esp8266_wifi_list(MENU_ENTRY **, int *);
 _Bool esp8266_wifi_connect(char *, char *);
-_Bool esp8266_wps_connect(void);
+_Bool esp8266_wps_connect(void) __attribute__((section(".flash01")));
 
-uint32_t esp8266_PlusStore_API_range_request( char *, uint32_t, http_range *, uint8_t *);
-uint32_t esp8266_PlusStore_API_file_request( uint8_t *, char *, uint32_t, uint32_t );
+uint32_t esp8266_PlusStore_API_range_request( char *, uint32_t, http_range *, uint8_t *) __attribute__((section(".flash01")));
+uint32_t esp8266_PlusStore_API_file_request( uint8_t *, char *, uint32_t, uint32_t ) __attribute__((section(".flash01")));
 
 // Is connected to AP (AT+CWJAP?)
-_Bool esp8266_is_connected(void);
+_Bool esp8266_is_connected(void) __attribute__((section(".flash01")));
 
 // Disconnect from AP (AT+CWQAP)
-void esp8266_disconnect(void);
+void esp8266_disconnect(void) __attribute__((section(".flash01")));
 
-// Print a string to the output
+// Print a string to the output __attribute__ ((noinline)) ?
 void esp8266_print(unsigned char *);
 
-void generate_udid_string(void);
+void generate_udid_string(void) __attribute__((section(".flash01")));
 
 #ifdef	__cplusplus
 }
