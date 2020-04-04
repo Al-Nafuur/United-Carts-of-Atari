@@ -173,15 +173,13 @@ void flash_download(uint32_t filesize, uint32_t Address, uint32_t http_range_sta
         http_range_param_pos_counter = http_range_param_pos;
         count = http_range_end;
         while(count != 0) {
-            c = count % 10;
-            http_request_header[http_range_param_pos_counter--] =  c + '0';
+            http_request_header[http_range_param_pos_counter--] = ( count % 10 ) + '0';
             count = count/10;
         }
         http_range_param_pos_counter = http_range_param_pos - 7;
         count = http_range_start;
         while(count != 0) {
-            c = count % 10;
-            http_request_header[http_range_param_pos_counter--] =  c + '0';
+            http_request_header[http_range_param_pos_counter--] = ( count % 10 ) + '0';
             count = count/10;
         }
 
