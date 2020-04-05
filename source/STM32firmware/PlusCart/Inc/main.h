@@ -76,42 +76,51 @@ void Error_Handler(void);
 #define BUFFER_SIZE				96   // kilobytes
 #define CCM_RAM_SIZE            64   // kilobytes
 
+#define NUM_MENU_ITEMS			1024
+
 #define MENU_TEXT_OFFLINE_ROMS              "Offline ROMs"
-#define MENU_TEXT_DELETE_OFFLINE_ROMS       "Erase O ROMs"
+#define MENU_TEXT_DELETE_OFFLINE_ROMS       "Erase offline ROMs"
 #define MENU_TEXT_SETUP 	                "Setup"
 #define MENU_TEXT_WIFI_SETUP 	            "WiFi Setup"
 #define MENU_TEXT_WIFI_RECONNECT            "WiFi retry"
-#define MENU_TEXT_WPS_CONNECT               "WPS Connect"
+#define MENU_TEXT_WPS_CONNECT               "WiFi WPS Connect"
 #define MENU_TEXT_TV_MODE_SETUP             "Set TV Mode"
 #define MENU_TEXT_TV_MODE_PAL               "PAL"
 #define MENU_TEXT_TV_MODE_PAL60             "PAL 60Hz"
 #define MENU_TEXT_TV_MODE_NTSC              "NTSC"
 #define MENU_TEXT_PRIVATE_KEY               "Private Key"
-#define MENU_TEXT_FIRMWARE_UPDATE           "** Update **"
-#define MENU_TEXT_OFFLINE_ROM_UPDATE        "* Flash ROMs"
-#define MENU_TEXT_PLUS_CONNECT              "Plus connect"
-#define MENU_TEXT_PLUS_REMOVE               "Plus remove"
+#define MENU_TEXT_FIRMWARE_UPDATE           "** Update firmware **"
+#define MENU_TEXT_OFFLINE_ROM_UPDATE        "** Flash offline ROMs **"
+#define MENU_TEXT_PLUS_CONNECT              "PlusStore connect"
+#define MENU_TEXT_PLUS_REMOVE               "PlusStore disconnect"
+#define MENU_TEXT_ESP8266_RESTORE           "ESP8266 Factory Reset"
 
-#define MENU_TEXT_ESP8266_RESTORE           "Factory RSET"
-
-#define STATUS_MESSAGE_WIFI_NOT_CONNECTED   "No WiFi     "
-#define STATUS_MESSAGE_WIFI_CONNECTED       "WiFi connect"
-#define STATUS_MESSAGE_ESP_TIMEOUT          "WiFi timeout"
-#define STATUS_MESSAGE_PLUS_CONNECT         "Insert email"
-#define STATUS_MESSAGE_PLUS_CONNECTED       "email send  "
-#define STATUS_MESSAGE_PLUS_CREATED         "email send  "
-#define STATUS_MESSAGE_PLUS_CONNECT_FAILED  "Failed!     "
-#define STATUS_MESSAGE_PLUS_REMOVED         "Cart removed"
-#define STATUS_MESSAGE_PRIVATE_KEY          "Insert Key  "
-#define STATUS_MESSAGE_PRIVATE_KEY_SAVED    "Key saved   "
-#define STATUS_MESSAGE_OFFLINE_ROMS_DELETED "ROMs Erased "
-#define STATUS_MESSAGE_NOT_ENOUGH_MENORY    "ROM Too Big!"
-#define STATUS_MESSAGE_ROMTYPE_UNSUPPORTED  "Unsupported "
-#define STATUS_MESSAGE_DONE                 "Done        "
-#define STATUS_MESSAGE_FAILED               "Failed      "
-#define STATUS_MESSAGE_DOWNLOAD_FAILD       "Downld Faild"
-
-
+enum e_status_message {
+	none = -2,
+	keyboard_input,
+	root,
+	version,
+	select_wifi_network,
+	wifi_not_connected,
+	wifi_connected,
+	esp_timeout,
+	insert_password,
+	plus_connect,
+	plus_connected,
+	plus_created,
+	plus_connect_failed,
+	plus_removed,
+	private_key,
+	private_key_saved,
+	offline_roms_deleted,
+	not_enough_menory,
+	romtype_unsupported,
+	romtype_unknown,
+	done,
+	failed,
+	download_faild,
+	paging
+};
 
 /* USER CODE END Private defines */
 
