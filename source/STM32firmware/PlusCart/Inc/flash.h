@@ -24,6 +24,7 @@ extern "C" {
 #define ADDR_FLASH_SECTOR_11    ((uint32_t)0x080E0000) /* Base @ of Sector 11, 128 Kbytes */
 #define ADDR_FLASH_SECTOR_12    ((uint32_t)0x08100000) /* Base @ of !virtual! Sector 12, 0 Kbytes */
 
+#define FLASH_TIMEOUT_VALUE       50000U /* 50 s */
 
 
 // toDo delete !! old pre 0.10.3 Config !
@@ -50,15 +51,14 @@ extern "C" {
 #define EEPROM_MAX_PAGE_ID           ((uint8_t)(EEPROM_SIZE / EEPROM_PAGE_SIZE ) -1)
 #define EEPROM_MAX_ENTRY_ID          ((uint8_t)((EEPROM_PAGE_SIZE - EEPROM_PAGE_HEADER_SIZE) / EEPROM_ENTRY_SIZE) - 1)
 
-
 // Download Area in Flash
 #define DOWNLOAD_AREA_START_ADDRESS  ADDR_FLASH_SECTOR_5
-#define MAX_FLASH_ROM_FILES          130
 #define TAR_HEADER_SIZE              512
 #define TAR_BLOCK_SIZE               512
 
 void flash_firmware_update(uint32_t)__attribute__((section(".data#")));
-void flash_download(uint32_t, uint32_t, uint32_t);
+
+uint32_t flash_download(char *, uint32_t , uint32_t , _Bool );
 
 
 uint32_t flash_file_request( uint8_t *, uint32_t, uint32_t, uint32_t );
@@ -66,6 +66,9 @@ uint32_t flash_file_request( uint8_t *, uint32_t, uint32_t, uint32_t );
 _Bool flash_has_downloaded_roms(void);
 
 void flash_file_list(char *, MENU_ENTRY **dst, int *);
+uint32_t flash_check_offline_roms_size(void);
+
+void flash_erase_storage(uint8_t);
 
 USER_SETTINGS flash_get_eeprom_user_settings(void);
 void flash_set_eeprom_user_settings(USER_SETTINGS);

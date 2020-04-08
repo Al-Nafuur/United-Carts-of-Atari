@@ -4,7 +4,6 @@
 #include "esp8266.h"
 #include "stm32f4xx_hal.h"
 #include "flash.h"
-#include "global.h"
 #include "cartridge_firmware.h"
 
 
@@ -98,54 +97,32 @@ void flash_set_eeprom_user_settings(USER_SETTINGS user_settings){
 
 
 /* write to flash with multiple HTTP range requests */
-void flash_download(uint32_t filesize, uint32_t Address, uint32_t http_range_start){
+uint32_t flash_download(char *filename, uint32_t filesize, uint32_t http_range_start, _Bool append){
 
-    if(Address < ADDR_FLASH_SECTOR_5) // we don't flash firmware area here!
-    	return;
+	uint8_t start_sector;
+
+	if(append)
+		start_sector = user_settings.first_free_flash_sector;
+	else
+		start_sector = (uint8_t)FLASH_SECTOR_5;
+
+	if( start_sector < (uint8_t)FLASH_SECTOR_5 || esp8266_PlusStore_API_connect() == FALSE){
+    	return 0;
+	}
 
     uint8_t c;
     uint16_t http_range_param_pos_counter, http_range_param_pos = strlen((char *)http_request_header) - 5;
-    uint32_t count, flash_max = 4, http_range_end = http_range_start + 4095;
-    HAL_StatusTypeDef status;
+    uint32_t count, http_range_end = http_range_start + 4095;
+	uint32_t Address = DOWNLOAD_AREA_START_ADDRESS + 128 * 1024 * ( start_sector - 5);
 
+	esp8266_PlusStore_API_prepare_request_header((char *)filename, TRUE, FALSE );
 
-    //HAL_FLASHEx_Erase();
-    // Process Locked
-    // __HAL_LOCK(&pFlash);
-    pFlash.Lock = HAL_LOCKED;
+    strcat(http_request_header, (char *)"     0-  4095\r\n\r\n");
 
-    // Wait for last operation to be completed
-    if(FLASH_WaitInRAMForLastOperationWithMaxDelay() == HAL_OK){
-        uint32_t sectors[7];
-        uint8_t start_sector = get_sector( Address);
-        flash_max = 12 - start_sector;
-        for(count = 0 ; count < flash_max; count++){
-            sectors[count] = count + start_sector;
-        }
+    flash_erase_storage(start_sector);
 
-
-        for( count = 0 ; count < flash_max; count++){
-//          FLASH_Erase_Sector(count, (uint8_t) FLASH_VOLTAGE_RANGE_3);
-            CLEAR_BIT(FLASH->CR, FLASH_CR_PSIZE);
-            FLASH->CR |= FLASH_PSIZE_WORD;
-            CLEAR_BIT(FLASH->CR, FLASH_CR_SNB);
-            FLASH->CR |= FLASH_CR_SER | (sectors[count] << FLASH_CR_SNB_Pos);
-            FLASH->CR |= FLASH_CR_STRT;
-
-            /* Wait for last operation to be completed */
-            status = FLASH_WaitInRAMForLastOperationWithMaxDelay();
-
-            /* If the erase operation is completed, disable the SER and SNB Bits */
-            CLEAR_BIT(FLASH->CR, (FLASH_CR_SER | FLASH_CR_SNB));
-
-            if(status != HAL_OK){
-                /* In case of error, stop erase procedure and return the faulty sector*/
-                // break; Todo wat nu
-            }
-        }
-    }else{
-        return; // or try flashing anyway ??
-    }
+    __disable_irq();
+	HAL_FLASH_Unlock();
 
     /* Process Unlocked */
     __HAL_UNLOCK(&pFlash);
@@ -237,9 +214,12 @@ void flash_download(uint32_t filesize, uint32_t Address, uint32_t http_range_sta
     // End Transparent Transmission
 	esp8266_PlusStore_API_close_connection();
 
-    // flash new usersettings .. (if not BFSC or BF !!)
-    user_settings.first_free_flash_sector = get_sector(Address) + 1;
-    flash_set_eeprom_user_settings(user_settings);
+    // flash new usersettings .. (if not appended)
+	if(! append){
+		user_settings.first_free_flash_sector = get_sector(Address) + 1;
+    	flash_set_eeprom_user_settings(user_settings);
+	}
+	return ( DOWNLOAD_AREA_START_ADDRESS + 128 * 1024 * ( start_sector - 5) );
 }
 
 
@@ -372,7 +352,7 @@ void flash_file_list( char *path, MENU_ENTRY **dst , int *num_p){
 
     c =  (*(__IO uint8_t*)(base_adress));
 
-    while(c != 0xff && *num_p < MAX_FLASH_ROM_FILES){ // NUM_MENU_ITEMS and c < 127 ? Ascii ?
+    while(c != 0xff && *num_p < NUM_MENU_ITEMS){ // NUM_MENU_ITEMS and c < 127 ? Ascii ?
         pos = 0;
         length = get_filesize(base_adress);
         is_dir = ((*(__IO uint8_t*)(base_adress + 156)) == '5');
@@ -414,7 +394,45 @@ void flash_file_list( char *path, MENU_ENTRY **dst , int *num_p){
     }
 
     free(tmp_path);
+
 }
+
+uint32_t flash_check_offline_roms_size( ){
+    uint32_t base_adress = (uint32_t)( DOWNLOAD_AREA_START_ADDRESS), length, r;
+    uint8_t c;
+
+    c =  (*(__IO uint8_t*)(base_adress));
+
+    while(c != 0xff && c != 0x00 ){
+        length = get_filesize(base_adress);
+
+        // move to next (possible) tar entry (base_adress)
+        base_adress += TAR_HEADER_SIZE + length;
+        // padding for next tar block !!
+        r = base_adress % TAR_BLOCK_SIZE;
+        if(r){
+            base_adress += (TAR_BLOCK_SIZE - r);
+        }
+        c =  (*(__IO uint8_t*)(base_adress));
+    }
+
+    return base_adress;
+}
+
+void flash_erase_storage(uint8_t start_sector){
+	if(start_sector < (uint8_t)FLASH_SECTOR_5 )
+		return;
+
+	HAL_FLASH_Unlock();
+	FLASH_WaitForLastOperation((uint32_t)FLASH_TIMEOUT_VALUE);
+	for( uint32_t del_sec = (uint32_t)start_sector; del_sec <= FLASH_SECTOR_11; del_sec++){
+	    FLASH_Erase_Sector(del_sec, (uint8_t) FLASH_VOLTAGE_RANGE_3);
+		FLASH_WaitForLastOperation((uint32_t)FLASH_TIMEOUT_VALUE);
+	    CLEAR_BIT(FLASH->CR, (FLASH_CR_SER | FLASH_CR_SNB));
+	}
+	HAL_FLASH_Lock();
+}
+
 
 /* Private function -----------------------------------------------------------*/
 

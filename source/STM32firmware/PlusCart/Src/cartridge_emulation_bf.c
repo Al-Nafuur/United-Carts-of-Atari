@@ -37,14 +37,7 @@ static bool setup_cartridge_image(const char* filename, uint32_t image_size, uin
 
     uint32_t flash_part_address, bytes_read;
 	if(d->type == Cart_File ){
-	    flash_part_address = (0x08020000 + 128 * 1024 * ( user_settings.first_free_flash_sector - 5));
-		esp8266_PlusStore_API_connect();
-		esp8266_PlusStore_API_prepare_request_header((char *)filename, TRUE, FALSE );
-
-	    strcat(http_request_header, (char *)"     0-  4095\r\n\r\n");
-		__disable_irq();
-		HAL_FLASH_Unlock();
-		flash_download(FLASH_IMAGE_SIZE, flash_part_address, FLASH_IMAGE_OFFSET );
+		flash_part_address = flash_download((char*)filename, FLASH_IMAGE_SIZE, FLASH_IMAGE_OFFSET, TRUE);
 	}else{
 		flash_part_address = d->flash_base_address + FLASH_IMAGE_OFFSET;
 	}
