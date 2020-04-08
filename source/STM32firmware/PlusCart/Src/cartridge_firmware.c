@@ -282,7 +282,7 @@ void set_menu_status_msg(const char* message) {
     	menu_header[msg_len] = 32;
 }
 
-void set_menu_status_byte(enum eStatus_bytes_id byte_id, char status_byte) {
+void set_menu_status_byte(uint8_t byte_id, char status_byte) {
 	menu_status[byte_id] = status_byte;
 }
 
