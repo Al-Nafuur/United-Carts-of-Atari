@@ -76,9 +76,8 @@ void Error_Handler(void);
 #define BUFFER_SIZE				96   // kilobytes
 #define CCM_RAM_SIZE            64   // kilobytes
 
-#define NUM_MENU_ITEMS			1024
-
 #define MENU_TEXT_OFFLINE_ROMS              "Offline ROMs"
+#define MENU_TEXT_DETECT_OFFLINE_ROMS       "Detect offline ROMs"
 #define MENU_TEXT_DELETE_OFFLINE_ROMS       "Erase offline ROMs"
 #define MENU_TEXT_SETUP 	                "Setup"
 #define MENU_TEXT_WIFI_SETUP 	            "WiFi Setup"
@@ -90,7 +89,7 @@ void Error_Handler(void);
 #define MENU_TEXT_TV_MODE_NTSC              "NTSC"
 #define MENU_TEXT_PRIVATE_KEY               "Private Key"
 #define MENU_TEXT_FIRMWARE_UPDATE           "** Update firmware **"
-#define MENU_TEXT_OFFLINE_ROM_UPDATE        "** Flash offline ROMs **"
+#define MENU_TEXT_OFFLINE_ROM_UPDATE        "Download offline ROMs"
 #define MENU_TEXT_PLUS_CONNECT              "PlusStore connect"
 #define MENU_TEXT_PLUS_REMOVE               "PlusStore disconnect"
 #define MENU_TEXT_ESP8266_RESTORE           "ESP8266 Factory Reset"
@@ -100,6 +99,7 @@ enum e_status_message {
 	keyboard_input,
 	root,
 	version,
+	paging,
 	select_wifi_network,
 	wifi_not_connected,
 	wifi_connected,
@@ -119,7 +119,8 @@ enum e_status_message {
 	done,
 	failed,
 	download_faild,
-	paging
+	offline_roms_detected,
+	no_offline_roms_detected,
 };
 
 /* USER CODE END Private defines */

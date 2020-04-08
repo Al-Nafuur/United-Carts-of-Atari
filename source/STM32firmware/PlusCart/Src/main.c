@@ -96,8 +96,6 @@ typedef struct {
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-//unsigned const char firmware_ntsc_rom[]__attribute__((section(".flash0")))
-//  EXT_TO_CART_TYPE_MAP ext_to_cart_type_map[]__attribute__((section(".ccmram"))) = {
 
 const EXT_TO_CART_TYPE_MAP ext_to_cart_type_map[]__attribute__((section(".flash01"))) = {
 	{"ROM", { base_type_None, FALSE, FALSE }},
@@ -136,6 +134,7 @@ const EXT_TO_CART_TYPE_MAP ext_to_cart_type_map[]__attribute__((section(".flash0
 static const char status_message[][28]__attribute__((section(".flash01"))) = {
 		"PlusCart(+) by W.Stubig"          ,
 		"PlusCart(+) Ver. " VERSION        ,
+		"PlusCart(+)"                      ,
 		"Select your WiFi Network"         ,
 		"No WiFi"                          ,
 		"WiFi connect"                     ,
@@ -155,7 +154,8 @@ static const char status_message[][28]__attribute__((section(".flash01"))) = {
 		"Done"                             ,
 		"Failed"                           ,
 		"Firmware download failed"         ,
-		"PlusCart(+)"
+		"Offline ROMs detected"            ,
+		"No offline ROMs detected"
 };
 
 
@@ -214,7 +214,7 @@ void append_entry_to_path(MENU_ENTRY *);
 char *get_filename_ext(char *filename) {
 	char *dot = strrchr(filename, '.');
 	if(!dot || dot == filename) return "";
-	return dot + 1;
+	return (dot + 1);
 }
 
 void make_menu_entry( MENU_ENTRY **dst, char *name, int type){
@@ -225,8 +225,8 @@ void make_menu_entry( MENU_ENTRY **dst, char *name, int type){
 	num_menu_entries++;
 }
 void make_keyboard(MENU_ENTRY **dst){
-	make_menu_entry(&(*dst), "(GO BACK)", Leave_Menu); // TODO Delete last Char or All?
-	make_menu_entry(&(*dst), "(DEL CHAR)", Delete_Keyboard_Char); // TODO Delete last Char or All?
+	make_menu_entry(&(*dst), "(GO BACK)", Leave_Menu);
+	make_menu_entry(&(*dst), "(DEL CHAR)", Delete_Keyboard_Char);
 	char Key[2] = "0";
 	for (char i=32; i < 100; i++){
 		Key[0] = i;
@@ -257,7 +257,9 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			make_menu_entry(&dst, MENU_TEXT_ESP8266_RESTORE, Menu_Action);
 
 			if(	flash_has_downloaded_roms() )
-			    		make_menu_entry(&dst, MENU_TEXT_DELETE_OFFLINE_ROMS, Menu_Action);
+	    		make_menu_entry(&dst, MENU_TEXT_DELETE_OFFLINE_ROMS, Menu_Action);
+			else
+	    		make_menu_entry(&dst, MENU_TEXT_DETECT_OFFLINE_ROMS, Menu_Action);
 
         	menu_status = version;
 			loadStore = TRUE;
@@ -361,13 +363,29 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 
         	curPath[0] = '\0';
 
+		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_OFFLINE_ROM_UPDATE, sizeof(MENU_TEXT_OFFLINE_ROM_UPDATE) - 1) == 0 ){
+			if( flash_download("&r=1", d->filesize , 0 , FALSE ) != DOWNLOAD_AREA_START_ADDRESS){
+		    	menu_status = esp_timeout;
+			}else{
+	    		menu_status = done;
+	        	curPath[0] = '\0';
+			}
 		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_DELETE_OFFLINE_ROMS, sizeof(MENU_TEXT_DELETE_OFFLINE_ROMS) - 1) == 0 ){
-			HAL_FLASH_Unlock();
-	        for( count = FLASH_SECTOR_5; count <= FLASH_SECTOR_11; count++){
-		        FLASH_Erase_Sector((uint32_t) count, (uint8_t) FLASH_VOLTAGE_RANGE_3);
-		    }
-			HAL_FLASH_Lock();
+			flash_erase_storage((uint8_t)FLASH_SECTOR_5);
+			user_settings.first_free_flash_sector = (uint8_t) FLASH_SECTOR_5;
+		    flash_set_eeprom_user_settings(user_settings);
     		menu_status = offline_roms_deleted;
+        	curPath[0] = '\0';
+		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_DETECT_OFFLINE_ROMS, sizeof(MENU_TEXT_DELETE_OFFLINE_ROMS) - 1) == 0 ){
+			uint32_t last_address = flash_check_offline_roms_size();
+			if(last_address > DOWNLOAD_AREA_START_ADDRESS + 1024){
+			    user_settings.first_free_flash_sector = ((last_address - ADDR_FLASH_SECTOR_5) / 0x20000 ) + 6;
+			    flash_set_eeprom_user_settings(user_settings);
+	    		menu_status = offline_roms_detected;
+			}else{
+	    		menu_status = no_offline_roms_detected;
+			}
+    		num_menu_entries = 0;
         	curPath[0] = '\0';
 		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_WPS_CONNECT, sizeof(MENU_TEXT_WPS_CONNECT) - 1) == 0 ){
 	    	if(esp8266_wps_connect()){
@@ -415,16 +433,6 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			}else{
 		    	menu_status = download_faild;
 			}
-
-		} else if(strncmp(MENU_TEXT_OFFLINE_ROM_UPDATE, curPath, sizeof(MENU_TEXT_OFFLINE_ROM_UPDATE) - 1) == 0 ){
-			if( esp8266_PlusStore_API_connect() == FALSE){
-		    	menu_status = esp_timeout;
-			}
-			esp8266_PlusStore_API_prepare_request_header("&r=1", TRUE, FALSE);
-		    strcat(http_request_header, (char *)"     0-  4095\r\n\r\n");
-			__disable_irq();
-			HAL_FLASH_Unlock();
-			flash_download(d->filesize, ADDR_FLASH_SECTOR_5, 0);
 		} else if(strncmp(MENU_TEXT_WIFI_RECONNECT, curPath, sizeof(MENU_TEXT_WIFI_RECONNECT) - 1) == 0 ){
 
 			loadStore = TRUE;
@@ -491,7 +499,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
     	}
     }
 
-    if(strlen(curPath) == 0){// d->type == Root_Menu !!
+    if(strlen(curPath) == 0){
     	if(	flash_has_downloaded_roms() )
     		make_menu_entry(&dst, MENU_TEXT_OFFLINE_ROMS, Offline_Sub_Menu);
 
@@ -809,7 +817,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  //  MX_USART1_UART_Init(); /* USART1_Init is done later at before  wifi init
+
   /* USER CODE BEGIN 2 */
 
   user_settings = flash_get_eeprom_user_settings();
@@ -900,7 +908,7 @@ int main(void)
     main_status = (main_status != none)?main_status:menu_status;
     if(main_status == keyboard_input){
     	set_menu_status_msg((char *)input_field);
-    	set_menu_status_byte(PageType, Keyboard);
+    	set_menu_status_byte((uint8_t)PageType, (char)Keyboard);
     }else{
     	if(main_status != none){
         	set_menu_status_msg(status_message[main_status]);
