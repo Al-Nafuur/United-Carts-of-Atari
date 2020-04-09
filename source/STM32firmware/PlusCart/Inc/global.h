@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include "stm32f4xx_hal.h"
 
-#define VERSION                   "0.13.6"
+#define VERSION                   "0.13.7"
 #define PLUSSTORE_API_HOST        "pluscart.firmaplus.de"
 
 #define TRUE 1

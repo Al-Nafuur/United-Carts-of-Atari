@@ -419,9 +419,6 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 		flash_file_list(&curPath[sizeof(MENU_TEXT_OFFLINE_ROMS) - 1], &dst, &num_menu_entries);
 	}else if(d->type == Menu_Action){
 		if(strncmp(MENU_TEXT_FIRMWARE_UPDATE, curPath, sizeof(MENU_TEXT_FIRMWARE_UPDATE) - 1) == 0 ){
-			if( esp8266_PlusStore_API_connect() == FALSE){
-		    	menu_status = esp_timeout;
-			}
 	    	curPath[0] = '\0';
 		    strcat(curPath, (char *)"&u=1");
 			uint32_t bytes_read = esp8266_PlusStore_API_file_request( buffer, curPath, 0, 0x4000 );
