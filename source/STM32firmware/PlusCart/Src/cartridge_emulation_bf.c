@@ -53,12 +53,12 @@ static bool setup_cartridge_image(const char* filename, uint32_t image_size, uin
     for (uint8_t i = 0; i < CCM_BANKS; i++) layout->banks[RAM_BANKS + i] = CCM_RAM + i * 4096;
     for (uint8_t i = 0; i < FLASH_BANKS; i++) layout->banks[RAM_BANKS + CCM_BANKS + i] = (uint8_t *)(flash_part_address + i * 4096);
 
-	esp8266_PlusStore_API_close_connection();
+    esp8266_PlusStore_API_end_transmission();
  	return true;
 
 	fail_close:
 
-	esp8266_PlusStore_API_close_connection();
+	esp8266_PlusStore_API_end_transmission();
 	return false;
 }
 

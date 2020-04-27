@@ -75,7 +75,7 @@ static void setup_multiload_map(uint8_t *multiload_map, uint32_t multiload_count
 		}
 		esp8266_PlusStore_API_connect();
 		esp8266_PlusStore_API_range_request( (char *)cartridge_path, multiload_count, range, multiload_buffer );
-		esp8266_PlusStore_API_close_connection();
+		esp8266_PlusStore_API_end_transmission();
 		for ( i = 0; i < multiload_count; i++) {
 			multiload_map[multiload_buffer[i]] = i;
 		}

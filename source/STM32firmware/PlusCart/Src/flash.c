@@ -161,7 +161,7 @@ uint32_t flash_download(char *filename, uint32_t filesize, uint32_t http_range_s
             count = count/10;
         }
 
-        HAL_UART_Transmit(&huart1, (uint8_t*) http_request_header, strlen( http_request_header), 50);
+    	esp8266_print(http_request_header);
 
         // Skip HTTP Header
         esp8266_skip_http_response_header();
@@ -213,7 +213,7 @@ uint32_t flash_download(char *filename, uint32_t filesize, uint32_t http_range_s
     __enable_irq();
 
     // End Transparent Transmission
-	esp8266_PlusStore_API_close_connection();
+    esp8266_PlusStore_API_end_transmission();
 
     // flash new usersettings .. (if not appended)
 	if(! append){
