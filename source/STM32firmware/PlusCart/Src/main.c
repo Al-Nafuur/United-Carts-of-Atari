@@ -137,7 +137,7 @@ static const char status_message[][28]__attribute__((section(".flash01"))) = {
 		"PlusCart(+)"                      ,
 		"Select your WiFi Network"         ,
 		"No WiFi"                          ,
-		"WiFi connect"                     ,
+		"WiFi connected"                   ,
 		"Request timeout"                  ,
 		"Insert WiFi Password"             ,
 		"Insert email or username"         ,
@@ -253,6 +253,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			make_menu_entry(&dst, MENU_TEXT_TV_MODE_SETUP, Setup_Menu);
 			make_menu_entry(&dst, MENU_TEXT_WIFI_SETUP, Setup_Menu);
 			make_menu_entry(&dst, MENU_TEXT_WPS_CONNECT, Menu_Action);
+			make_menu_entry(&dst, MENU_TEXT_WIFI_MANGER, Menu_Action);
 			//make_menu_entry(&dst, MENU_TEXT_PRIVATE_KEY, Input_Field);
 			make_menu_entry(&dst, MENU_TEXT_ESP8266_RESTORE, Menu_Action);
 
@@ -323,8 +324,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 					return esp_timeout;
 				}
 				esp8266_PlusStore_API_prepare_request_header(curPath, FALSE, TRUE );
-	        	HAL_UART_Transmit(&huart1, (uint8_t *)http_request_header, strlen(http_request_header), 50);
-
+	        	esp8266_print(http_request_header);
 	        	esp8266_skip_http_response_header();
 	        	while(HAL_UART_Receive(&huart1, &c, 1, 100 ) == HAL_OK){}
 	        	if(c == '0'){
@@ -335,7 +335,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 	        		menu_status = plus_connected;
 	        	}
 
-				esp8266_PlusStore_API_close_connection();
+	        	esp8266_PlusStore_API_end_transmission();
 
 	        	curPath[0] = '\0';
 			}else{
@@ -349,7 +349,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 				return esp_timeout;
 			}
 			esp8266_PlusStore_API_prepare_request_header(curPath, FALSE, TRUE );
-        	HAL_UART_Transmit(&huart1, (uint8_t *)http_request_header, strlen(http_request_header), 50);
+        	esp8266_print(http_request_header);
 
             esp8266_skip_http_response_header();
         	while(HAL_UART_Receive(&huart1, &c, 1, 100 ) == HAL_OK){}
@@ -359,13 +359,13 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
         		menu_status = plus_removed;
         	}
 
-			esp8266_PlusStore_API_close_connection();
+        	esp8266_PlusStore_API_end_transmission();
 
         	curPath[0] = '\0';
 
 		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_OFFLINE_ROM_UPDATE, sizeof(MENU_TEXT_OFFLINE_ROM_UPDATE) - 1) == 0 ){
 			if( flash_download("&r=1", d->filesize , 0 , FALSE ) != DOWNLOAD_AREA_START_ADDRESS){
-		    	menu_status = esp_timeout;
+		    	menu_status = download_failed;
 			}else{
 	    		menu_status = done;
 	        	curPath[0] = '\0';
@@ -395,6 +395,10 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 	    	}
 			curPath[0] = '\0';
 			HAL_Delay(2000);
+		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_WIFI_MANGER, sizeof(MENU_TEXT_WIFI_MANGER) - 1) == 0 ){
+			menu_status = done;
+			esp8266_AT_WiFiManager();
+	    	curPath[0] = '\0';
 		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_ESP8266_RESTORE, sizeof(MENU_TEXT_ESP8266_RESTORE) - 1) == 0 ){
 	    	if(esp8266_reset(TRUE)){
 	        	menu_status = done;
@@ -428,7 +432,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 				HAL_FLASH_Unlock();
 				flash_firmware_update(d->filesize);
 			}else{
-		    	menu_status = download_faild;
+		    	menu_status = download_failed;
 			}
 		} else if(strncmp(MENU_TEXT_WIFI_RECONNECT, curPath, sizeof(MENU_TEXT_WIFI_RECONNECT) - 1) == 0 ){
 
@@ -448,7 +452,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			}
 			esp8266_PlusStore_API_prepare_request_header(curPath, FALSE, FALSE);
 
-            HAL_UART_Transmit(&huart1, (uint8_t *)http_request_header, strlen(http_request_header), 50);
+        	esp8266_print(http_request_header);
             uint16_t bytes_read = 0, content_length = esp8266_skip_http_response_header();
         	count = 0;
         	while(bytes_read < content_length){
@@ -490,7 +494,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
         		bytes_read++;
         	}
 
-			esp8266_PlusStore_API_close_connection();
+        	esp8266_PlusStore_API_end_transmission();
         }else if(strlen(curPath) == 0){
         	make_menu_entry(&dst, MENU_TEXT_WIFI_RECONNECT, Menu_Action);
     	}
@@ -744,7 +748,7 @@ void system_secondary_init(void){
 	set_menu_status_byte(StatusByteReboot, 0);
 	generate_udid_string();
 	MX_USART1_UART_Init();
-	Initialize_ESP8266();
+	esp8266_init();
 	// set up status area
 }
 
