@@ -186,7 +186,7 @@ void createMenuForAtari( MENU_ENTRY * menu_entries, uint8_t page_id, int num_men
         	page_id = page_id/10;
         }
         if(i % 2 == 0)
-        	i--;
+        	menu_header[i--] = ' ';
     	menu_header[i--] = CHAR_R_Page;
     	menu_header[i] = CHAR_L_Page;
     }
