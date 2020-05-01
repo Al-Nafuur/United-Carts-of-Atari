@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include "stm32f4xx_hal.h"
 
-#define VERSION                   "0.14.2"
+#define VERSION                   "0.14.3"
 #define PLUSSTORE_API_HOST        "pluscart.firmaplus.de"
 
 #define TRUE 1
@@ -32,6 +32,7 @@
 #define MENU_TEXT_PLUS_CONNECT              "PlusStore connect"
 #define MENU_TEXT_PLUS_REMOVE               "PlusStore disconnect"
 #define MENU_TEXT_ESP8266_RESTORE           "ESP8266 Factory Reset"
+#define MENU_TEXT_SEARCH_ROM                "Search ROM"
 
 #define URLENCODE_MENU_TEXT_PLUS_CONNECT            "PlusStore%20connect"
 #define URLENCODE_MENU_TEXT_SETUP 	                "Setup"

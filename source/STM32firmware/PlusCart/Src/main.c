@@ -421,6 +421,16 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 	}else if(strncmp(MENU_TEXT_OFFLINE_ROMS, curPath, sizeof(MENU_TEXT_OFFLINE_ROMS) - 1) == 0 ){
 		make_menu_entry(&dst, "..", Leave_Menu);
 		flash_file_list(&curPath[sizeof(MENU_TEXT_OFFLINE_ROMS) - 1], &dst, &num_menu_entries);
+	}else if(strncmp(MENU_TEXT_SEARCH_ROM, curPath, sizeof(MENU_TEXT_SEARCH_ROM) - 1) == 0 ){
+		if(d->type == Menu_Action){ // if actual Entry is of type Menu_Action -> Send search to API
+			for (char* p = curPath; (p = strchr(p, ' ')); ++p) {
+				*p = '+';
+			}
+			loadStore = TRUE;
+		}else{
+			make_keyboard( &dst);
+		}
+
 	}else if(d->type == Menu_Action){
 		if(strncmp(MENU_TEXT_FIRMWARE_UPDATE, curPath, sizeof(MENU_TEXT_FIRMWARE_UPDATE) - 1) == 0 ){
 	    	curPath[0] = '\0';
@@ -884,7 +894,9 @@ int main(void)
   	    	  main_status = keyboard_input;
   		} else {
   		  // go into Menu TODO find better way for separation of first keyboard char!!
-  		  if(( d->type != Keyboard_Char && strlen(curPath) > 0) || strcmp(MENU_TEXT_SETUP"/"MENU_TEXT_PLUS_CONNECT, curPath) == 0 ){
+  		  if( ( d->type != Keyboard_Char && strlen(curPath) > 0)
+  			   || strcmp(MENU_TEXT_SETUP"/"MENU_TEXT_PLUS_CONNECT, curPath) == 0
+			   || strcmp(MENU_TEXT_SEARCH_ROM, curPath) == 0 ){
     		    strcat(curPath, "/");
   		  }
 
