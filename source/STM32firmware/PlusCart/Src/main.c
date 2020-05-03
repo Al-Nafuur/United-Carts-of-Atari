@@ -114,20 +114,20 @@ const EXT_TO_CART_TYPE_MAP ext_to_cart_type_map[]__attribute__((section(".flash0
 	{"3E",  { base_type_3E, FALSE, FALSE }},
 	{"E0",  { base_type_E0, FALSE, FALSE }},
 	{"084", { base_type_0840, FALSE, FALSE }},
-	{"CV", { base_type_CV, FALSE, FALSE }},
-	{"EF", { base_type_EF, FALSE, FALSE }},
+	{"CV",  { base_type_CV, FALSE, FALSE }},
+	{"EF",  { base_type_EF, FALSE, FALSE }},
 	{"EFS", { base_type_EF, TRUE, FALSE }},
-	{"F0", { base_type_F0, FALSE, FALSE }},
-	{"FA", { base_type_FA, FALSE, FALSE }},
-	{"E7", { base_type_E7, FALSE, FALSE }},
+	{"F0",  { base_type_F0, FALSE, FALSE }},
+	{"FA",  { base_type_FA, FALSE, FALSE }},
+	{"E7",  { base_type_E7, FALSE, FALSE }},
 	{"DPC", { base_type_DPC, FALSE, FALSE }},
 	{"AR",  { base_type_AR, FALSE, FALSE }},
 	{"BF",  { base_type_BF, FALSE, FALSE }},
-	{"BFS",  { base_type_BFSC, FALSE, FALSE }},
-	{"ACE",  { base_type_ACE, FALSE, FALSE }},
+	{"BFS", { base_type_BFSC, FALSE, FALSE }},
+	{"ACE", { base_type_ACE, FALSE, FALSE }},
 	{"WD",  { base_type_PP, FALSE, FALSE }},
 	{"DF",  { base_type_DF, FALSE, FALSE }},
-	{"DFS",  { base_type_DFSC, FALSE, FALSE }},
+	{"DFS", { base_type_DFSC, FALSE, FALSE }},
 	{0,{0,0,0}}
 };
 
@@ -743,9 +743,9 @@ void emulate_cartridge(CART_TYPE cart_type, MENU_ENTRY *d)
 	else if (cart_type.base_type == base_type_DFSC)
 		emulate_dfsc_cartridge(curPath, cart_size_bytes, buffer, d);
 	else if (cart_type.base_type == base_type_BF)
-		emulate_bf_cartridge(curPath, cart_size_bytes, buffer, d);//cart_type.flash_part_address);
+		emulate_bf_cartridge(curPath, cart_size_bytes, buffer, d);
 	else if (cart_type.base_type == base_type_BFSC)
-		emulate_bfsc_cartridge(curPath, cart_size_bytes, buffer, d);//cart_type.flash_part_address);
+		emulate_bfsc_cartridge(curPath, cart_size_bytes, buffer, d);
 }
 
 void truncate_curPath(){

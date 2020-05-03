@@ -46,7 +46,7 @@ char stm32_udid[25];
 char tmp_uart_buffer[50];
 
 _Bool esp8266_PlusStore_API_connect(){
-	uint64_t resp = esp8266_send_command(API_ATCMD_1, 200);
+	uint64_t resp = esp8266_send_command(API_ATCMD_1, 5000);
 	if( resp == ESP8266_CONNECT || resp == ESP8266_ALREADY_CONNECTED){
 		esp8266_send_command(API_ATCMD_2, 200);
 	    return TRUE;
