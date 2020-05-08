@@ -47,6 +47,11 @@ extern "C" {
 #define HAL_UART_TIMEOUT_SEND    180
 #define HAL_UART_TIMEOUT_RECEIVE 100
 
+#define PLUSSTORE_CONNECT_TIMEOUT          5000
+#define PLUSSTORE_RESPONSE_START_TIMEOUT  25000
+#define PLUSROM_API_CONNECT_TIMEOUT        PLUSSTORE_CONNECT_TIMEOUT
+
+
 #define MAX_RANGE_SIZE           4096
 #define RANGE_BOUNDARY_SIZE        19
 #define RANGE_BOUNDARY_TEMPLATE  '_','_','_','_','_','_','_','_','_','_','_','_','_'

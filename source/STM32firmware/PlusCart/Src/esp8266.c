@@ -46,7 +46,7 @@ char stm32_udid[25];
 char tmp_uart_buffer[50];
 
 _Bool esp8266_PlusStore_API_connect(){
-	uint64_t resp = esp8266_send_command(API_ATCMD_1, 5000);
+	uint64_t resp = esp8266_send_command(API_ATCMD_1, PLUSSTORE_CONNECT_TIMEOUT);
 	if( resp == ESP8266_CONNECT || resp == ESP8266_ALREADY_CONNECTED){
 		esp8266_send_command(API_ATCMD_2, 200);
 	    return TRUE;
@@ -153,7 +153,7 @@ int esp8266_PlusROM_API_connect(unsigned int size){
     strcat(http_request_header, (char *)&buffer[offset]);
     strcat(http_request_header, (char *)"\",80\r\n");
 
-    esp8266_send_command(http_request_header, 5000);
+    esp8266_send_command(http_request_header, PLUSROM_API_CONNECT_TIMEOUT);
 
 	http_request_header[0] = '\0';
 	strcat(http_request_header, (char *)"POST /");
@@ -173,7 +173,7 @@ uint16_t esp8266_skip_http_response_header(){
 	int count = 0;
 	uint16_t content_length = 0;
 	uint8_t c;
-	while(HAL_UART_Receive(&huart1, &c, 1, 15000 ) == HAL_OK){
+	while(HAL_UART_Receive(&huart1, &c, 1, PLUSSTORE_RESPONSE_START_TIMEOUT ) == HAL_OK){
        	if( c == '\n' ){
        		if (count == 1){
        			break;
@@ -194,7 +194,7 @@ uint16_t esp8266_skip_http_response_header(){
 void get_boundary_http_header(char * buffer){
 	int count = 0;
 	uint8_t c;
-	while(HAL_UART_Receive(&huart1, &c, 1, 15000 ) == HAL_OK){
+	while(HAL_UART_Receive(&huart1, &c, 1, PLUSSTORE_RESPONSE_START_TIMEOUT ) == HAL_OK){
        	if( c == '\n' ){
        		if (count == 1){
        			esp8266_skip_http_response_header(); // first row in multipart response is empty
@@ -334,7 +334,7 @@ _Bool esp8266_wifi_connect(char *ssid, char *password ){
     strcat(http_request_header, password);
     strcat(http_request_header, "\"\r\n");
 
-	if(esp8266_send_command(http_request_header , 15000) == ESP8266_OK){
+	if(esp8266_send_command(http_request_header, 15000) == ESP8266_OK){
     	return TRUE;
 	}
 	return FALSE;
@@ -707,7 +707,7 @@ void generate_html_wifi_info(void){
 
 void connect_tcp_link(char link_id ){;
 	sprintf(tmp_uart_buffer, API_ATCMD_1a, link_id);
-	esp8266_send_command(tmp_uart_buffer , 200);
+	esp8266_send_command(tmp_uart_buffer, PLUSSTORE_CONNECT_TIMEOUT);
 }
 
 _Bool init_send_tcp_link(char link_id, uint16_t bytes_to_send){
