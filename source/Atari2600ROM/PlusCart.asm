@@ -13,7 +13,7 @@ PAL60       = 0
 PAL50       = 0
 
 ILLEGAL     = 1
-DEBUG       = 1
+DEBUG       = 0
 
   IF NTSC
 NTSC_TIM    = 1
@@ -412,7 +412,7 @@ Start = (. & $1fff)
   ENDM
 
 ;WriteByte (command area)
-SendCartCommand      equ $1fe6  ; Command byte to send to Cart firmware
+SendCartCommand   equ $1fe6  ; Command byte to send to Cart firmware
                              ; ($0 -> $f): first nibble item is selected on act page. 
 PrevPageCommand   equ $10    ; ($10)     : previous page request (act page--) 
 NextPageCommand   equ $20    ; ($20)     : next page request (act page++) 
@@ -704,8 +704,6 @@ lvover	sta WSYNC
 	  rts
 
 reboot
-  	lda #RebootCommand
-	  sta SendCartCommand
 	  lda #0
 	  tax
 add2
@@ -716,6 +714,9 @@ add2
 	  ldx #$FD		;Set stack pointer to $fd
 	  txs
 ; tell cart we are ready for switch
+    lda #RebootCommand
+	  sta SendCartCommand
+	  lda #0
 	  sta WSYNC
 	  sta WSYNC
 	  jmp ($fffc)

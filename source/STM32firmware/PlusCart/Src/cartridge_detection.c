@@ -142,6 +142,12 @@ int isProbably3E(int size, unsigned char *bytes)
 	return searchForBytes(bytes, size, signature, 4, 1);
 }
 
+int isProbably3EPlus(int size, unsigned char *bytes)
+{	// 3E+ cart is identified by key 'TJ3E' in the ROM
+	unsigned char  signature[] = { 'T', 'J', '3', 'E' };
+	return searchForBytes(bytes, size, signature, 4, 1);
+}
+
 int isProbablyE0(int size, unsigned char *bytes)
 {	// E0 cart bankswitching is triggered by accessing addresses
 	// $FE0 to $FF9 using absolute non-indexed addressing

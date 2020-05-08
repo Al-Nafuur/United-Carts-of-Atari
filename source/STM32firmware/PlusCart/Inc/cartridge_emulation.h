@@ -26,14 +26,12 @@ enum Transmission_State{
 
 #define setup_cartridge_image() \
 	if (cart_size_bytes > 0x010000) return; \
-	uint8_t* cart_rom = buffer; \
-	if (!reboot_into_cartridge()) return;
+	uint8_t* cart_rom = buffer;
 
 #define setup_cartridge_image_with_ram() \
 	if (cart_size_bytes > 0x010000) return; \
 	uint8_t* cart_rom = buffer; \
-	uint8_t* cart_ram = buffer + cart_size_bytes + (((~cart_size_bytes & 0x03) + 1) & 0x03); \
-	if (!reboot_into_cartridge()) return;
+	uint8_t* cart_ram = buffer + cart_size_bytes + (((~cart_size_bytes & 0x03) + 1) & 0x03);
 
 #define setup_plus_rom_functions() \
 		uint8_t receive_buffer_write_pointer = 0, receive_buffer_read_pointer = 0, content_counter = 0; \
@@ -133,10 +131,11 @@ enum Transmission_State{
         }
 
 
-
 void emulate_2k_4k_cartridge(int, _Bool, int);
+
 /* 'Standard' Bankswitching */
 void emulate_FxSC_cartridge(int, _Bool, uint16_t, uint16_t, int);
+
 /* FA (CBS RAM plus) Bankswitching */
 void emulate_FA_cartridge();
 
@@ -149,6 +148,9 @@ void emulate_3F_cartridge();
 /* 3E (3F + RAM) Bankswitching */
 void emulate_3E_cartridge(int, _Bool);
 
+/* 3E+ Bankswitching by Thomas Jentzsch */
+void emulate_3EPlus_cartridge();
+
 /* E0 Bankswitching */
 void emulate_E0_cartridge();
 
@@ -156,6 +158,7 @@ void emulate_0840_cartridge();
 
 /* CommaVid Cartridge*/
 void emulate_CV_cartridge();
+
 /* F0 Bankswitching */
 void emulate_F0_cartridge();
 

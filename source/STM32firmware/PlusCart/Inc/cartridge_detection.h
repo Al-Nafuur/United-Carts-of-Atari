@@ -13,6 +13,7 @@ int isProbablySC(int, unsigned char *);
 int isProbablyFE(int, unsigned char *);
 int isProbably3F(int, unsigned char *);
 int isProbably3E(int, unsigned char *);
+int isProbably3EPlus(int, unsigned char *);
 int isProbablyE0(int, unsigned char *);
 int isProbably0840(int, unsigned char *);
 int isProbablyCV(int, unsigned char *);

@@ -77,6 +77,7 @@ enum cart_base_type{
 	base_type_DFSC,
 	base_type_BF,
 	base_type_BFSC,
+	base_type_3EPlus,
 	base_type_ACE
 };
 
@@ -128,6 +129,7 @@ const EXT_TO_CART_TYPE_MAP ext_to_cart_type_map[]__attribute__((section(".flash0
 	{"WD",  { base_type_PP, FALSE, FALSE }},
 	{"DF",  { base_type_DF, FALSE, FALSE }},
 	{"DFS", { base_type_DFSC, FALSE, FALSE }},
+	{"3EP", { base_type_3EPlus, FALSE, FALSE }},
 	{0,{0,0,0}}
 };
 
@@ -613,6 +615,8 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 			cart_type.base_type = base_type_4K;
 		else if (isProbablyE0(d->filesize, buffer))
 			cart_type.base_type = base_type_E0;
+		else if (isProbably3EPlus(d->filesize, buffer))
+			cart_type.base_type = base_type_3EPlus;
 		else if (isProbably3E(d->filesize, buffer))
 			cart_type.base_type = base_type_3E;
 		else if (isProbably3F(d->filesize, buffer))
@@ -639,6 +643,8 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 	{
 		if (isProbablyE7(d->filesize, buffer))
 			cart_type.base_type = base_type_E7;
+		else if (isProbably3EPlus(d->filesize, buffer))
+			cart_type.base_type = base_type_3EPlus;
 		else if (isProbably3E(d->filesize, buffer))
 			cart_type.base_type = base_type_3E;
 		else
@@ -646,7 +652,9 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 	}
 	else if (d->filesize == 32*1024)
 	{
-		if (isProbably3E(d->filesize, buffer))
+		if (isProbably3EPlus(d->filesize, buffer))
+			cart_type.base_type = base_type_3EPlus;
+		else if (isProbably3E(d->filesize, buffer))
 			cart_type.base_type = base_type_3E;
 		else if (isProbably3F(d->filesize, buffer))
 			cart_type.base_type = base_type_3F;
@@ -655,7 +663,9 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 	}
 	else if (d->filesize == 64*1024)
 	{
-		if (isProbably3E(d->filesize, buffer))
+		if (isProbably3EPlus(d->filesize, buffer))
+			cart_type.base_type = base_type_3EPlus;
+		else if (isProbably3E(d->filesize, buffer))
 			cart_type.base_type = base_type_3E;
 		else if (isProbably3F(d->filesize, buffer))
 			cart_type.base_type = base_type_3F;
@@ -746,6 +756,8 @@ void emulate_cartridge(CART_TYPE cart_type, MENU_ENTRY *d)
 		emulate_bf_cartridge(curPath, cart_size_bytes, buffer, d);
 	else if (cart_type.base_type == base_type_BFSC)
 		emulate_bfsc_cartridge(curPath, cart_size_bytes, buffer, d);
+	else if (cart_type.base_type == base_type_3EPlus)
+		emulate_3EPlus_cartridge();
 }
 
 void truncate_curPath(){
