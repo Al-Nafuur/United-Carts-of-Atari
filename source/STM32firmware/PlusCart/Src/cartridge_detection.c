@@ -257,3 +257,12 @@ int isProbablyDFSC(unsigned char *tail)
 	return !memcmp(tail + 8, "DFSC", 4);
 }
 
+int isProbablyDPCplus(int size, unsigned char *bytes)
+{	// DPC+ ARM code has 2 occurrences of the string DPC+
+	// Note: all Harmony/Melody custom drivers also contain the value
+	// 0x10adab1e (LOADABLE) if needed for future improvement
+	unsigned char  signature[] = { 'D', 'P', 'C', '+' };
+	return searchForBytes(bytes, size, signature, 4, 2);
+}
+
+
