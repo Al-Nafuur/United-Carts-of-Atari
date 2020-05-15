@@ -149,7 +149,7 @@ void emulate_3F_cartridge();
 void emulate_3E_cartridge(int, _Bool);
 
 /* 3E+ Bankswitching by Thomas Jentzsch */
-void emulate_3EPlus_cartridge();
+void emulate_3EPlus_cartridge(int, _Bool);
 
 /* E0 Bankswitching */
 void emulate_E0_cartridge();
@@ -166,7 +166,7 @@ void emulate_F0_cartridge();
 void emulate_E7_cartridge();
 
 /* DPC (Pitfall II) Bankswitching */
-void emulate_DPC_cartridge();
+void emulate_DPC_cartridge(uint32_t);
 
 /* Pink Panther */
 void emulate_pp_cartridge(uint8_t* ram);

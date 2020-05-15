@@ -546,7 +546,7 @@ void emulate_3E_cartridge(int header_length, _Bool withPlusFunctions)
  *   - read $x800, write $xa00
  *   - read $xc00, write $xe00
  */
-void emulate_3EPlus_cartridge()
+void emulate_3EPlus_cartridge(int header_length, _Bool withPlusFunctions)
 {
 	if (cart_size_bytes > 0x010000) return;
 
@@ -559,8 +559,9 @@ void emulate_3EPlus_cartridge()
 	_Bool bankIsRAM[4] = { FALSE, FALSE, FALSE, FALSE };
 	unsigned char *bankPtr[4] = { &cart_rom[0], &cart_rom[0], &cart_rom[0], &cart_rom[0] };
 
-	if (!reboot_into_cartridge()) return;
+	setup_plus_rom_functions();
 
+	if (!reboot_into_cartridge()) return;
 	__disable_irq();	// Disable interrupts
 
 	while (1)
@@ -577,6 +578,29 @@ void emulate_3EPlus_cartridge()
 				// read last data on the bus before the address lines change
 				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
 				bankPtr[act_bank][addr & 0x1FF] = data_prev;
+			}else if(addr == 0x1ff2 ){// read from receive buffer
+				DATA_OUT = ((uint16_t)receive_buffer[receive_buffer_read_pointer]);
+				SET_DATA_MODE_OUT
+				// if there is more data on the receive_buffer
+				if(receive_buffer_read_pointer != receive_buffer_write_pointer )
+					receive_buffer_read_pointer++;
+				// wait for address bus to change
+				while (ADDR_IN == addr){}
+				SET_DATA_MODE_IN
+			}else if(addr == 0x1ff1){ // write to send Buffer and start Request !!
+				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+				if(huart_state == No_Transmission)
+					huart_state = Send_Start;
+				out_buffer[out_buffer_write_pointer] = data_prev;
+			}else if(addr == 0x1ff3){ // read receive Buffer length
+				DATA_OUT = (uint16_t) ((uint8_t)(receive_buffer_write_pointer - receive_buffer_read_pointer));
+				SET_DATA_MODE_OUT
+				// wait for address bus to change
+				while (ADDR_IN == addr){}
+				SET_DATA_MODE_IN
+			}else if(addr == 0x1ff0){ // write to send Buffer
+				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+				out_buffer[out_buffer_write_pointer++] = data_prev;
 			}
 			else
 			{	// reads to either RAM or ROM
@@ -588,11 +612,14 @@ void emulate_3EPlus_cartridge()
 
 				SET_DATA_MODE_OUT
 				// wait for address bus to change
-				while (ADDR_IN == addr) ;
+				while (ADDR_IN == addr){process_transmission();}
 				SET_DATA_MODE_IN
 			}
 		}else{
-			while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+			while (ADDR_IN == addr) {
+				data_prev = data; data = DATA_IN;
+				process_transmission();
+			}
 			if (addr == 0x3e) {
 				act_bank = (data_prev & 0x0C0) >> 6; // bit 6 and 7 define the bank
 				bankIsRAM[act_bank] = TRUE; //TRUE;
@@ -1188,7 +1215,6 @@ void emulate_DPC_cartridge( uint32_t image_size)
 
 	__enable_irq();
 }
-
 
 /* Pink Panther cartridge emulation
  *
