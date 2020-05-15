@@ -96,13 +96,15 @@ enum e_status_message {
 	private_key_saved,
 	offline_roms_deleted,
 	not_enough_menory,
-	romtype_unsupported,
+	romtype_ACE_unsupported,
 	romtype_unknown,
 	done,
 	failed,
 	download_failed,
 	offline_roms_detected,
 	no_offline_roms_detected,
+	romtype_DPCplus_unsupported,
+
 };
 
 /* USER CODE END Private defines */

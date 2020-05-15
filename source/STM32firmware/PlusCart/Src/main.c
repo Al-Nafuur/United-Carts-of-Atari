@@ -78,6 +78,7 @@ enum cart_base_type{
 	base_type_BF,
 	base_type_BFSC,
 	base_type_3EPlus,
+	base_type_DPCplus,
 	base_type_ACE
 };
 
@@ -99,37 +100,39 @@ typedef struct {
 /* USER CODE BEGIN PD */
 
 const EXT_TO_CART_TYPE_MAP ext_to_cart_type_map[]__attribute__((section(".flash01"))) = {
-	{"ROM", { base_type_None, FALSE, FALSE }},
-	{"BIN", { base_type_None, FALSE, FALSE }},
-	{"A26", { base_type_None, FALSE, FALSE }},
-	{"2K",  { base_type_2K, FALSE, FALSE }},
-	{"4K",  { base_type_4K, FALSE, FALSE }},
-	{"F8",  { base_type_F8, FALSE, FALSE }},
-	{"F6",  { base_type_F6, FALSE, FALSE }},
-	{"F4",  { base_type_F4, FALSE, FALSE }},
-	{"F8S", { base_type_F8, TRUE, FALSE }},
-	{"F6S", { base_type_F6, TRUE, FALSE }},
-	{"F4S", { base_type_F4, TRUE, FALSE }},
-	{"FE",  { base_type_FE, FALSE, FALSE }},
-	{"3F",  { base_type_3F, FALSE, FALSE }},
-	{"3E",  { base_type_3E, FALSE, FALSE }},
-	{"E0",  { base_type_E0, FALSE, FALSE }},
-	{"084", { base_type_0840, FALSE, FALSE }},
-	{"CV",  { base_type_CV, FALSE, FALSE }},
-	{"EF",  { base_type_EF, FALSE, FALSE }},
-	{"EFS", { base_type_EF, TRUE, FALSE }},
-	{"F0",  { base_type_F0, FALSE, FALSE }},
-	{"FA",  { base_type_FA, FALSE, FALSE }},
-	{"E7",  { base_type_E7, FALSE, FALSE }},
-	{"DPC", { base_type_DPC, FALSE, FALSE }},
-	{"AR",  { base_type_AR, FALSE, FALSE }},
-	{"BF",  { base_type_BF, FALSE, FALSE }},
-	{"BFS", { base_type_BFSC, FALSE, FALSE }},
-	{"ACE", { base_type_ACE, FALSE, FALSE }},
-	{"WD",  { base_type_PP, FALSE, FALSE }},
-	{"DF",  { base_type_DF, FALSE, FALSE }},
-	{"DFS", { base_type_DFSC, FALSE, FALSE }},
-	{"3EP", { base_type_3EPlus, FALSE, FALSE }},
+	{"ROM",  { base_type_None, FALSE, FALSE }},
+	{"BIN",  { base_type_None, FALSE, FALSE }},
+	{"A26",  { base_type_None, FALSE, FALSE }},
+	{"2K",   { base_type_2K, FALSE, FALSE }},
+	{"4K",   { base_type_4K, FALSE, FALSE }},
+	{"F8",   { base_type_F8, FALSE, FALSE }},
+	{"F6",   { base_type_F6, FALSE, FALSE }},
+	{"F4",   { base_type_F4, FALSE, FALSE }},
+	{"F8S",  { base_type_F8, TRUE, FALSE }},
+	{"F6S",  { base_type_F6, TRUE, FALSE }},
+	{"F4S",  { base_type_F4, TRUE, FALSE }},
+	{"FE",   { base_type_FE, FALSE, FALSE }},
+	{"3F",   { base_type_3F, FALSE, FALSE }},
+	{"3E",   { base_type_3E, FALSE, FALSE }},
+	{"E0",   { base_type_E0, FALSE, FALSE }},
+	{"084",  { base_type_0840, FALSE, FALSE }},
+	{"CV",   { base_type_CV, FALSE, FALSE }},
+	{"EF",   { base_type_EF, FALSE, FALSE }},
+	{"EFS",  { base_type_EF, TRUE, FALSE }},
+	{"F0",   { base_type_F0, FALSE, FALSE }},
+	{"FA",   { base_type_FA, FALSE, FALSE }},
+	{"E7",   { base_type_E7, FALSE, FALSE }},
+	{"DPC",  { base_type_DPC, FALSE, FALSE }},
+	{"AR",   { base_type_AR, FALSE, FALSE }},
+	{"BF",   { base_type_BF, FALSE, FALSE }},
+	{"BFS",  { base_type_BFSC, FALSE, FALSE }},
+	{"ACE",  { base_type_ACE, FALSE, FALSE }},
+	{"WD",   { base_type_PP, FALSE, FALSE }},
+	{"DF",   { base_type_DF, FALSE, FALSE }},
+	{"DFS",  { base_type_DFSC, FALSE, FALSE }},
+	{"3EP",  { base_type_3EPlus, FALSE, FALSE }},
+	{"DPCP", { base_type_DPCplus, FALSE, FALSE }},
+
 	{0,{0,0,0}}
 };
 
@@ -151,13 +154,14 @@ static const char status_message[][28]__attribute__((section(".flash01"))) = {
 		"Secret-Key saved"                 ,
 		"Offline ROMs erased"              ,
 		"ROM file too big!"                ,
-		"ACE ROMs are not supported"       ,
+		"ACE is not supported"             ,
 		"Unknown/invalid ROM"              ,
 		"Done"                             ,
 		"Failed"                           ,
 		"Firmware download failed"         ,
 		"Offline ROMs detected"            ,
-		"No offline ROMs detected"
+		"No offline ROMs detected"         ,
+		"DPC+ is not supported"
 };
 
 
@@ -595,7 +599,11 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 	// If we don't already know the type (from the file extension), then we
 	// auto-detect the cart type - largely follows code in Stella's CartDetector.cpp
 
-	if (d->filesize == 2*1024)
+	if (d->filesize <= 64 * 1024 && (d->filesize % 1024) == 0 && isProbably3EPlus(d->filesize, buffer))
+	{
+		cart_type.base_type = base_type_3EPlus;
+	}
+	else if (d->filesize == 2*1024)
 	{
 		if (isProbablyCV(d->filesize, buffer))
 			cart_type.base_type = base_type_CV;
@@ -615,8 +623,6 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 			cart_type.base_type = base_type_4K;
 		else if (isProbablyE0(d->filesize, buffer))
 			cart_type.base_type = base_type_E0;
-		else if (isProbably3EPlus(d->filesize, buffer))
-			cart_type.base_type = base_type_3EPlus;
 		else if (isProbably3E(d->filesize, buffer))
 			cart_type.base_type = base_type_3E;
 		else if (isProbably3F(d->filesize, buffer))
@@ -643,29 +649,30 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 	{
 		if (isProbablyE7(d->filesize, buffer))
 			cart_type.base_type = base_type_E7;
-		else if (isProbably3EPlus(d->filesize, buffer))
-			cart_type.base_type = base_type_3EPlus;
 		else if (isProbably3E(d->filesize, buffer))
 			cart_type.base_type = base_type_3E;
 		else
 			cart_type.base_type = base_type_F6;
 	}
+	else if (d->filesize == 29*1024)
+	{
+		if (isProbablyDPCplus(d->filesize, buffer))
+			cart_type.base_type = base_type_DPCplus;
+	}
 	else if (d->filesize == 32*1024)
 	{
-		if (isProbably3EPlus(d->filesize, buffer))
-			cart_type.base_type = base_type_3EPlus;
-		else if (isProbably3E(d->filesize, buffer))
+		if (isProbably3E(d->filesize, buffer))
 			cart_type.base_type = base_type_3E;
 		else if (isProbably3F(d->filesize, buffer))
 			cart_type.base_type = base_type_3F;
+		else if (isProbablyDPCplus(d->filesize, buffer))
+			cart_type.base_type = base_type_DPCplus;
 		else
 			cart_type.base_type = base_type_F4;
 	}
 	else if (d->filesize == 64*1024)
 	{
-		if (isProbably3EPlus(d->filesize, buffer))
-			cart_type.base_type = base_type_3EPlus;
-		else if (isProbably3E(d->filesize, buffer))
+		if (isProbably3E(d->filesize, buffer))
 			cart_type.base_type = base_type_3E;
 		else if (isProbably3F(d->filesize, buffer))
 			cart_type.base_type = base_type_3F;
@@ -743,7 +750,7 @@ void emulate_cartridge(CART_TYPE cart_type, MENU_ENTRY *d)
 	else if (cart_type.base_type == base_type_E7)
 		emulate_E7_cartridge();
 	else if (cart_type.base_type == base_type_DPC)
-		emulate_DPC_cartridge(cart_size_bytes);
+		emulate_DPC_cartridge((uint32_t)cart_size_bytes);
 	else if (cart_type.base_type == base_type_AR)
 		emulate_supercharger_cartridge(curPath, cart_size_bytes, buffer, user_settings.tv_mode);
 	else if (cart_type.base_type == base_type_PP)
@@ -757,7 +764,7 @@ void emulate_cartridge(CART_TYPE cart_type, MENU_ENTRY *d)
 	else if (cart_type.base_type == base_type_BFSC)
 		emulate_bfsc_cartridge(curPath, cart_size_bytes, buffer, d);
 	else if (cart_type.base_type == base_type_3EPlus)
-		emulate_3EPlus_cartridge();
+		emulate_3EPlus_cartridge(offset, cart_type.withPlusFunctions);
 }
 
 void truncate_curPath(){
@@ -878,7 +885,9 @@ int main(void)
     		CART_TYPE cart_type = identify_cartridge(d);
             HAL_Delay(200);
             if (cart_type.base_type == base_type_ACE){
-            	main_status = romtype_unsupported;
+            	main_status = romtype_ACE_unsupported;
+            }else if (cart_type.base_type == base_type_DPCplus){
+            	main_status = romtype_DPCplus_unsupported;
             }else if (cart_type.base_type != base_type_None){
                 emulate_cartridge(cart_type, d);
             }else{
