@@ -1,12 +1,10 @@
 #ifndef CARTRIDGE_EMULATION_H
 #define CARTRIDGE_EMULATION_H
 
-#include "cartridge_io.h"
 
-/* dpc emulation */
+#include <stdint.h>
+
 #define RESET_ADDR addr = addr_prev = 0xffff;
-
-/* df, dfsc, bf, bfsc, dpc shared */
 #define CCM_RAM ((uint8_t*)0x10000000)
 
 
@@ -131,10 +129,8 @@ enum Transmission_State{
         }
 
 
-void emulate_2k_4k_cartridge(int, _Bool, int);
-
 /* 'Standard' Bankswitching */
-void emulate_FxSC_cartridge(int, _Bool, uint16_t, uint16_t, int);
+void emulate_standard_cartridge(int, _Bool, uint16_t, uint16_t, int);
 
 /* FA (CBS RAM plus) Bankswitching */
 void emulate_FA_cartridge();

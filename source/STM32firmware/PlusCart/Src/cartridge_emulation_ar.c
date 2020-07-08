@@ -5,7 +5,7 @@
 #include "esp8266.h"
 
 #include "cartridge_io.h"
-#include "cartridge_supercharger.h"
+#include "cartridge_emulation_ar.h"
 #include "cartridge_firmware.h"
 #include "supercharger_bios.h"
 
@@ -137,7 +137,7 @@ static void load_multiload(uint8_t *ram, uint8_t *rom, uint8_t physical_index, c
 	rom[0x7f3] = header->entry_hi;
 }
 
-void emulate_supercharger_cartridge(const char* cartridge_path, unsigned int image_size, uint8_t* buffer, int tv_mode) {
+void emulate_ar_cartridge(const char* cartridge_path, unsigned int image_size, uint8_t* buffer, int tv_mode) {
 	uint8_t *ram = buffer;
 	uint8_t *rom = ram + 0x1800;
 	uint8_t *multiload_map = rom + 0x0800;

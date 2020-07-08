@@ -9,81 +9,18 @@
  * Cartridge Emulation
  *************************************************************************/
 #include <string.h> // for new DCP emulation
-#include <ctype.h>
-#include <stdlib.h>
 #include "cartridge_emulation.h"
 #include "cartridge_firmware.h"
-#include "global.h"
-
-
-void emulate_2k_4k_cartridge( int header_length, _Bool withPlusFunctions, int mask)
-{
-	setup_cartridge_image();
-
-	uint16_t addr, addr_prev = 0, data = 0, data_prev = 0;
-
-	setup_plus_rom_functions();
-
-	if (!reboot_into_cartridge()) return;
-	__disable_irq();	// Disable interrupts
-
-	while (1)
-	{
-		while ((addr = ADDR_IN) != addr_prev)
-			addr_prev = addr;
-		// got a stable address
-		if (addr & 0x1000)
-		{ // A12 high
-			if(withPlusFunctions && addr > 0x1fef && addr < 0x1ff4){
-				if(addr == 0x1ff2 ){// read from receive buffer
-					DATA_OUT = ((uint16_t)receive_buffer[receive_buffer_read_pointer]);
-				    SET_DATA_MODE_OUT
-					// if there is more data on the receive_buffer
-					if(receive_buffer_read_pointer != receive_buffer_write_pointer )
-					  receive_buffer_read_pointer++;
-					// wait for address bus to change
-					while (ADDR_IN == addr){}
-					SET_DATA_MODE_IN
-				}else if(addr == 0x1ff1){ // write to send Buffer and start Request !!
-					while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-					if(huart_state == No_Transmission)
-					  huart_state = Send_Start;
-					out_buffer[out_buffer_write_pointer] = data_prev;
-				}else if(addr == 0x1ff3){ // read receive Buffer length
-					DATA_OUT = ((uint16_t)(receive_buffer_write_pointer - receive_buffer_read_pointer));
-					SET_DATA_MODE_OUT
-					// wait for address bus to change
-					while (ADDR_IN == addr){}
-					SET_DATA_MODE_IN
-				}else{ // if(addr == 0x1ff0){ // write to send Buffer
-					while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-					out_buffer[out_buffer_write_pointer++] = data_prev;
-				}
-			 }else{
-					DATA_OUT = ((uint16_t)cart_rom[addr&mask]);
-					SET_DATA_MODE_OUT
-					// wait for address bus to change
-					while (ADDR_IN == addr) ;
-					SET_DATA_MODE_IN
-			 }
-	    }else if(withPlusFunctions){
-	      while (ADDR_IN == addr) {
-	    	  process_transmission();
-	      }
-	    }
-	}
-	__enable_irq();
-}
 
 /* 'Standard' Bankswitching
  * ------------------------
- * Used by F8(8k), F6(16k), F4(32k), EF(64k)
+ * Used by 2K, 4K, 4KSC, F8(8k), F6(16k), F4(32k), EF(64k)
  * and F8SC(8k), F6SC(16k), F4SC(32k), EFSC(64k)
  *
  * SC variants have 128 bytes of RAM:
  * RAM read port is $1080 - $10FF, write port is $1000 - $107F.
  */
-void emulate_FxSC_cartridge(int header_length, _Bool withPlusFunctions, uint16_t lowBS, uint16_t highBS, int isSC)
+void emulate_standard_cartridge(int header_length, _Bool withPlusFunctions, uint16_t lowBS, uint16_t highBS, int isSC)
 {
 	setup_cartridge_image_with_ram();
 

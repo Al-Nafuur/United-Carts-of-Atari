@@ -1,63 +1,18 @@
-#include <stdbool.h>
 
-#include "global.h"
-#include "esp8266.h"
-#include "flash.h"
-
+#include <stdlib.h>
+#include "cartridge_setup.h"
 #include "cartridge_emulation_df.h"
 #include "cartridge_firmware.h"
-
-#define BUFFER_SIZE_KB 96
-#define CCM_SIZE_KB 64
-
-#define RAM_BANKS ((BUFFER_SIZE_KB / 4) - 1)     //    23
-#define CCM_BANKS (32 - RAM_BANKS)               //     9
-
-#define AVAILABLE_RAM_BASE (RAM_BANKS * 4096)    //  9216
-
-#define CCM_RAM ((uint8_t*)0x10000000)
-#define CCM_SIZE (CCM_SIZE_KB * 1024)
-
-#define CCM_IMAGE_OFFSET (RAM_BANKS * 4096)      // 94208
-#define CCM_IMAGE_SIZE (CCM_BANKS * 4096)        // 26864
 
 #define STARTUP_BANK_BF 1
 #define STARTUP_BANK_BFSC 15
 
-typedef struct {
-    uint8_t* banks[32];
-} cartridge_layout;
-
-static bool setup_cartridge_image(const char* filename, uint32_t image_size, uint8_t* buffer, cartridge_layout* layout, MENU_ENTRY *d) {
-    if (image_size != 128*1024) return false;
-
-	uint32_t bytes_read;
-	if(d->type == Cart_File )
-		bytes_read = esp8266_PlusStore_API_file_request( CCM_RAM, (char*) filename, CCM_IMAGE_OFFSET, CCM_IMAGE_SIZE );
-	else
-		bytes_read = flash_file_request( CCM_RAM, d->flash_base_address, CCM_IMAGE_OFFSET, CCM_IMAGE_SIZE );
-
-    if (bytes_read != CCM_IMAGE_SIZE) goto fail_close;
-
-    for (uint8_t i = 0; i < RAM_BANKS; i++) layout->banks[i] = buffer + i * 4096;
-    for (uint8_t i = 0; i < CCM_BANKS; i++) layout->banks[RAM_BANKS + i] = CCM_RAM + i * 4096;
-
-	return true;
-
-	fail_close:
-
-	return false;
-}
-
 void emulate_dfsc_cartridge(const char* filename, uint32_t image_size, uint8_t* buffer, MENU_ENTRY *d ) {
-    uint8_t *ram_base = buffer + AVAILABLE_RAM_BASE;
 
-    cartridge_layout* layout = (void*)ram_base;
-    ram_base += sizeof(cartridge_layout);
+	cartridge_layout * layout = (cartridge_layout *) malloc( sizeof(  cartridge_layout ));
+    uint8_t* ram = buffer;
 
-    uint8_t* ram = ram_base;
-
-    if (!setup_cartridge_image(filename, image_size, buffer, layout, d)) return;
+    if (!setup_cartridge_image(filename, image_size, buffer, layout, d, base_type_DFSC)) return;
 
     uint8_t *bank = layout->banks[STARTUP_BANK_BFSC];
 
@@ -95,13 +50,15 @@ void emulate_dfsc_cartridge(const char* filename, uint32_t image_size, uint8_t* 
 			SET_DATA_MODE_IN
         }
     }
+	__enable_irq();
+
+	free(layout);
 }
 
 void emulate_df_cartridge(const char* filename, uint32_t image_size, uint8_t* buffer, MENU_ENTRY *d ) {
-    uint8_t *ram_base = buffer + AVAILABLE_RAM_BASE;
-    cartridge_layout* layout = (void*)ram_base;
+	cartridge_layout * layout = (cartridge_layout *) malloc( sizeof(  cartridge_layout ));
 
-    if (!setup_cartridge_image(filename, image_size, buffer, layout, d)) return;
+    if (!setup_cartridge_image(filename, image_size, buffer, layout, d, base_type_DF)) return;
 
     uint8_t *bank = layout->banks[STARTUP_BANK_BF];
 
@@ -130,4 +87,7 @@ void emulate_df_cartridge(const char* filename, uint32_t image_size, uint8_t* bu
         while (ADDR_IN == addr) ;
         SET_DATA_MODE_IN
     }
+	__enable_irq();
+
+	free(layout);
 }
