@@ -75,6 +75,8 @@ void Error_Handler(void);
 
 #define BUFFER_SIZE				96   // kilobytes
 #define CCM_RAM_SIZE            64   // kilobytes
+#define CCM_RAM ((uint8_t*)0x10000000)
+
 
 enum e_status_message {
 	none = -2,

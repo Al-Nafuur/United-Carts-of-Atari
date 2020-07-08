@@ -42,45 +42,18 @@
 #include "flash.h"
 #include "cartridge_io.h"
 #include "cartridge_firmware.h"
-#include "cartridge_supercharger.h"
+#include "cartridge_emulation_ar.h"
 #include "cartridge_detection.h"
 #include "cartridge_emulation.h"
 #include "cartridge_emulation_df.h"
 #include "cartridge_emulation_bf.h"
+#include "cartridge_emulation_sb.h"
 
 
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-enum cart_base_type{
-	base_type_None,
-	base_type_2K,
-	base_type_4K,
-	base_type_F8,
-	base_type_F6,
-	base_type_F4,
-	base_type_FE,
-	base_type_3F,
-	base_type_3E,
-	base_type_E0,
-	base_type_0840,
-	base_type_CV,
-	base_type_EF,
-	base_type_F0,
-	base_type_FA,
-	base_type_E7,
-	base_type_DPC,
-	base_type_AR,
-	base_type_PP,
-	base_type_DF,
-	base_type_DFSC,
-	base_type_BF,
-	base_type_BFSC,
-	base_type_3EPlus,
-	base_type_DPCplus,
-	base_type_ACE
-};
 
 typedef struct {
 	enum cart_base_type base_type;
@@ -105,6 +78,7 @@ const EXT_TO_CART_TYPE_MAP ext_to_cart_type_map[]__attribute__((section(".flash0
 	{"A26",  { base_type_None, FALSE, FALSE }},
 	{"2K",   { base_type_2K, FALSE, FALSE }},
 	{"4K",   { base_type_4K, FALSE, FALSE }},
+	{"4KS",  { base_type_4K, TRUE, FALSE }},
 	{"F8",   { base_type_F8, FALSE, FALSE }},
 	{"F6",   { base_type_F6, FALSE, FALSE }},
 	{"F4",   { base_type_F4, FALSE, FALSE }},
@@ -132,6 +106,7 @@ const EXT_TO_CART_TYPE_MAP ext_to_cart_type_map[]__attribute__((section(".flash0
 	{"DFS",  { base_type_DFSC, FALSE, FALSE }},
 	{"3EP",  { base_type_3EPlus, FALSE, FALSE }},
 	{"DPCP", { base_type_DPCplus, FALSE, FALSE }},
+	{"SB",   { base_type_SB, FALSE, FALSE }},
 
 	{0,{0,0,0}}
 };
@@ -684,15 +659,21 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 	else if (d->filesize == 128 * 1024) {
 		if (isProbablyDF(tail))
 			cart_type.base_type = base_type_DF;
-		else if (isProbablyDFSC(tail))
+		else if (isProbablyDFSC(tail)){
 			cart_type.base_type = base_type_DFSC;
+			cart_type.withSuperChip = 1;
+		}else
+			cart_type.base_type = base_type_SB;
 	}
 	else if (d->filesize == 256 * 1024)
 	{
 		if (isProbablyBF(tail))
 			cart_type.base_type = base_type_BF;
-		else if (isProbablyBFSC(tail))
+		else if (isProbablyBFSC(tail)){
 			cart_type.base_type = base_type_BFSC;
+			cart_type.withSuperChip = 1;
+		}else
+			cart_type.base_type = base_type_SB;
 	}
 
 	close:
@@ -719,16 +700,17 @@ void emulate_cartridge(CART_TYPE cart_type, MENU_ENTRY *d)
 		offset = esp8266_PlusROM_API_connect(cart_size_bytes);
 	}
 
-	if (cart_type.base_type == base_type_2K)
-		emulate_2k_4k_cartridge(offset, cart_type.withPlusFunctions, 0x7FF);
-	else if (cart_type.base_type == base_type_4K)
-		emulate_2k_4k_cartridge(offset, cart_type.withPlusFunctions, 0xFFF);
+	if (cart_type.base_type == base_type_2K){
+		memcpy(buffer+0x800, buffer, 0x800);
+		emulate_standard_cartridge(offset, cart_type.withPlusFunctions, 0x2000, 0x0000, cart_type.withSuperChip);
+	}else if (cart_type.base_type == base_type_4K )
+		emulate_standard_cartridge(offset, cart_type.withPlusFunctions, 0x2000, 0x0000, cart_type.withSuperChip);
 	else if (cart_type.base_type == base_type_F8)
-		emulate_FxSC_cartridge(offset, cart_type.withPlusFunctions, 0x1FF8, 0x1FF9, cart_type.withSuperChip);
+		emulate_standard_cartridge(offset, cart_type.withPlusFunctions, 0x1FF8, 0x1FF9, cart_type.withSuperChip);
 	else if (cart_type.base_type == base_type_F6)
-		emulate_FxSC_cartridge(offset, cart_type.withPlusFunctions, 0x1FF6, 0x1FF9, cart_type.withSuperChip);
+		emulate_standard_cartridge(offset, cart_type.withPlusFunctions, 0x1FF6, 0x1FF9, cart_type.withSuperChip);
 	else if (cart_type.base_type == base_type_F4)
-		emulate_FxSC_cartridge(offset, cart_type.withPlusFunctions, 0x1FF4, 0x1FFB, cart_type.withSuperChip );
+		emulate_standard_cartridge(offset, cart_type.withPlusFunctions, 0x1FF4, 0x1FFB, cart_type.withSuperChip );
 	else if (cart_type.base_type == base_type_FE)
 		emulate_FE_cartridge();
 	else if (cart_type.base_type == base_type_3F)
@@ -742,7 +724,7 @@ void emulate_cartridge(CART_TYPE cart_type, MENU_ENTRY *d)
 	else if (cart_type.base_type == base_type_CV)
 		emulate_CV_cartridge();
 	else if (cart_type.base_type == base_type_EF)
-		emulate_FxSC_cartridge(offset, cart_type.withPlusFunctions, 0x1FE0, 0x1FEF, cart_type.withSuperChip);
+		emulate_standard_cartridge(offset, cart_type.withPlusFunctions, 0x1FE0, 0x1FEF, cart_type.withSuperChip);
 	else if (cart_type.base_type == base_type_F0)
 		emulate_F0_cartridge();
 	else if (cart_type.base_type == base_type_FA)
@@ -752,7 +734,7 @@ void emulate_cartridge(CART_TYPE cart_type, MENU_ENTRY *d)
 	else if (cart_type.base_type == base_type_DPC)
 		emulate_DPC_cartridge((uint32_t)cart_size_bytes);
 	else if (cart_type.base_type == base_type_AR)
-		emulate_supercharger_cartridge(curPath, cart_size_bytes, buffer, user_settings.tv_mode);
+		emulate_ar_cartridge(curPath, cart_size_bytes, buffer, user_settings.tv_mode);
 	else if (cart_type.base_type == base_type_PP)
 		emulate_pp_cartridge( buffer + 8*1024);
 	else if (cart_type.base_type == base_type_DF)
@@ -765,6 +747,9 @@ void emulate_cartridge(CART_TYPE cart_type, MENU_ENTRY *d)
 		emulate_bfsc_cartridge(curPath, cart_size_bytes, buffer, d);
 	else if (cart_type.base_type == base_type_3EPlus)
 		emulate_3EPlus_cartridge(offset, cart_type.withPlusFunctions);
+	else if (cart_type.base_type == base_type_SB)
+		emulate_SB_cartridge(curPath, cart_size_bytes, buffer, d);
+
 }
 
 void truncate_curPath(){
