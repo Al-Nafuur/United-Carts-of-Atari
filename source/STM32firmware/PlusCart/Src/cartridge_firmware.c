@@ -74,14 +74,16 @@ void inline add_end_bank(int bank_id){
     memcpy( bufferp, end_bank, sizeof(end_bank));
 }
 
-void inline add_textline_start(bool even, uint8_t entry){
+void inline add_textline_start(bool even, uint8_t entry, bool isFolder){
     if(even){
         memcpy( bufferp, textline_start_even, sizeof(textline_start_even));
         bufferp[1]  += entry;
+        if(isFolder) bufferp[5] = 0x0e;
         bufferp += sizeof(textline_start_even);
     } else {
         memcpy( bufferp, textline_start_odd, sizeof(textline_start_odd));
         bufferp[3]  += entry;
+        if(isFolder) bufferp[7] = 0x0e;
         bufferp += sizeof(textline_start_odd);
     }
 }
@@ -212,14 +214,16 @@ void createMenuForAtari( MENU_ENTRY * menu_entries, uint8_t page_id, int num_men
         bufferp += sizeof(normal_bottom);
 
        	for ( entry = 0; entry < (NUM_MENU_ITEMS_PER_PAGE + 1); entry++){
-            bool is_kernel_a = bank < 4;
+            bool is_kernel_a = bank < 4, isFolder = false;
             int list_entry = entry + offset - 1;
             if(entry == 0){
                 memcpy(menu_string, menu_header, 32);
+                isFolder = true;
             }else if(list_entry < num_menu_entries){
             	str_len = strlen(menu_entries[list_entry].entryname);
                 memcpy(menu_string, menu_entries[list_entry].entryname, str_len);
             	memset(&menu_string[str_len], ' ', (32 - str_len));
+            	isFolder = ( menu_entries[list_entry].type != Offline_Cart_File && menu_entries[list_entry].type != Cart_File );
             }else{
             	memset(menu_string, ' ', 32);
             }
@@ -227,7 +231,7 @@ void createMenuForAtari( MENU_ENTRY * menu_entries, uint8_t page_id, int num_men
     			if(menu_string[i] < 32 || menu_string[i] > 137 )
     				menu_string[i] = 32;
     		}
-            add_textline_start(is_kernel_a , entry);
+            add_textline_start(is_kernel_a , entry, isFolder);
             for (sc = 0; sc<12; sc++){
                 if(is_kernel_a){
                     add_kernel_a(sc,  menu_string );
