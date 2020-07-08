@@ -99,6 +99,9 @@ int isPotentialF8(int size, unsigned char *bytes){
 int isProbablySC(int size, unsigned char *bytes)
 {
 	int banks = size/4096;
+	// check 2K for SC
+	if(banks == 0 && size >= 256 )
+    	banks++;
 	for (int i = 0; i < banks; i++)
 	{
 		for (int j = 0; j < 128; j++)
@@ -263,6 +266,19 @@ int isProbablyDPCplus(int size, unsigned char *bytes)
 	// 0x10adab1e (LOADABLE) if needed for future improvement
 	unsigned char  signature[] = { 'D', 'P', 'C', '+' };
 	return searchForBytes(bytes, size, signature, 4, 2);
+}
+
+int isProbablySB(int size, unsigned char *bytes)
+{
+  // SB cart bankswitching switches banks by accessing address 0x0800
+	unsigned char signature[2][3] = {
+    { 0xBD, 0x00, 0x08 },  // LDA $0800,x
+    { 0xAD, 0x00, 0x08 }   // LDA $0800
+  };
+  if(searchForBytes(bytes, size, signature[0], 3, 1))
+    return 1;
+  else
+    return searchForBytes(bytes, size, signature[1], 3, 1);
 }
 
 

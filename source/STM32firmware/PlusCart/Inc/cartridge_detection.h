@@ -23,6 +23,7 @@ int isProbablyBF(unsigned char *);
 int isProbablyBFSC(unsigned char *);
 int isProbablyDF(unsigned char *);
 int isProbablyDFSC(unsigned char *);
-int isProbablyDPCplus(int , unsigned char *);
+int isProbablyDPCplus(int, unsigned char *);
+int isProbablySB(int, unsigned char *);
 
 #endif // CARTRIDGE_DETECTION_H
