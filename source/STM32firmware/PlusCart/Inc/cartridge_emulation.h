@@ -90,7 +90,7 @@ enum Transmission_State{
           case Receive_Header: { \
             if(( huart1.Instance->SR & UART_FLAG_RXNE) == UART_FLAG_RXNE){ \
               c = (uint8_t)huart1.Instance->DR; \
-              if(c == prev_prev_c && c == '\n'){ \
+              if(c == '\n' && c == prev_prev_c){ \
                 huart_state++; \
               }else{ \
                 prev_prev_c = prev_c; \

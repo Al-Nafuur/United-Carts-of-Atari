@@ -30,7 +30,7 @@ void emulate_SB_cartridge( const char* filename, uint32_t image_size, uint8_t* b
 			// wait for address bus to change
 			while (ADDR_IN == addr) ;
 			SET_DATA_MODE_IN
-		}else if (addr & 0x0800 ){ // addr > 0x7FF && addr < (0x800 + banks )){// (addr & 0xFF) < banks){	// bank-switch
+		}else if (addr & 0x0800 ){
 			bank = layout->banks[addr & banks];
 			// wait for address bus to change
 			while (ADDR_IN == addr) ;
