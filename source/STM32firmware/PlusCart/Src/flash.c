@@ -145,9 +145,9 @@ uint32_t flash_download(char *filename, uint32_t filesize, uint32_t http_range_s
     pFlash.Lock = HAL_LOCKED;
     FLASH_WaitInRAMForLastOperationWithMaxDelay();
 
-    uint8_t chunks = ( filesize + 4095 )  / 4096;
-    uint16_t lastChunkSize = (filesize % 4096)?(filesize % 4096):4096;
-    while(chunks != 0 ){
+    uint8_t parts = ( filesize + 4095 )  / 4096;
+    uint16_t last_part_size = (filesize % 4096)?(filesize % 4096):4096;
+    while(parts != 0 ){
         http_range_param_pos_counter = http_range_param_pos;
         count = http_range_end;
         while(count != 0) {
@@ -168,7 +168,7 @@ uint32_t flash_download(char *filename, uint32_t filesize, uint32_t http_range_s
 
         // Now for the HTTP Body
         count = 0;
-        while(count < 4096 && (chunks != 1 || count < lastChunkSize )){
+        while(count < 4096 && (parts != 1 || count < last_part_size )){
             if(( huart1.Instance->SR & UART_FLAG_RXNE) == UART_FLAG_RXNE){ // ! (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_TXE) ) ){
                 c = (uint8_t)huart1.Instance->DR; // & (uint8_t)0xFF);
 
@@ -202,7 +202,7 @@ uint32_t flash_download(char *filename, uint32_t filesize, uint32_t http_range_s
         }
 
         http_range_start += 4096;
-        http_range_end += (--chunks==1)?lastChunkSize:4096;
+        http_range_end += (--parts==1)?last_part_size:4096;
 
         count = 0;
         while(count++ < 25000000){
