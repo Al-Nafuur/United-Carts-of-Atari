@@ -63,10 +63,11 @@ _Min_Stack_Size = 0x400;	/* required amount of stack */
 MEMORY
 {
     CCMRAM	(xrw)	: ORIGIN = 0x10000000,	LENGTH = 64K
-    RAM	(xrw)	: ORIGIN = 0x20000000,	LENGTH = 128K
-    VECTOR (rx) : ORIGIN = 0x8000000, LENGTH = 16K
-    EEPROM (rx) : ORIGIN = 0x8004000, LENGTH = 16K
-    FLASH (rx) : ORIGIN = 0x8008000, LENGTH = 1024K-32K
+	BUFFER	(xrw)	: ORIGIN = 0x20000000,	LENGTH = 96K
+	RAM	(xrw)		: ORIGIN = 0x20018000,	LENGTH = 32K
+    VECTOR (rx) 	: ORIGIN = 0x8000000, LENGTH = 16K
+    EEPROM (rx) 	: ORIGIN = 0x8004000, LENGTH = 16K
+    FLASH (rx)		: ORIGIN = 0x8008000, LENGTH = 1024K-32K
 }
 
 /* Sections */
@@ -170,7 +171,7 @@ SECTIONS
   _sidata = LOADADDR(.data);
 
   /* Initialized data sections into "RAM" Ram type memory */
-  .data : 
+  .data :
   {
     . = ALIGN(4);
     _sdata = .;        /* create a global symbol at data start */
@@ -196,6 +197,14 @@ SECTIONS
     _eccmram = .;       /* create a global symbol at ccmram end */
   } >CCMRAM
 
+
+   /* Uninitialized data section into "RAM" Ram type memory */
+  . = ALIGN(4);
+  .buffer (NOLOAD):
+  {
+    *(.buffer)
+    . = ALIGN(4);
+  } >BUFFER
 
    /* Uninitialized data section into "RAM" Ram type memory */
   . = ALIGN(4);
