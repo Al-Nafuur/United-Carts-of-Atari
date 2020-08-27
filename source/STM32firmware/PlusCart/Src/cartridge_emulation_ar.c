@@ -63,26 +63,14 @@ typedef struct __attribute__((packed)) {
 } LoadHeader;
 
 static void setup_multiload_map(uint8_t *multiload_map, uint32_t multiload_count, const char* cartridge_path) {
-
-	if(multiload_count){
-		http_range range[multiload_count];
-		uint8_t multiload_buffer[multiload_count + RANGE_BOUNDARY_SIZE];
-		uint32_t i;
-		memset(multiload_map, 0, 0xff);
-		for ( i = 0; i < multiload_count; i++) {
-			range[i].start =((i + 1) * 8448 - 251); // - 256 + 5 -> multiload_id
-			range[i].stop = range[i].start;
-		}
-		esp8266_PlusStore_API_connect();
-		esp8266_PlusStore_API_range_request( (char *)cartridge_path, multiload_count, range, multiload_buffer );
-		esp8266_PlusStore_API_end_transmission();
-		for ( i = 0; i < multiload_count; i++) {
-			multiload_map[multiload_buffer[i]] = i;
-		}
-	}else{
-		multiload_map[0] = 0;
+	uint32_t i,start;
+	uint8_t multiload_id;
+	memset(multiload_map, 0, 0xff);
+	for ( i = 0; i < multiload_count; i++) {
+		start = ((i + 1) * 8448 - 251); // - 256 + 5 -> multiload_id
+		esp8266_PlusStore_API_file_request( &multiload_id, (char*) cartridge_path, start, 1 );
+		multiload_map[multiload_id] = i;
 	}
-
 }
 
 static void setup_rom(uint8_t* rom, int tv_mode) {
@@ -183,7 +171,7 @@ void emulate_ar_cartridge(const char* cartridge_path, unsigned int image_size, u
 
 			while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
 
-			load_multiload(ram, rom, multiload_map[data_prev], cartridge_path, multiload_buffer, image_size);
+			load_multiload(ram, rom, multiload_map[data_prev & 0xff], cartridge_path, multiload_buffer, image_size);
 
 			goto finish_cycle;
 		}
