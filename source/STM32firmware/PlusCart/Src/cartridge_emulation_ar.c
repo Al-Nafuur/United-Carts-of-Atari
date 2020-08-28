@@ -5,6 +5,7 @@
 #include "esp8266.h"
 
 #include "cartridge_io.h"
+#include "cartridge_emulation.h"
 #include "cartridge_emulation_ar.h"
 #include "cartridge_firmware.h"
 #include "supercharger_bios.h"
@@ -139,6 +140,7 @@ void emulate_ar_cartridge(const char* cartridge_path, unsigned int image_size, u
 	uint8_t data_hold = 0;
 	uint32_t multiload_count = image_size / 8448;
 	uint8_t value_out;
+	bool joy_status = false;
 
 	memset(ram, 0, 0x1800);
 
@@ -156,85 +158,94 @@ void emulate_ar_cartridge(const char* cartridge_path, unsigned int image_size, u
 			addr_prev = addr;
 		}
 
-		if (!(addr & 0x1000)) goto finish_cycle;
+		if (addr & 0x1000){
+			if (write_ram_enabled && transition_count == 5 && (addr < 0x1800 || bank1 != rom))
+				value_out = data_hold;
+			else
+				value_out = addr < 0x1800 ? bank0[addr & 0x07ff] : bank1[addr & 0x07ff];
 
-		if (write_ram_enabled && transition_count == 5 && (addr < 0x1800 || bank1 != rom))
-			value_out = data_hold;
-		else
-			value_out = addr < 0x1800 ? bank0[addr & 0x07ff] : bank1[addr & 0x07ff];
+			DATA_OUT = ((uint16_t)value_out);
+			SET_DATA_MODE_OUT;
 
-		DATA_OUT = ((uint16_t)value_out);
-		SET_DATA_MODE_OUT;
+			if (addr == 0x1ff9 && bank1 == rom && last_address <= 0xff) {
+				SET_DATA_MODE_IN;
 
-		if (addr == 0x1ff9 && bank1 == rom && last_address <= 0xff) {
-			SET_DATA_MODE_IN;
+				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
 
-			while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+				load_multiload(ram, rom, multiload_map[data_prev & 0xff], cartridge_path, multiload_buffer, image_size);
 
-			load_multiload(ram, rom, multiload_map[data_prev & 0xff], cartridge_path, multiload_buffer, image_size);
-
-			goto finish_cycle;
-		}
-
-		if ((addr & 0x0f00) == 0 && (transition_count > 5 || !write_ram_enabled)) {
-			data_hold = addr & 0xff;
-			transition_count = 0;
-		}
-		else if (addr == 0x1ff8) {
-			transition_count = 6;
-			write_ram_enabled = data_hold & 0x02;
-			switch ((data_hold & 0x1c) >> 2) {
-				case 4:
-				case 0:
-					bank0 = ram + 2048 * 2;
-					bank1 = rom;
-					break;
-
-				case 1:
-					bank0 = ram;
-					bank1 = rom;
-					break;
-
-				case 2:
-					bank0 = ram + 2048 * 2;
-					bank1 = ram;
-					break;
-
-				case 3:
-					bank0 = ram;
-					bank1 = ram + 2048 * 2;
-					break;
-
-				case 5:
-					bank0 = ram + 2048;
-					bank1 = rom;
-					break;
-
-				case 6:
-					bank0 = ram + 2048 * 2;
-					bank1 = ram + 2048;
-					break;
-
-				case 7:
-					bank0 = ram + 2048;
-					bank1 = ram + 2048 * 2;
-					break;
 			}
-		}
-		else if (write_ram_enabled && transition_count == 5) {
-			if (addr < 0x1800)
-				bank0[addr & 0x07ff] = data_hold;
-			else if (bank1 != rom)
-				bank1[addr & 0x07ff] = data_hold;
-		}
+			else if ((addr & 0x0f00) == 0 && (transition_count > 5 || !write_ram_enabled)) {
+				data_hold = addr & 0xff;
+				transition_count = 0;
+			}
+			else if (addr == 0x1ff8) {
+				transition_count = 6;
+				write_ram_enabled = data_hold & 0x02;
+				switch ((data_hold & 0x1c) >> 2) {
+					case 4:
+					case 0:
+						bank0 = ram + 2048 * 2;
+						bank1 = rom;
+						break;
 
-		finish_cycle:
+					case 1:
+						bank0 = ram;
+						bank1 = rom;
+						break;
+
+					case 2:
+						bank0 = ram + 2048 * 2;
+						bank1 = ram;
+						break;
+
+					case 3:
+						bank0 = ram;
+						bank1 = ram + 2048 * 2;
+						break;
+
+					case 5:
+						bank0 = ram + 2048;
+						bank1 = rom;
+						break;
+
+					case 6:
+						bank0 = ram + 2048 * 2;
+						bank1 = ram + 2048;
+						break;
+
+					case 7:
+						bank0 = ram + 2048;
+						bank1 = ram + 2048 * 2;
+						break;
+				}
+			}
+			else if (write_ram_enabled && transition_count == 5) {
+				if (addr < 0x1800)
+					bank0[addr & 0x07ff] = data_hold;
+				else if (bank1 != rom)
+					bank1[addr & 0x07ff] = data_hold;
+			}
+
+		}else{
 			if (transition_count < 6) transition_count++;
-
 			last_address = addr;
-			while (ADDR_IN == addr);
-			SET_DATA_MODE_IN;
+            if(addr == SWCHB){
+        		while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+        		if( !(data_prev & 0x1) && joy_status)
+        			break;
+            }else if(addr == SWCHA){
+        		while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+        		joy_status = !(data_prev & 0x80);
+            }
+            continue;
+		}
+		if (transition_count < 6) transition_count++;
+
+		last_address = addr;
+		while (ADDR_IN == addr);
+		SET_DATA_MODE_IN;
 	}
 
-	__enable_irq();
+	exit_cartridge(addr, addr_prev);
 }

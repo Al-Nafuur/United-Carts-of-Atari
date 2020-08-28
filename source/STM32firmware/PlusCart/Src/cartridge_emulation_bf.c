@@ -1,5 +1,7 @@
 
 #include <stdlib.h>
+#include <stdbool.h>
+#include "cartridge_emulation.h"
 #include "cartridge_setup.h"
 #include "cartridge_emulation_bf.h"
 #include "cartridge_firmware.h"
@@ -15,6 +17,7 @@ void emulate_bfsc_cartridge(const char* filename, uint32_t image_size, uint8_t* 
     if (!setup_cartridge_image(filename, image_size, buffer, layout, d, base_type_BFSC)) return;
 
     uint8_t *bank = layout->banks[STARTUP_BANK_BFSC];
+	bool joy_status = false;
 
     if (!reboot_into_cartridge()) return;
     __disable_irq();
@@ -29,28 +32,39 @@ void emulate_bfsc_cartridge(const char* filename, uint32_t image_size, uint8_t* 
 			addr_prev = addr;
 		}
 
-        if (!(addr & 0x1000)) continue;
+        if (addr & 0x1000){
+            uint16_t address = addr & 0x0fff;
 
-        uint16_t address = addr & 0x0fff;
+            if (address < 0x80) {
+                while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+    			data = data_prev;
 
-        if (address < 0x80) {
-            while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-			data = data_prev;
+                ram[address] = data;
+            } else {
+                if (address >= 0x0f80 && address <= 0x0fbf) bank = layout->banks[address - 0x0f80];
 
-            ram[address] = data;
-        } else {
-            if (address >= 0x0f80 && address <= 0x0fbf) bank = layout->banks[address - 0x0f80];
+                data = (address < 0x0100) ? ram[address & 0x7f] : bank[address];
 
-            data = (address < 0x0100) ? ram[address & 0x7f] : bank[address];
+                DATA_OUT = ((uint16_t)data);
+    			SET_DATA_MODE_OUT
+    			// wait for address bus to change
+    			while (ADDR_IN == addr) ;
+    			SET_DATA_MODE_IN
+            }
 
-            DATA_OUT = ((uint16_t)data);
-			SET_DATA_MODE_OUT
-			// wait for address bus to change
-			while (ADDR_IN == addr) ;
-			SET_DATA_MODE_IN
+        }else{
+            if(addr == SWCHB){
+        		while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+        		if( !(data_prev & 0x1) && joy_status)
+        			break;
+            }else if(addr == SWCHA){
+        		while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+        		joy_status = !(data_prev & 0x80);
+            }
         }
+
     }
-	__enable_irq();
+	exit_cartridge(addr, addr_prev);
 
 	free(layout);
 }
@@ -61,11 +75,12 @@ void emulate_bf_cartridge(const char* filename, uint32_t image_size, uint8_t* bu
     if (!setup_cartridge_image(filename, image_size, buffer, layout, d, base_type_BF)) return;
 
     uint8_t *bank = layout->banks[STARTUP_BANK_BF];
+	bool joy_status = false;
 
     if (!reboot_into_cartridge()) return;
     __disable_irq();
 
-    uint16_t addr, addr_prev = 0, addr_prev2 = 0;
+    uint16_t addr, addr_prev = 0, addr_prev2 = 0, data = 0, data_prev = 0;
 
 	while (1)
 	{
@@ -75,20 +90,28 @@ void emulate_bf_cartridge(const char* filename, uint32_t image_size, uint8_t* bu
 			addr_prev = addr;
 		}
 
-        if (!(addr & 0x1000)) continue;
+        if (addr & 0x1000){
+            uint16_t address = addr & 0x0fff;
 
-        uint16_t address = addr & 0x0fff;
+            if (address >= 0x0f80 && address <= 0x0fbf) bank = layout->banks[address - 0x0f80];
 
-        if (address >= 0x0f80 && address <= 0x0fbf) bank = layout->banks[address - 0x0f80];
-
-        DATA_OUT = ((uint16_t)bank[address]);
-        SET_DATA_MODE_OUT
-        // wait for address bus to change
-        while (ADDR_IN == addr) ;
-        SET_DATA_MODE_IN
-
+            DATA_OUT = ((uint16_t)bank[address]);
+            SET_DATA_MODE_OUT
+            // wait for address bus to change
+            while (ADDR_IN == addr) ;
+            SET_DATA_MODE_IN
+        }else{
+            if(addr == SWCHB){
+        		while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+        		if( !(data_prev & 0x1) && joy_status)
+        			break;
+            }else if(addr == SWCHA){
+        		while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+        		joy_status = !(data_prev & 0x80);
+            }
+        }
     }
-	__enable_irq();
+	exit_cartridge(addr, addr_prev);
 
 	free(layout);
 }

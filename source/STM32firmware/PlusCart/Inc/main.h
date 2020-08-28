@@ -106,6 +106,7 @@ enum e_status_message {
 	offline_roms_detected,
 	no_offline_roms_detected,
 	romtype_DPCplus_unsupported,
+	exit_emulation
 
 };
 

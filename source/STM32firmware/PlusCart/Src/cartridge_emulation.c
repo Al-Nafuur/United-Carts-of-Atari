@@ -8,9 +8,34 @@
 /*************************************************************************
  * Cartridge Emulation
  *************************************************************************/
-#include <string.h> // for new DCP emulation
+#include <string.h>
+#include <stdbool.h>
 #include "cartridge_emulation.h"
 #include "cartridge_firmware.h"
+
+#define setup_cartridge_image() \
+	if (cart_size_bytes > 0x010000) return; \
+	uint8_t* cart_rom = buffer;
+
+#define setup_cartridge_image_with_ram() \
+	if (cart_size_bytes > 0x010000) return; \
+	uint8_t* cart_rom = buffer; \
+	uint8_t* cart_ram = buffer + cart_size_bytes + (((~cart_size_bytes & 0x03) + 1) & 0x03);
+
+
+void exit_cartridge(uint16_t addr, uint16_t addr_prev){
+
+	DATA_OUT = 0xEA;                  // (NOP) or data for SWCHB
+	SET_DATA_MODE_OUT;
+	while (ADDR_IN == addr);
+
+	addr = ADDR_IN;
+	DATA_OUT = 0x00;                  // (BRK)
+	while (ADDR_IN == addr);
+
+	emulate_firmware_cartridge();
+}
+
 
 /* 'Standard' Bankswitching
  * ------------------------
@@ -26,6 +51,7 @@ void emulate_standard_cartridge(int header_length, _Bool withPlusFunctions, uint
 
 	uint16_t addr, addr_prev = 0, data = 0, data_prev = 0;
 	unsigned char *bankPtr = &cart_rom[0];
+	bool joy_status = false;
 
 	setup_plus_rom_functions();
 
@@ -95,13 +121,23 @@ void emulate_standard_cartridge(int header_length, _Bool withPlusFunctions, uint
 				}
 
 			}
-	    }else if(withPlusFunctions){
-	      while (ADDR_IN == addr) {
-	    	  process_transmission();
-	      }
+	    }else{
+		    if(addr == SWCHB){
+				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+				if( !(data_prev & 0x1) && joy_status)
+					break;
+  		    }else if(addr == SWCHA){
+				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+				joy_status = !(data_prev & 0x80);
+  		    }else if(withPlusFunctions){
+  		    	while (ADDR_IN == addr) {
+  		    		process_transmission();
+  		    	}
+  		    }
 	    }
 	}
-	__enable_irq();
+
+	exit_cartridge(addr, addr_prev);
 }
 
 /* FA (CBS RAM plus) Bankswitching
@@ -116,6 +152,7 @@ void emulate_FA_cartridge()
 
 	uint16_t addr, addr_prev = 0, data = 0, data_prev = 0;
 	unsigned char *bankPtr = &cart_rom[0];
+	bool joy_status = false;
 
 	if (!reboot_into_cartridge()) return;
 	__disable_irq();	// Disable interrupts
@@ -152,9 +189,19 @@ void emulate_FA_cartridge()
 				while (ADDR_IN == addr) ;
 				SET_DATA_MODE_IN
 			}
+		}else{
+		    if(addr == SWCHB){
+				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+				if( !(data_prev & 0x1) && joy_status)
+					break;
+  		    }else if(addr == SWCHA){
+				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+				joy_status = !(data_prev & 0x80);
+  		    }
 		}
 	}
-	__enable_irq();
+
+	exit_cartridge(addr, addr_prev);
 }
 
 /* FE Bankswitching
@@ -221,6 +268,7 @@ void emulate_FE_cartridge()
 	uint16_t addr, addr_prev = 0, data = 0, data_prev = 0;
 	unsigned char *bankPtr = &cart_rom[0];
 	int lastAccessWasFE = 0;
+	bool joy_status = false;
 
 	if (!reboot_into_cartridge()) return;
 	__disable_irq();	// Disable interrupts
@@ -230,12 +278,7 @@ void emulate_FE_cartridge()
 		while ((addr = ADDR_IN) != addr_prev)
 			addr_prev = addr;
 		// got a stable address
-		if (!(addr & 0x1000))
-		{	// A12 low, read last data on the bus before the address lines change
-			while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-			data = data_prev;
-		}
-		else
+		if (addr & 0x1000)
 		{ // A12 high
 			data = bankPtr[addr&0xFFF];
 			DATA_OUT = data;
@@ -243,6 +286,17 @@ void emulate_FE_cartridge()
 			// wait for address bus to change
 			while (ADDR_IN == addr) ;
 			SET_DATA_MODE_IN
+		}
+		else
+		{	// A12 low, read last data on the bus before the address lines change
+			while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+			data = data_prev;
+		    if(addr == SWCHB){
+				if( !(data_prev & 0x1) && joy_status)
+					break;
+  		    }else if(addr == SWCHA){
+				joy_status = !(data_prev & 0x80);
+  		    }
 		}
 		// end of cycle
 		if (lastAccessWasFE)
@@ -254,7 +308,8 @@ void emulate_FE_cartridge()
 		}
 		lastAccessWasFE = (addr == 0x01FE);
 	}
-	__enable_irq();
+
+	exit_cartridge(addr, addr_prev);
 }
 
 /* 3F (Tigervision) Bankswitching
@@ -287,6 +342,7 @@ void emulate_3F_cartridge()
 	uint16_t addr, addr_prev = 0, addr_prev2 = 0, data = 0, data_prev = 0;
 	unsigned char *bankPtr = &cart_rom[0];
 	unsigned char *fixedPtr = &cart_rom[(cartPages-1)*2048];
+	bool joy_status = false;
 
 	if (!reboot_into_cartridge()) return;
 	__disable_irq();	// Disable interrupts
@@ -299,16 +355,7 @@ void emulate_3F_cartridge()
 			addr_prev = addr;
 		}
 		// got a stable address
-		if (!(addr & 0x1000))
-		{	// A12 low, read last data on the bus before the address lines change
-			while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-			if (addr == 0x003F)
-			{	// switch bank
-				int newPage = (data_prev) % cartPages; //data_prev>>8
-				bankPtr = &cart_rom[newPage*2048];
-			}
-		}
-		else
+		if (addr & 0x1000)
 		{ // A12 high
 			if (addr & 0x800)
 				DATA_OUT = ((uint16_t)fixedPtr[addr&0x7FF]);
@@ -319,8 +366,24 @@ void emulate_3F_cartridge()
 			while (ADDR_IN == addr) ;
 			SET_DATA_MODE_IN
 		}
+		else
+		{	// A12 low, read last data on the bus before the address lines change
+			while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+			if (addr == 0x003F)
+			{	// switch bank
+				int newPage = (data_prev) % cartPages; //data_prev>>8
+				bankPtr = &cart_rom[newPage*2048];
+			}
+			else if(addr == SWCHB){
+				if( !(data_prev & 0x1) && joy_status)
+					break;
+  		    }else if(addr == SWCHA){
+				joy_status = !(data_prev & 0x80);
+  		    }
+		}
 	}
-	__enable_irq();
+
+	exit_cartridge(addr, addr_prev);
 }
 
 /* Scheme as described by Eckhard Stolberg. Didn't work on my test 7800, so replaced
@@ -389,6 +452,7 @@ void emulate_3E_cartridge(int header_length, _Bool withPlusFunctions)
 	unsigned char *bankPtr = &cart_rom[0];
 	unsigned char *fixedPtr = &cart_rom[(cartROMPages-1)*2048];
 	int bankIsRAM = 0;
+	bool joy_status = false;
 
 	setup_plus_rom_functions();
 
@@ -468,9 +532,16 @@ void emulate_3E_cartridge(int header_length, _Bool withPlusFunctions)
 				bankIsRAM = 1;
 				bankPtr = &cart_ram[(data_prev%cartRAMPages)*1024];	// switch in RAM bank
 			}
+			else if(addr == SWCHB){
+				if( !(data_prev & 0x1) && joy_status)
+					break;
+  		    }else if(addr == SWCHA){
+				joy_status = !(data_prev & 0x80);
+  		    }
 		}
 	}
-	__enable_irq();
+
+	exit_cartridge(addr, addr_prev);
 }
 
 /* 3E+ Bankswitching
@@ -493,8 +564,9 @@ void emulate_3EPlus_cartridge(int header_length, _Bool withPlusFunctions)
 	uint16_t act_bank = 0;
 	uint8_t* cart_rom = buffer;
 	uint8_t* cart_ram = buffer + cart_size_bytes + (((~cart_size_bytes & 0x03) + 1) & 0x03);
-	_Bool bankIsRAM[4] = { FALSE, FALSE, FALSE, FALSE };
+	bool bankIsRAM[4] = { false, false, false, false };
 	unsigned char *bankPtr[4] = { &cart_rom[0], &cart_rom[0], &cart_rom[0], &cart_rom[0] };
+	bool joy_status = false;
 
 	setup_plus_rom_functions();
 
@@ -559,18 +631,22 @@ void emulate_3EPlus_cartridge(int header_length, _Bool withPlusFunctions)
 			}
 			if (addr == 0x3e) {
 				act_bank = (data_prev & 0x0C0) >> 6; // bit 6 and 7 define the bank
-				bankIsRAM[act_bank] = TRUE; //TRUE;
+				bankIsRAM[act_bank] = true;
 				bankPtr[act_bank] =  cart_ram + ( ((data_prev & 0x03F) % cartRAMPages) << 9 );	// * 512 switch in a RAM bank
 			}
 			else if ( addr == 0x3f ){
 				act_bank = (data_prev & 0x0C0) >> 6; // bit 6 and 7 define the bank
-				bankIsRAM[act_bank] = FALSE;
+				bankIsRAM[act_bank] = false;
 				bankPtr[act_bank] = cart_rom + ( ((data_prev & 0x03F) % cartROMPages) << 10);	// * 1024 switch in a ROM bank
+			}else if(addr == SWCHB){
+				if( !(data_prev & 0x1) && joy_status)
+					break;
+  		    }else if(addr == SWCHA){
+				joy_status = !(data_prev & 0x80);
 			}
-
 		}
 	}
-	__enable_irq();
+	exit_cartridge(addr, addr_prev);
 }
 
 /* E0 Bankswitching
@@ -597,8 +673,9 @@ void emulate_E0_cartridge()
 {
 	setup_cartridge_image();
 
-	uint16_t addr, addr_prev = 0;
+	uint16_t addr, addr_prev = 0, data = 0, data_prev = 0;
 	unsigned char curBanks[4] = {0,0,0,7};
+	bool joy_status = false;
 
 	if (!reboot_into_cartridge()) return;
 	__disable_irq();	// Disable interrupts
@@ -627,10 +704,18 @@ void emulate_E0_cartridge()
 			// wait for address bus to change
 			while (ADDR_IN == addr) ;
 			SET_DATA_MODE_IN
+		}else{
+		    if(addr == SWCHB){
+				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+				if( !(data_prev & 0x1) && joy_status)
+					break;
+  		    }else if(addr == SWCHA){
+				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+				joy_status = !(data_prev & 0x80);
+  		    }
 		}
 	}
-	__enable_irq();
-
+	exit_cartridge(addr, addr_prev);
 }
 
 /* 0840 Bankswitching
@@ -652,8 +737,9 @@ void emulate_0840_cartridge()
 {
 	setup_cartridge_image();
 
-	uint16_t addr, addr_prev = 0, addr_prev2 = 0;
+	uint16_t addr, addr_prev = 0, addr_prev2 = 0, data = 0, data_prev = 0;
 	unsigned char *bankPtr = &cart_rom[0];
+	bool joy_status = false;
 
 	if (!reboot_into_cartridge()) return;
 	__disable_irq();	// Disable interrupts
@@ -679,10 +765,16 @@ void emulate_0840_cartridge()
 			if ((addr & 0x0840) == 0x0800) bankPtr = &cart_rom[0];
 			else if ((addr & 0x0840) == 0x0840) bankPtr = &cart_rom[4*1024];
 			// wait for address bus to change
-			while (ADDR_IN == addr) ;
+			while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+		    if(addr == SWCHB){
+				if( !(data_prev & 0x1) && joy_status)
+					break;
+		    }else if(addr == SWCHA){
+				joy_status = !(data_prev & 0x80);
+		    }
 		}
 	}
-	__enable_irq();
+	exit_cartridge(addr, addr_prev);
 }
 
 /* CommaVid Cartridge
@@ -697,6 +789,7 @@ void emulate_CV_cartridge()
 	setup_cartridge_image_with_ram();
 
 	uint16_t addr, addr_prev = 0, data = 0, data_prev = 0;
+	bool joy_status = false;
 
 	if (!reboot_into_cartridge()) return;
 	__disable_irq();	// Disable interrupts
@@ -734,8 +827,19 @@ void emulate_CV_cartridge()
 				}
 			}
 		}
+		else
+		{
+		    if(addr == SWCHB){
+				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+				if( !(data_prev & 0x1) && joy_status)
+					break;
+		    }else if(addr == SWCHA){
+				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+				joy_status = !(data_prev & 0x80);
+		    }
+		}
 	}
-	__enable_irq();
+	exit_cartridge(addr, addr_prev);
 }
 
 /* F0 Bankswitching
@@ -747,8 +851,9 @@ void emulate_F0_cartridge()
 {
 	setup_cartridge_image();
 
-	uint16_t addr, addr_prev = 0;
+	uint16_t addr, addr_prev = 0, data = 0, data_prev = 0;
 	int currentBank = 0;
+	bool joy_status = false;
 
 	if (!reboot_into_cartridge()) return;
 	__disable_irq();	// Disable interrupts
@@ -768,9 +873,18 @@ void emulate_F0_cartridge()
 			// wait for address bus to change
 			while (ADDR_IN == addr) ;
 			SET_DATA_MODE_IN
+		}else{
+		    if(addr == SWCHB){
+				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+				if( !(data_prev & 0x1) && joy_status)
+					break;
+		    }else if(addr == SWCHA){
+				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+				joy_status = !(data_prev & 0x80);
+		    }
 		}
 	}
-	__enable_irq();
+	exit_cartridge(addr, addr_prev);
 }
 
 /* E7 Bankswitching
@@ -811,6 +925,7 @@ void emulate_E7_cartridge()
 	unsigned char *ram1Ptr = &cart_ram[0];
 	unsigned char *ram2Ptr = &cart_ram[1024];
 	int ram_mode = 0;
+	bool joy_status = false;
 
 	if (!reboot_into_cartridge()) return;
 	__disable_irq();	// Disable interrupts
@@ -889,9 +1004,18 @@ void emulate_E7_cartridge()
 					SET_DATA_MODE_IN
 				}
 			}
+		}else{
+		    if(addr == SWCHB){
+				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+				if( !(data_prev & 0x1) && joy_status)
+					break;
+		    }else if(addr == SWCHA){
+				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+				joy_status = !(data_prev & 0x80);
+		    }
 		}
 	}
-	__enable_irq();
+	exit_cartridge(addr, addr_prev);
 }
 
 /* DPC (Pitfall II) Bankswitching
@@ -933,6 +1057,7 @@ void emulate_DPC_cartridge( uint32_t image_size)
 
 	uint16_t addr, addr_prev, data = 0, data_prev = 0;
 	unsigned char *bankPtr = buffer, *DpcDisplayPtr = buffer + 8*1024;
+	bool joy_status = false;
 	RESET_ADDR;
 
 	// Initialise the DPC's random number generator register (must be non-zero)
@@ -1147,10 +1272,17 @@ void emulate_DPC_cartridge( uint32_t image_size)
 
 			while (ADDR_IN == addr);
 			RESET_ADDR;
-		}
-	}
+		}else if(addr == SWCHB){
+			while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+			if( !(data_prev & 0x1) && joy_status)
+				break;
+	    }else if(addr == SWCHA){
+			while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+			joy_status = !(data_prev & 0x80);
+	    }
 
-	__enable_irq();
+	}
+	exit_cartridge(addr, addr_prev);
 }
 
 /* Pink Panther cartridge emulation
@@ -1202,6 +1334,7 @@ void emulate_pp_cartridge( uint8_t* ram) {
     uint8_t bankswitch_counter = 0;
 
     uint16_t addr, addr_prev = 0, addr_prev2 = 0, data = 0, data_prev = 0;
+	bool joy_status = false;
 
     for (int i = 0; i <= 7; i++) {
         switchLayout( &segmentLayout[4*i], i);
@@ -1257,8 +1390,16 @@ void emulate_pp_cartridge( uint8_t* ram) {
                 bankswitch_pending = true;
                 pending_bank = zaddr & 0x07;
                 bankswitch_counter = 3;
-            }
+            }else if(addr == SWCHB){
+				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+				if( !(data_prev & 0x1) && joy_status)
+					break;
+		    }else if(addr == SWCHA){
+				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+				joy_status = !(data_prev & 0x80);
+		    }
         }
     }
+	exit_cartridge(addr, addr_prev);
 }
 

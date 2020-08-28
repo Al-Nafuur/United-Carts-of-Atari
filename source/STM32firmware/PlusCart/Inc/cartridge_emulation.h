@@ -7,6 +7,8 @@
 #define RESET_ADDR addr = addr_prev = 0xffff;
 #define CCM_RAM ((uint8_t*)0x10000000)
 
+#define SWCHB          0x282
+#define SWCHA          0x280
 
 enum Transmission_State{
 	No_Transmission,
@@ -21,15 +23,6 @@ enum Transmission_State{
 	Receive_Finished
 };
 
-
-#define setup_cartridge_image() \
-	if (cart_size_bytes > 0x010000) return; \
-	uint8_t* cart_rom = buffer;
-
-#define setup_cartridge_image_with_ram() \
-	if (cart_size_bytes > 0x010000) return; \
-	uint8_t* cart_rom = buffer; \
-	uint8_t* cart_ram = buffer + cart_size_bytes + (((~cart_size_bytes & 0x03) + 1) & 0x03);
 
 #define setup_plus_rom_functions() \
 		uint8_t receive_buffer_write_pointer = 0, receive_buffer_read_pointer = 0, content_counter = 0; \
@@ -128,6 +121,7 @@ enum Transmission_State{
             break; \
         }
 
+void exit_cartridge(uint16_t , uint16_t );
 
 /* 'Standard' Bankswitching */
 void emulate_standard_cartridge(int, _Bool, uint16_t, uint16_t, int);
