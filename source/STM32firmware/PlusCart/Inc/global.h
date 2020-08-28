@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include "stm32f4xx_hal.h"
 
-#define VERSION                   "0.14.10"
+#define VERSION                   "0.14.12"
 #define PLUSSTORE_API_HOST        "pluscart.firmaplus.de"
 
 #define TRUE 1
@@ -37,6 +37,7 @@
 #define URLENCODE_MENU_TEXT_PLUS_CONNECT            "PlusStore%20connect"
 #define URLENCODE_MENU_TEXT_SETUP 	                "Setup"
 
+#define AUTOSTART_FILENAME_PREFIX           "Autostart."
 
 extern UART_HandleTypeDef huart1;
 extern char http_request_header[];
