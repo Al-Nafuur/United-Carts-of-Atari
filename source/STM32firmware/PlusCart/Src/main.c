@@ -48,6 +48,7 @@
 #include "cartridge_emulation_df.h"
 #include "cartridge_emulation_bf.h"
 #include "cartridge_emulation_sb.h"
+#include "cartridge_emulation_dpcp.h"
 
 
 /* USER CODE END Includes */
@@ -136,7 +137,8 @@ static const char status_message[][28]__attribute__((section(".flash01"))) = {
 		"Firmware download failed"         ,
 		"Offline ROMs detected"            ,
 		"No offline ROMs detected"         ,
-		"DPC+ is not supported"
+		"DPC+ is not supported"            ,
+		"Emulation exited"
 };
 
 
@@ -155,7 +157,7 @@ UART_HandleTypeDef huart1;
 int num_menu_entries = 0;
 char http_request_header[512];
 
-uint8_t buffer[BUFFER_SIZE * 1024];
+uint8_t buffer[BUFFER_SIZE * 1024] __attribute__((section(".buffer")));
 unsigned int cart_size_bytes;
 
 USER_SETTINGS user_settings;
@@ -217,6 +219,22 @@ void make_keyboard(MENU_ENTRY **dst){
 
 }
 
+MENU_ENTRY* generateSetupMenu(MENU_ENTRY *dst) {
+	make_menu_entry(&dst, "(GO Back)", Leave_Menu);
+	make_menu_entry(&dst, MENU_TEXT_TV_MODE_SETUP, Setup_Menu);
+	make_menu_entry(&dst, MENU_TEXT_WIFI_SETUP, Setup_Menu);
+	make_menu_entry(&dst, MENU_TEXT_WPS_CONNECT, Menu_Action);
+	make_menu_entry(&dst, MENU_TEXT_WIFI_MANGER, Menu_Action);
+	//make_menu_entry(&dst, MENU_TEXT_PRIVATE_KEY, Input_Field);
+	make_menu_entry(&dst, MENU_TEXT_ESP8266_RESTORE, Menu_Action);
+	if (flash_has_downloaded_roms())
+		make_menu_entry(&dst, MENU_TEXT_DELETE_OFFLINE_ROMS, Menu_Action);
+	else
+		make_menu_entry(&dst, MENU_TEXT_DETECT_OFFLINE_ROMS, Menu_Action);
+
+	return dst;
+}
+
 enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 	int count = 0;
 	_Bool loadStore = FALSE;
@@ -230,19 +248,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 	if(strncmp(MENU_TEXT_SETUP, curPath, sizeof(MENU_TEXT_SETUP) - 1) == 0 ){
 		//char *  curPathPos = (char *) &curPath[sizeof(MENU_TEXT_SETUP)];
 		if(strlen(curPath) == sizeof(MENU_TEXT_SETUP) - 1 ){
-			make_menu_entry(&dst, "(GO Back)", Leave_Menu);
-			make_menu_entry(&dst, MENU_TEXT_TV_MODE_SETUP, Setup_Menu);
-			make_menu_entry(&dst, MENU_TEXT_WIFI_SETUP, Setup_Menu);
-			make_menu_entry(&dst, MENU_TEXT_WPS_CONNECT, Menu_Action);
-			make_menu_entry(&dst, MENU_TEXT_WIFI_MANGER, Menu_Action);
-			//make_menu_entry(&dst, MENU_TEXT_PRIVATE_KEY, Input_Field);
-			make_menu_entry(&dst, MENU_TEXT_ESP8266_RESTORE, Menu_Action);
-
-			if(	flash_has_downloaded_roms() )
-	    		make_menu_entry(&dst, MENU_TEXT_DELETE_OFFLINE_ROMS, Menu_Action);
-			else
-	    		make_menu_entry(&dst, MENU_TEXT_DETECT_OFFLINE_ROMS, Menu_Action);
-
+			dst = generateSetupMenu(dst);
         	menu_status = version;
 			loadStore = TRUE;
 		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_WIFI_SETUP, sizeof(MENU_TEXT_WIFI_SETUP) - 1) == 0 ){
@@ -747,8 +753,14 @@ void emulate_cartridge(CART_TYPE cart_type, MENU_ENTRY *d)
 		emulate_bfsc_cartridge(curPath, cart_size_bytes, buffer, d);
 	else if (cart_type.base_type == base_type_3EPlus)
 		emulate_3EPlus_cartridge(offset, cart_type.withPlusFunctions);
+	else if (cart_type.base_type == base_type_DPCplus)
+		emulate_DPCplus_cartridge(cart_size_bytes);
 	else if (cart_type.base_type == base_type_SB)
 		emulate_SB_cartridge(curPath, cart_size_bytes, buffer, d);
+
+	if (cart_type.withPlusFunctions == TRUE ){
+		esp8266_PlusStore_API_end_transmission();
+	}
 
 }
 
@@ -759,8 +771,26 @@ void truncate_curPath(){
 }
 
 void system_secondary_init(void){
+	if(flash_has_downloaded_roms() ){
+	    MENU_ENTRY *d = &menu_entries[0];
+	    MENU_ENTRY *dst = (MENU_ENTRY *)&menu_entries[0];
+		curPath[0] = '\0';
+		strcat(curPath, MENU_TEXT_OFFLINE_ROMS);
+		flash_file_list(&curPath[sizeof(MENU_TEXT_OFFLINE_ROMS) - 1], &dst, &num_menu_entries);
+
+		if(strncmp(AUTOSTART_FILENAME_PREFIX, d->entryname, sizeof(AUTOSTART_FILENAME_PREFIX) - 1) == 0 ){
+    		CART_TYPE cart_type = identify_cartridge(d);
+            HAL_Delay(200);
+            if (cart_type.base_type != base_type_None){
+                emulate_cartridge(cart_type, d);
+            }
+		}
+		num_menu_entries = 0;
+		curPath[0] = '\0';
+	}
 	set_menu_status_byte(StatusByteReboot, 0);
 	generate_udid_string();
+
 	MX_USART1_UART_Init();
 	esp8266_init();
 	// set up status area
@@ -846,10 +876,10 @@ int main(void)
     int ret = emulate_firmware_cartridge();
     enum e_status_message menu_status = none, main_status = none;
     if (ret == CART_CMD_ROOT_DIR){
-      d->type = Root_Menu;
-      d->filesize = 0;
+	  system_secondary_init();
 
-   	  system_secondary_init();
+	  d->type = Root_Menu;
+      d->filesize = 0;
 
    	  input_field[0] = 0;
       curPath[0] = 0;
@@ -871,10 +901,10 @@ int main(void)
             HAL_Delay(200);
             if (cart_type.base_type == base_type_ACE){
             	main_status = romtype_ACE_unsupported;
-            }else if (cart_type.base_type == base_type_DPCplus){
-            	main_status = romtype_DPCplus_unsupported;
             }else if (cart_type.base_type != base_type_None){
                 emulate_cartridge(cart_type, d);
+                set_menu_status_byte(StatusByteReboot, 0);
+                main_status = exit_emulation;
             }else{
             	main_status = romtype_unknown;
             }
