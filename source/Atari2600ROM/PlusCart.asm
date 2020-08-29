@@ -406,7 +406,7 @@ Start = (. & $1fff)
     jmp     DoStart
 ;    nop
 
-    ds      8, 0        ; hotspots
+    ds      8, 0        ; bank switch hotspots
     .word   FirstStart
     .word   FirstStart
   ENDM
@@ -462,6 +462,11 @@ FirstStart
   	jsr PrepareWaitCartRoutine
   	ldx #FirstBootCommand
   	jsr WaitCart
+
+_init_blocker	; check right not pressed
+	lda #$80
+	and SWCHA
+	beq _init_blocker
 
 
 MainLoop
