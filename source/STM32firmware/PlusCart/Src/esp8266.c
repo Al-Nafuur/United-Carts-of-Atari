@@ -182,7 +182,7 @@ uint16_t esp8266_skip_http_response_header(){
        		}
        		count = 0;
        	}else{
-       		if(count < 20){
+       		if(count < 21){
        			tmp_uart_buffer[count] = c;
        		}
        		count++;
