@@ -734,7 +734,7 @@ void emulate_cartridge(CART_TYPE cart_type, MENU_ENTRY *d)
 	else if (cart_type.base_type == base_type_F0)
 		emulate_F0_cartridge();
 	else if (cart_type.base_type == base_type_FA)
-		emulate_FA_cartridge();
+		emulate_FA_cartridge(offset, cart_type.withPlusFunctions);
 	else if (cart_type.base_type == base_type_E7)
 		emulate_E7_cartridge();
 	else if (cart_type.base_type == base_type_DPC)

@@ -3,6 +3,7 @@
 
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #define RESET_ADDR addr = addr_prev = 0xffff;
 #define CCM_RAM ((uint8_t*)0x10000000)
@@ -127,7 +128,7 @@ void exit_cartridge(uint16_t , uint16_t );
 void emulate_standard_cartridge(int, _Bool, uint16_t, uint16_t, int);
 
 /* FA (CBS RAM plus) Bankswitching */
-void emulate_FA_cartridge();
+void emulate_FA_cartridge(int, bool);
 
 /* FE Bankswitching */
 void emulate_FE_cartridge();
