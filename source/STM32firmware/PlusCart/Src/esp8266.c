@@ -148,6 +148,8 @@ int esp8266_PlusROM_API_connect(unsigned int size){
 
 	int offset = strlen((char *)&buffer[i]) + 1 + i;
 
+	esp8266_send_command("AT+CIPCLOSE\r\n", 5000);
+
 	http_request_header[0] = '\0';
 	strcat(http_request_header, (char *)"AT+CIPSTART=\"TCP\",\"");
     strcat(http_request_header, (char *)&buffer[offset]);
