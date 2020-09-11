@@ -1,57 +1,85 @@
 <?php
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $options = array('cache_dir' => 'combat');
-    $cache = new FileCache($options);
-    $active_users = $cache->get( "active_combat_users"  );
-    $isWebEmulator =  (strpos( $device_id, " WE") !== false );
-    if(!$active_users)
-        $active_users = array();
+$active_user_id = $_SERVER['HTTP_PLUSSTORE_ID'];
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $active_user_id) {
     $post_data = file_get_contents("php://input");
     $post_data_len = strlen($post_data);
+    if($post_data_len > 1 ){  // clients must send at least 2 bytes payload
+        $options = array('cache_dir' => 'combat');
+        $cache = new FileCache($options);
+        $active_user = $cache->get( $active_user_id );
+        $isWebEmulator =  (strpos( $active_user_id, " WE") !== false );
+    
+        header('Content-Type: application/octet-stream');
+        header('Content-Length: '.($post_data_len + 2));
+        if( $isWebEmulator)
+            header('Access-Control-Allow-Origin: *');
 
-    $PlusStoreId = $_SERVER['HTTP_PLUSSTORE_ID'];
-
-    header('Content-Type: application/octet-stream');
-    if( $isWebEmulator)
-        header('Access-Control-Allow-Origin: *');
-
-    if($post_data_len == 2){ // login / start request
-        if(! array_key_exists($PlusStoreId, $active_users ) ){ // new user !!
-            if(empty ($active_users ) || count($active_users) % 2 == 0 ){ // even amount of users.. new game
-                $active_users[$PlusStoreId] = ["isMaster" => 1, "gameActive" => 0, "M_SWCHA" => 240, "S_SWCHA" => 15, "INPT4" => 128, "INPT5" => 128    ];
-            }else{ // odd ammount -> a opponent is waiting
-                $opponent = array_key_last($active_users);
-                $active_users[$PlusStoreId] = ["isMaster" => 0, "gameActive" => 1, "opponent" => $opponent ];
-                $active_users[$opponent]["gameActive"] = 1;
-                $active_users[$opponent]["opponent"] = $PlusStoreId;
+        if(!  $active_user  ){ // new user !!
+            $waiting_user = $cache->get("waiting_user");
+            // now check aktiv users
+            if( $waiting_user ){                                                    //  an opponent is waiting 
+                $cache->delete( "waiting_user");
+                $active_user = ["isMaster" => 0, "gameActive" => 1, "opponent_id" => $waiting_user, "SWCHA" => 15, "INPT4" => 128 ];
+                $master = $cache->get( $waiting_user );
+                $master["gameActive"] = 1;
+                $master["opponent_id"] = $active_user_id;
+                $cache->save( $waiting_user, $master, 10 );                         // cache for 10 seconds !!
+            }else{ // no user waiting -> new game
+                $active_user = ["isMaster" => 1, "gameActive" => 0, "SWCHA" => 240, "INPT4" => 128  ];
+                $cache->save( "waiting_user" , $active_user_id, 10 );               // cache waiting User for 10 seconds 
             }
-            echo chr(3).chr(255).chr(128).chr(128); // First byte ist Content-Length of the rest..
-        }else if( $active_users[$PlusStoreId]["gameActive"] == 0  ){ // game inactive !!
-            echo chr(3).chr(255).chr(128).chr(128); // First byte ist Content-Length of the rest..
+            echo chr($post_data_len + 1).chr(255).chr(128).chr(128)
+                 .substr($post_data, 2, ($post_data_len - 2));                      // First byte is Content-Length of the rest..
+        }else if( $active_user["gameActive"] == 0  ){                               // game inactive user still waits for opponent !
+            $cache->save( "waiting_user" , $active_user_id, 10 );                   // cache waiting User for 10 (more) seconds 
+            echo chr($post_data_len + 1).chr(255).chr(128).chr(128)
+                 .substr($post_data, 2, ($post_data_len - 2));                      // First byte is Content-Length of the rest..
         }else{
-            if($active_users[$PlusStoreId]["isMaster"] == 1){
-                $master =& $active_users[$PlusStoreId];
-                $master["M_SWCHA"] = (ord(substr($post_data, 0)) & 0xF0);
-                $master["INPT4"] = ord(substr($post_data, 1));
+            $active_user["SWCHA"] = (ord($post_data[0]) & 0xF0);
+            $active_user["INPT4"] = ord($post_data[1]);
+            if($active_user["isMaster"] == 1){
+                $master =& $active_user;
+                $master["RAM"]  = substr($post_data, 2, ($post_data_len - 2) );
+                $slave = $cache->get( $active_user["opponent_id"] );
+                if(!$slave){                                                        // opponent is offline !
+                    $waiting_user = $cache->get("waiting_user");
+                    if($waiting_user){
+                        $cache->delete( "waiting_user");
+                        $active_user["opponent_id"] = $waiting_user;
+                        $slave = $cache->get( $waiting_user );
+                    }else{
+                        $cache->save( "waiting_user" , $active_user_id, 10 );       // cache waiting User for 10 seconds 
+                        $active_user["gameActive"] = 0;
+                    }
+                }
             }else{
-                $master =& $active_users[$active_users[$PlusStoreId]["opponent"]];
-                $master["S_SWCHA"] = ( ord(substr($post_data, 0)) >> 4 );
-                $master["INPT5"] = ord(substr($post_data, 1));
+                $slave =& $active_user;
+                $master = $cache->get( $active_user["opponent_id"] );
+                if(!$master){                                                        // opponent is offline !
+                    $waiting_user = $cache->get("waiting_user");
+                    if($waiting_user){
+                        $cache->delete( "waiting_user");
+                        $active_user["opponent_id"] = $waiting_user;
+                        $master = $cache->get( $waiting_user );
+                    }else{
+                        $cache->save( "waiting_user" , $active_user_id, 10 );       // cache waiting User for 10 seconds 
+                        $active_user["gameActive"] = 0;
+                    }
+                }
             }
-            $SWCHA = (int)($master["M_SWCHA"] | $master["S_SWCHA"]);
-            echo chr(3).chr( $SWCHA ).chr($master["INPT4"]).chr($master["INPT5"]);
+            $SWCHA = (int)( ($master["SWCHA"] & 0xF0) | ($slave["SWCHA"]>> 4) );
+            echo chr($post_data_len + 1).chr( $SWCHA ).chr($master["INPT4"]).chr($slave["INPT4"]).$master["RAM"];
         }
-        $cache->save( "active_combat_users" , $active_users, 1800 ); // cache for 30 minutes
+        $cache->save( $active_user_id , $active_user, 10 );                         // cache for 10 seconds !!
     }
 }else if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    header('Access-Control-Allow-Origin: *');
-    header('Access-Control-Allow-Headers: PlusStore-ID,Content-Type');
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Headers: PlusStore-ID,Content-Type');
 }else{
     echo "Wrong Request Method!\r\n";
 }
-
 
 
 

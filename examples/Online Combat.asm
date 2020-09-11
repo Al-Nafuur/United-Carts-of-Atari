@@ -2026,7 +2026,50 @@ APICheck				; check server response
         STA MY_INPT4
 	LDA ReceiveBuffer		; load (3.) received byte (MY_INPT5)
         STA MY_INPT5
-	JMP APIEnd
+
+;	LDA ReceiveBuffer		; load (4.) received byte (TankY0)
+;	STA BINvar
+;	LDA ReceiveBuffer		; load (4.) received byte (TankY0)
+;	STA BCDvar
+;	LDA ReceiveBuffer		; load (4.) received byte (TankY0)
+;	STA PF_PONG
+;	LDA ReceiveBuffer		; load (4.) received byte (TankY0)
+;	STA GUIDED
+;	LDA ReceiveBuffer		; load (4.) received byte (TankY0)
+;	STA BILLIARD
+;	LDA ReceiveBuffer		; load (4.) received byte (TankY0)
+;	STA GAMSHP
+;	LDA ReceiveBuffer		; load (4.) received byte (TankY0)
+;	STA SCORE
+;	LDA ReceiveBuffer		; load (4.) received byte (TankY0)
+;	STA SCORE+1
+;	LDA ReceiveBuffer		; load (4.) received byte (TankY0)
+;	STA GAMVAR
+;	LDA ReceiveBuffer		; load (4.) received byte (TankY0)
+;	STA TankY0
+;	LDA ReceiveBuffer		; load (5.) received byte (TankY1)
+;	STA TankY1
+;	LDA ReceiveBuffer		; load (6.) received byte (MissileY0)
+;	STA MissileY0
+;	LDA ReceiveBuffer		; load (7.) received byte (MissileY1)
+;	STA MissileY1
+;	LDA ReceiveBuffer		; load (8.) received byte (DIRECTN)
+;        STA DIRECTN
+;	LDA ReceiveBuffer		; load (9.) received byte (DIRECTN)
+;        STA DIRECTN+1
+;	LDA ReceiveBuffer		; load (10.) received byte (DIRECTN)
+;	STA DIRECTN+2
+;	LDA ReceiveBuffer		; load (11.) received byte (DIRECTN)
+;	STA DIRECTN+3
+
+
+;	LDX #$65
+;ReceiveRAMLoop
+;	LDA ReceiveBuffer		; load (RAM.)
+;        STA $80,X
+;	DEX           		        ; X--
+;	BPL ReceiveRAMLoop
+	RTS	; JMP APIEnd
 
 CheckSendRequest
 	LDA RequestPending		; Request already send?
@@ -2034,7 +2077,7 @@ CheckSendRequest
 	LDA RequestTimer		; but wait 5 frames before sending
 	BEQ APInewRequest		; no -> Send new Request
 	DEC RequestTimer
-	JMP APIEnd
+	RTS	; JMP APIEnd
 
 APInewRequest
 	LDA #5
@@ -2043,16 +2086,59 @@ APInewRequest
 	LDA SWCHA
 	STA WriteToBuffer
 	LDA INPT4
+;	STA WriteToBuffer
+
+;	LDA BINvar
+;	STA WriteToBuffer
+;	LDA BCDvar
+;	STA WriteToBuffer
+;	LDA PF_PONG
+;	STA WriteToBuffer
+;	LDA GUIDED
+;	STA WriteToBuffer
+;	LDA BILLIARD
+;	STA WriteToBuffer
+;	LDA GAMSHP
+;	STA WriteToBuffer
+;	LDA SCORE
+;	STA WriteToBuffer
+;	LDA SCORE+1
+;	STA WriteToBuffer
+;	LDA GAMVAR
+;	STA WriteToBuffer
+;	LDA TankY0
+;	STA WriteToBuffer
+;	LDA TankY1
+;	STA WriteToBuffer
+;	LDA MissileY0
+;	STA WriteToBuffer
+;	LDA MissileY1
+;	STA WriteToBuffer
+;	LDA DIRECTN
+;	STA WriteToBuffer
+;	LDA DIRECTN+1
+;	STA WriteToBuffer
+;	LDA DIRECTN+2
+;	STA WriteToBuffer
+;	LDA DIRECTN+3
+
 	STA WriteSendBuffer
+
+;	LDX #$65
+;SendRAMLoop
+;	STA WriteToBuffer
+;        LDA $80,X
+;	DEX                    		; X--
+;	BPL SendRAMLoop
+;	STA WriteSendBuffer
 APIEnd
         RTS
 
 
 	org $FF00
 PlusROMAPI:				; PlusROM API url
-	.byte "combat.php", #0
-        .byte "pluscart.firmaplus.de"
-        .byte #0
+	.byte "your/backend/path", #0
+	.byte "your.backend.domain", #0
 
 
 	org $FFF0			; Hotspots and detection for
