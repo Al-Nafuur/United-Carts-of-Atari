@@ -10,7 +10,7 @@
 #define BACK_COL_NTSC     0x92
 #define BACK_COL_PAL      0xb2
 
-#define t2c(l, r, s)  font[ ((l - 32) * 12) + s ] << 4  | font[ ((r - 32) * 12) + s ]
+#define t2c(l, r, s)  my_font[ ((l - 32) * 12) + s ] << 4  | my_font[ ((r - 32) * 12) + s ]
 
 
 static char menu_header[32]__attribute__((section(".ccmram")));
@@ -40,6 +40,7 @@ const uint8_t exit_kernel[]__attribute__((section(".flash01")))     = { 0x4c, 0x
 const uint8_t end_kernel_even[]__attribute__((section(".flash01"))) = { 0x86, 0x1b, 0x86, 0x1c};
 const uint8_t end_kernel_odd[]__attribute__((section(".flash01")))  = { 0xa2, 0x00};
 
+uint8_t * my_font;
 
 uint8_t * bufferp;
 
@@ -159,8 +160,9 @@ void inline add_exit_kernel(){
     bufferp += sizeof(exit_kernel);
 }
 
-void createMenuForAtari( MENU_ENTRY * menu_entries, uint8_t page_id, int num_menu_entries, _Bool paging_required, _Bool is_connected, uint8_t * plus_store_status){
+void createMenuForAtari( MENU_ENTRY * menu_entries, uint8_t page_id, int num_menu_entries, bool paging_required, bool is_connected, uint8_t * plus_store_status){
 	// create 7 banks of bytecode for the ATARI to execute.
+
 	uint8_t menu_string[32];
     uint8_t bank = 1, sc, entry, odd_even, str_len;
     uint8_t max_page = (num_menu_entries - 1) / NUM_MENU_ITEMS_PER_PAGE;
@@ -192,7 +194,7 @@ void createMenuForAtari( MENU_ENTRY * menu_entries, uint8_t page_id, int num_men
     	menu_header[i--] = CHAR_R_Page;
     	menu_header[i] = CHAR_L_Page;
     }
-    if(is_connected == TRUE){
+    if(is_connected == true){
     	menu_header[STATUS_MESSAGE_LENGTH + 1] = CHAR_L_Wifi;
     	menu_header[STATUS_MESSAGE_LENGTH + 2] = CHAR_R_Wifi;
     }else{
@@ -304,6 +306,10 @@ void set_tv_mode(int tv_mode) {
 			firmware_rom = firmware_pal60_rom;
 			break;
 	}
+}
+
+void set_my_font(int new_font) {
+	my_font = (uint8_t *)font[new_font];
 }
 
 // We require the menu to do a write to $1FF4 to unlock the comms area.

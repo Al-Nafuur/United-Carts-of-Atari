@@ -21,13 +21,18 @@
 #define TV_MODE_PAL     2
 #define TV_MODE_PAL60   3
 
+#define FONT_TJZ    0
+#define FONT_AD     1
+
+
 void set_menu_status_msg(const char* message);
 
-void createMenuForAtari( MENU_ENTRY * menu_entries, uint8_t page_id, int num_menu_entries, _Bool paging_required, _Bool is_connected, uint8_t * plus_store_status);
+void createMenuForAtari( MENU_ENTRY * menu_entries, uint8_t page_id, int num_menu_entries, bool paging_required, bool is_connected, uint8_t * plus_store_status);
 
 void set_menu_status_byte(uint8_t byte_id, char status_byte);
 
 void set_tv_mode(int tv_mode);
+void set_my_font(int new_font);
 
 int emulate_firmware_cartridge();
 
