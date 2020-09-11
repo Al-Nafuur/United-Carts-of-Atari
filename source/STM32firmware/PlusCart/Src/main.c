@@ -58,8 +58,8 @@
 
 typedef struct {
 	enum cart_base_type base_type;
-	_Bool withSuperChip;
-	_Bool withPlusFunctions;
+	bool withSuperChip;
+	bool withPlusFunctions;
 	uint32_t flash_part_address;
 } CART_TYPE;
 
@@ -74,40 +74,40 @@ typedef struct {
 /* USER CODE BEGIN PD */
 
 const EXT_TO_CART_TYPE_MAP ext_to_cart_type_map[]__attribute__((section(".flash01"))) = {
-	{"ROM",  { base_type_None, FALSE, FALSE }},
-	{"BIN",  { base_type_None, FALSE, FALSE }},
-	{"A26",  { base_type_None, FALSE, FALSE }},
-	{"2K",   { base_type_2K, FALSE, FALSE }},
-	{"4K",   { base_type_4K, FALSE, FALSE }},
-	{"4KS",  { base_type_4K, TRUE, FALSE }},
-	{"F8",   { base_type_F8, FALSE, FALSE }},
-	{"F6",   { base_type_F6, FALSE, FALSE }},
-	{"F4",   { base_type_F4, FALSE, FALSE }},
-	{"F8S",  { base_type_F8, TRUE, FALSE }},
-	{"F6S",  { base_type_F6, TRUE, FALSE }},
-	{"F4S",  { base_type_F4, TRUE, FALSE }},
-	{"FE",   { base_type_FE, FALSE, FALSE }},
-	{"3F",   { base_type_3F, FALSE, FALSE }},
-	{"3E",   { base_type_3E, FALSE, FALSE }},
-	{"E0",   { base_type_E0, FALSE, FALSE }},
-	{"084",  { base_type_0840, FALSE, FALSE }},
-	{"CV",   { base_type_CV, FALSE, FALSE }},
-	{"EF",   { base_type_EF, FALSE, FALSE }},
-	{"EFS",  { base_type_EF, TRUE, FALSE }},
-	{"F0",   { base_type_F0, FALSE, FALSE }},
-	{"FA",   { base_type_FA, FALSE, FALSE }},
-	{"E7",   { base_type_E7, FALSE, FALSE }},
-	{"DPC",  { base_type_DPC, FALSE, FALSE }},
-	{"AR",   { base_type_AR, FALSE, FALSE }},
-	{"BF",   { base_type_BF, FALSE, FALSE }},
-	{"BFS",  { base_type_BFSC, FALSE, FALSE }},
-	{"ACE",  { base_type_ACE, FALSE, FALSE }},
-	{"WD",   { base_type_PP, FALSE, FALSE }},
-	{"DF",   { base_type_DF, FALSE, FALSE }},
-	{"DFS",  { base_type_DFSC, FALSE, FALSE }},
-	{"3EP",  { base_type_3EPlus, FALSE, FALSE }},
-	{"DPCP", { base_type_DPCplus, FALSE, FALSE }},
-	{"SB",   { base_type_SB, FALSE, FALSE }},
+	{"ROM",  { base_type_None, false, false }},
+	{"BIN",  { base_type_None, false, false }},
+	{"A26",  { base_type_None, false, false }},
+	{"2K",   { base_type_2K, false, false }},
+	{"4K",   { base_type_4K, false, false }},
+	{"4KS",  { base_type_4K, true, false }},
+	{"F8",   { base_type_F8, false, false }},
+	{"F6",   { base_type_F6, false, false }},
+	{"F4",   { base_type_F4, false, false }},
+	{"F8S",  { base_type_F8, true, false }},
+	{"F6S",  { base_type_F6, true, false }},
+	{"F4S",  { base_type_F4, true, false }},
+	{"FE",   { base_type_FE, false, false }},
+	{"3F",   { base_type_3F, false, false }},
+	{"3E",   { base_type_3E, false, false }},
+	{"E0",   { base_type_E0, false, false }},
+	{"084",  { base_type_0840, false, false }},
+	{"CV",   { base_type_CV, false, false }},
+	{"EF",   { base_type_EF, false, false }},
+	{"EFS",  { base_type_EF, true, false }},
+	{"F0",   { base_type_F0, false, false }},
+	{"FA",   { base_type_FA, false, false }},
+	{"E7",   { base_type_E7, false, false }},
+	{"DPC",  { base_type_DPC, false, false }},
+	{"AR",   { base_type_AR, false, false }},
+	{"BF",   { base_type_BF, false, false }},
+	{"BFS",  { base_type_BFSC, false, false }},
+	{"ACE",  { base_type_ACE, false, false }},
+	{"WD",   { base_type_PP, false, false }},
+	{"DF",   { base_type_DF, false, false }},
+	{"DFS",  { base_type_DFSC, false, false }},
+	{"3EP",  { base_type_3EPlus, false, false }},
+	{"DPCP", { base_type_DPCplus, false, false }},
+	{"SB",   { base_type_SB, false, false }},
 
 	{0,{0,0,0}}
 };
@@ -222,6 +222,7 @@ void make_keyboard(MENU_ENTRY **dst){
 MENU_ENTRY* generateSetupMenu(MENU_ENTRY *dst) {
 	make_menu_entry(&dst, "(GO Back)", Leave_Menu);
 	make_menu_entry(&dst, MENU_TEXT_TV_MODE_SETUP, Setup_Menu);
+	make_menu_entry(&dst, MENU_TEXT_FONT_SETUP, Setup_Menu);
 	make_menu_entry(&dst, MENU_TEXT_WIFI_SETUP, Setup_Menu);
 	make_menu_entry(&dst, MENU_TEXT_WPS_CONNECT, Menu_Action);
 	make_menu_entry(&dst, MENU_TEXT_WIFI_MANGER, Menu_Action);
@@ -237,8 +238,8 @@ MENU_ENTRY* generateSetupMenu(MENU_ENTRY *dst) {
 
 enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 	int count = 0;
-	_Bool loadStore = FALSE;
-	_Bool is_entry_row;
+	bool loadStore = false;
+	bool is_entry_row;
 	uint8_t pos = 0, c;
 	num_menu_entries = 0;
 	enum e_status_message menu_status = none;
@@ -250,7 +251,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 		if(strlen(curPath) == sizeof(MENU_TEXT_SETUP) - 1 ){
 			dst = generateSetupMenu(dst);
         	menu_status = version;
-			loadStore = TRUE;
+			loadStore = true;
 		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_WIFI_SETUP, sizeof(MENU_TEXT_WIFI_SETUP) - 1) == 0 ){
 			if(strlen(curPath) > sizeof(MENU_TEXT_WIFI_SETUP) + sizeof(MENU_TEXT_SETUP) ){
 				if(d->type == Menu_Action){ // if actual Entry is of type Menu_Action -> Connect to WiFi
@@ -280,7 +281,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			}else{
 				menu_status = select_wifi_network;
 				make_menu_entry(&dst, "(GO BACK)", Leave_Menu);
-				if( esp8266_wifi_list( &dst, &num_menu_entries) == FALSE){
+				if( esp8266_wifi_list( &dst, &num_menu_entries) == false){
 		    		return esp_timeout;
 		    	}
 			}
@@ -305,12 +306,30 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 				make_menu_entry(&dst, MENU_TEXT_TV_MODE_NTSC, Menu_Action);
 			}
 
+		}else if( strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_FONT_SETUP, sizeof(MENU_TEXT_FONT_SETUP) - 1) == 0 ){
+			if(d->type == Menu_Action){
+				uint8_t new_font_style = FONT_TJZ;
+				if(strcmp(&curPath[sizeof(MENU_TEXT_SETUP) + sizeof(MENU_TEXT_FONT_SETUP)], MENU_TEXT_FONT_AD) == 0){
+					new_font_style = FONT_AD;
+				}
+				set_my_font(new_font_style);
+				if(user_settings.font_style != new_font_style){
+					user_settings.font_style = new_font_style;
+					flash_set_eeprom_user_settings(user_settings);
+				}
+	        	curPath[0] = '\0';
+			}else{
+				make_menu_entry(&dst, "(GO Back)", Leave_Menu);
+				make_menu_entry(&dst, MENU_TEXT_FONT_TJZ, Menu_Action);
+				make_menu_entry(&dst, MENU_TEXT_FONT_AD, Menu_Action);
+			}
+
 		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_PLUS_CONNECT, sizeof(MENU_TEXT_PLUS_CONNECT) - 1) == 0 ){
 			if(d->type == Menu_Action){ // if actual Entry is of type Menu_Action -> Connect user
-				if( esp8266_PlusStore_API_connect() == FALSE){
+				if( esp8266_PlusStore_API_connect() == false){
 					return esp_timeout;
 				}
-				esp8266_PlusStore_API_prepare_request_header(curPath, FALSE, TRUE );
+				esp8266_PlusStore_API_prepare_request_header(curPath, false, true );
 	        	esp8266_print(http_request_header);
 	        	esp8266_skip_http_response_header();
 	        	while(HAL_UART_Receive(&huart1, &c, 1, 100 ) == HAL_OK){}
@@ -332,10 +351,10 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 				make_keyboard(&dst);
 			}
 		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_PLUS_REMOVE, sizeof(MENU_TEXT_PLUS_REMOVE) - 1) == 0 ){
-			if( esp8266_PlusStore_API_connect() == FALSE){
+			if( esp8266_PlusStore_API_connect() == false){
 				return esp_timeout;
 			}
-			esp8266_PlusStore_API_prepare_request_header(curPath, FALSE, TRUE );
+			esp8266_PlusStore_API_prepare_request_header(curPath, false, true );
         	esp8266_print(http_request_header);
 
             esp8266_skip_http_response_header();
@@ -351,7 +370,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
         	curPath[0] = '\0';
 
 		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_OFFLINE_ROM_UPDATE, sizeof(MENU_TEXT_OFFLINE_ROM_UPDATE) - 1) == 0 ){
-			if( flash_download("&r=1", d->filesize , 0 , FALSE ) != DOWNLOAD_AREA_START_ADDRESS){
+			if( flash_download("&r=1", d->filesize , 0 , false ) != DOWNLOAD_AREA_START_ADDRESS){
 		    	menu_status = download_failed;
 			}else{
 	    		menu_status = done;
@@ -387,7 +406,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			esp8266_AT_WiFiManager();
 	    	curPath[0] = '\0';
 		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_ESP8266_RESTORE, sizeof(MENU_TEXT_ESP8266_RESTORE) - 1) == 0 ){
-	    	if(esp8266_reset(TRUE)){
+	    	if(esp8266_reset(true)){
 	        	menu_status = done;
 	    	}else{
 	        	menu_status = failed;
@@ -413,7 +432,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			for (char* p = curPath; (p = strchr(p, ' ')); ++p) {
 				*p = '+';
 			}
-			loadStore = TRUE;
+			loadStore = true;
 		}else{
 			make_keyboard( &dst);
 		}
@@ -433,21 +452,21 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			}
 		} else if(strncmp(MENU_TEXT_WIFI_RECONNECT, curPath, sizeof(MENU_TEXT_WIFI_RECONNECT) - 1) == 0 ){
 
-			loadStore = TRUE;
+			loadStore = true;
 		}
 
     	curPath[0] = '\0';
 	}else{
-		loadStore = TRUE;
+		loadStore = true;
 	}
 
 	// Test we should load store and if connected to AP
     if(	loadStore || strlen(curPath) == 0 ){
-    	if(esp8266_is_connected() == TRUE){
-			if( esp8266_PlusStore_API_connect() == FALSE){
+    	if(esp8266_is_connected() == true){
+			if( esp8266_PlusStore_API_connect() == false){
 				return esp_timeout;
 			}
-			esp8266_PlusStore_API_prepare_request_header(curPath, FALSE, FALSE);
+			esp8266_PlusStore_API_prepare_request_header(curPath, false, false);
 
         	esp8266_print(http_request_header);
             uint16_t bytes_read = 0, content_length = esp8266_skip_http_response_header();
@@ -461,8 +480,8 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
         				plus_store_status[bytes_read] = (uint8_t)c;
 
         		}else if(num_menu_entries < NUM_MENU_ITEMS){
-                    if(count == 0){ // first char defines if its an entry row (or Header Row)
-                    	is_entry_row = (c > '/' && c < ':' ) ? TRUE : FALSE; // First char is entry.type '0' to '9'
+                    if(count == 0){ // first char defines if its an entry row
+                    	is_entry_row = (c >= '0' && c <= '9' ); // First char is entry.type '0' to '9'
                         if(is_entry_row){
                         	dst->type = c - 48;
                         }
@@ -520,13 +539,13 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 CART_TYPE identify_cartridge( MENU_ENTRY *d )
 {
 
-	CART_TYPE cart_type = { base_type_None, FALSE, FALSE };
+	CART_TYPE cart_type = { base_type_None, false, false };
 
 	strcat(curPath, "/");
 	append_entry_to_path(d);
 
 	// Test if connected to AP
-    if(d->type == Cart_File && esp8266_is_connected() == FALSE ){
+    if(d->type == Cart_File && esp8266_is_connected() == false ){
     	return cart_type;
     }
 
@@ -700,7 +719,7 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 void emulate_cartridge(CART_TYPE cart_type, MENU_ENTRY *d)
 {
 	int offset = 0;
-	if (cart_type.withPlusFunctions == TRUE ){
+	if (cart_type.withPlusFunctions == true ){
  		// Read path and hostname in ROM File from where NMI points to till '\0' and
 		// copy to http_request_header
 		offset = esp8266_PlusROM_API_connect(cart_size_bytes);
@@ -758,7 +777,7 @@ void emulate_cartridge(CART_TYPE cart_type, MENU_ENTRY *d)
 	else if (cart_type.base_type == base_type_SB)
 		emulate_SB_cartridge(curPath, cart_size_bytes, buffer, d);
 
-	if (cart_type.withPlusFunctions == TRUE ){
+	if (cart_type.withPlusFunctions == true ){
 		esp8266_PlusStore_API_end_transmission();
 	}
 
@@ -788,6 +807,7 @@ void system_secondary_init(void){
 		num_menu_entries = 0;
 		curPath[0] = '\0';
 	}
+	set_my_font(user_settings.font_style);
 	set_menu_status_byte(StatusByteReboot, 0);
 	generate_udid_string();
 
@@ -967,8 +987,8 @@ int main(void)
     	}
     	set_menu_status_byte(PageType, Directory);
     }
-    _Bool paging_required = (main_status == paging);
-    _Bool is_connected = esp8266_is_connected();
+    bool paging_required = (main_status == paging);
+    bool is_connected = esp8266_is_connected();
 
     createMenuForAtari( menu_entries, act_page, num_menu_entries, paging_required, is_connected, plus_store_status );
     HAL_Delay(200);
