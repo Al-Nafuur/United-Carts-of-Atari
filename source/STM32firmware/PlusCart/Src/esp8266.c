@@ -32,29 +32,29 @@ uint64_t esp8266_send_command(char *command, uint32_t timeout) __attribute__((se
 /* AT WiFi Manager */
 void handle_http_requests() __attribute__((section(".flash01")));
 uint8_t process_http_headline() __attribute__((section(".flash01")));
-void send_requested_page_to_client(char id, const char* page, unsigned int len, _Bool close_connection) __attribute__((section(".flash01")));
+void send_requested_page_to_client(char id, const char* page, unsigned int len, bool close_connection) __attribute__((section(".flash01")));
 void get_http_request_url_param_values(url_param * param_array , int len) __attribute__((section(".flash01")));
 void generate_html_wifi_list(void) __attribute__((section(".flash01")));
 void generate_html_wifi_info(void) __attribute__((section(".flash01")));
 inline int ishex(char x) __attribute__((section(".flash01")));
 void uri_decode( char *s ) __attribute__((section(".flash01")));
 void connect_tcp_link(char link_id ) __attribute__((section(".flash01")));
-_Bool init_send_tcp_link(char link_id, uint16_t bytes_to_send) __attribute__((section(".flash01")));
+bool init_send_tcp_link(char link_id, uint16_t bytes_to_send) __attribute__((section(".flash01")));
 void close_tcp_link(char link_id) __attribute__((section(".flash01")));
 
 char stm32_udid[25];
 char tmp_uart_buffer[50];
 
-_Bool esp8266_PlusStore_API_connect(){
+bool esp8266_PlusStore_API_connect(){
 	uint64_t resp = esp8266_send_command(API_ATCMD_1, PLUSSTORE_CONNECT_TIMEOUT);
 	if( resp == ESP8266_CONNECT || resp == ESP8266_ALREADY_CONNECTED){
 		esp8266_send_command(API_ATCMD_2, 200);
-	    return TRUE;
+	    return true;
 	}
-    return FALSE;
+    return false;
 }
 
-void esp8266_PlusStore_API_prepare_request_header(char *path, _Bool prepare_range_request, _Bool basic_uri_encode){
+void esp8266_PlusStore_API_prepare_request_header(char *path, bool prepare_range_request, bool basic_uri_encode){
 
 	if(basic_uri_encode){
 		for (char* p = path; (p = strchr(p, ' ')); ++p) {
@@ -87,7 +87,7 @@ uint32_t esp8266_PlusStore_API_range_request(char *path, uint32_t range_count, h
 	uint8_t c;
 	char boundary[] = {'\r','\n','-','-', RANGE_BOUNDARY_TEMPLATE , '\r','\n'};
 
-	esp8266_PlusStore_API_prepare_request_header(path, TRUE, FALSE );
+	esp8266_PlusStore_API_prepare_request_header(path, true, false );
 
 	for (uint32_t i = 0; i < range_count; i++) {
  	    if (i > 0)
@@ -148,9 +148,9 @@ int esp8266_PlusROM_API_connect(unsigned int size){
 
 	int offset = strlen((char *)&buffer[i]) + 1 + i;
 
-	esp8266_send_command("AT+CIPCLOSE\r\n", 5000);
+    esp8266_send_command("AT+CIPCLOSE\r\n", 5000);
 
-	http_request_header[0] = '\0';
+    http_request_header[0] = '\0';
 	strcat(http_request_header, (char *)"AT+CIPSTART=\"TCP\",\"");
     strcat(http_request_header, (char *)&buffer[offset]);
     strcat(http_request_header, (char *)"\",80\r\n");
@@ -233,7 +233,7 @@ void esp8266_init()
 	count = 0;
     do{
 		HAL_Delay(1000);
-    }while( esp8266_is_connected() == FALSE && count++ < 6);
+    }while( esp8266_is_connected() == false && count++ < 6);
 
 }
 //________UART module Initialized__________//
@@ -261,7 +261,7 @@ void set_standard_mode(void){
  *
  * @return true if the module is started, false if something went wrong
  */
-_Bool esp8266_is_started(void) {
+bool esp8266_is_started(void) {
 	return (esp8266_send_command("AT\r\n", 200) == ESP8266_OK);
 }
 
@@ -273,7 +273,7 @@ _Bool esp8266_is_started(void) {
  *
  * @return true if the module restarted / reseted properly
  */
-_Bool esp8266_reset(_Bool factory_reset) {
+bool esp8266_reset(bool factory_reset) {
     if(factory_reset)
     	esp8266_send_command("AT+RESTORE\r\n", 200);
 	else
@@ -282,13 +282,13 @@ _Bool esp8266_reset(_Bool factory_reset) {
     wait_response(5000); // == ESP8266_READY
     esp8266_send_command("ATE0\r\n", 200);
 	set_standard_mode();
-	return TRUE;
+	return true;
 }
 
 
-_Bool esp8266_wifi_list(MENU_ENTRY **dst, int *num_menu_entries){
+bool esp8266_wifi_list(MENU_ENTRY **dst, int *num_menu_entries){
 	int count = 0;
-	_Bool is_entry_row;
+	bool is_entry_row;
 	uint8_t pos = 0, c;
 
 	esp8266_print("AT+CWLAP\r\n");
@@ -322,13 +322,13 @@ _Bool esp8266_wifi_list(MENU_ENTRY **dst, int *num_menu_entries){
             }
     	}while(HAL_UART_Receive(&huart1, &c, 1, 150 ) == HAL_OK);
 
-    	return TRUE;
+    	return true;
 	}
-	return FALSE;
+	return false;
 }
 
 
-_Bool esp8266_wifi_connect(char *ssid, char *password ){
+bool esp8266_wifi_connect(char *ssid, char *password ){
 	http_request_header[0] = 0;
     strcat(http_request_header, "AT+CWJAP=\"");
     strcat(http_request_header, ssid);
@@ -337,21 +337,21 @@ _Bool esp8266_wifi_connect(char *ssid, char *password ){
     strcat(http_request_header, "\"\r\n");
 
 	if(esp8266_send_command(http_request_header, 15000) == ESP8266_OK){
-    	return TRUE;
+    	return true;
 	}
-	return FALSE;
+	return false;
 }
 
-_Bool esp8266_wps_connect(){
+bool esp8266_wps_connect(){
 	if(esp8266_send_command("AT+WPS=1\r\n", 1000) == ESP8266_OK){
 		if(wait_response(130000) == ESP8266_WPS_SUCCESS){
-			return TRUE;
+			return true;
  		}
 	}
-	return FALSE;
+	return false;
 }
 
-_Bool esp8266_is_connected(void){
+bool esp8266_is_connected(void){
 	uint8_t count = 0;
 	unsigned char c;
    	esp8266_print("AT+CWJAP?\r\n");
@@ -392,7 +392,7 @@ void esp8266_AT_WiFiManager(){
 	esp8266_send_command("AT+CIPSERVER=0\r\n", 200);        // disable server
 	esp8266_send_command("AT+CIPMUX=0\r\n", 200);           // Single connection
 	esp8266_send_command("AT+CWMODE=1\r\n", 5000);	        // disable AccessPoint mode.
-	esp8266_reset(FALSE);
+	esp8266_reset(false);
 	HAL_Delay(4000);
 }
 
@@ -468,7 +468,7 @@ uint8_t process_http_headline(){
         	strncat(cur_path, p_array[0].value, (127 - sizeof(URLENCODE_MENU_TEXT_SETUP "/" URLENCODE_MENU_TEXT_PLUS_CONNECT "/") ) );
         	strcat(cur_path, "/Enter");
 
-			esp8266_PlusStore_API_prepare_request_header(cur_path, FALSE, FALSE );
+			esp8266_PlusStore_API_prepare_request_header(cur_path, false, false );
 			connect_tcp_link(send_link_id);
 			init_send_tcp_link(send_link_id, (uint16_t)strlen(http_request_header));
 			esp8266_print(http_request_header);
@@ -486,47 +486,47 @@ uint8_t process_http_headline(){
     }
 
     if(response_page == http_favicon_ico ){
-    	send_requested_page_to_client(linkId, favicon_ico, sizeof(favicon_ico), TRUE);
+    	send_requested_page_to_client(linkId, favicon_ico, sizeof(favicon_ico), true);
     }else if(response_page == http_page_not_found){
-    	send_requested_page_to_client(linkId, not_found_text, sizeof(not_found_text)-1, TRUE);
+    	send_requested_page_to_client(linkId, not_found_text, sizeof(not_found_text)-1, true);
     }else{
-    	send_requested_page_to_client(linkId, http_header_html, sizeof(http_header_html) - 1, FALSE);
-       	send_requested_page_to_client(linkId, html_head, sizeof(html_head) - 1, FALSE);
+    	send_requested_page_to_client(linkId, http_header_html, sizeof(http_header_html) - 1, false);
+       	send_requested_page_to_client(linkId, html_head, sizeof(html_head) - 1, false);
        	if(response_page == http_page_wifi || response_page == http_page_info){
-           	send_requested_page_to_client(linkId, (char *)buffer, strlen((char *)buffer), FALSE);
+           	send_requested_page_to_client(linkId, (char *)buffer, strlen((char *)buffer), false);
        	}
        	if(response_page == http_page_wifi  || response_page == http_page_wifi_no_scan){
-           	send_requested_page_to_client(linkId, html_form, sizeof(html_form) - 1, FALSE);
+           	send_requested_page_to_client(linkId, html_form, sizeof(html_form) - 1, false);
        	}
 
        	if(response_page == http_page_save ){
-          	send_requested_page_to_client(linkId, html_saved, sizeof(html_saved) - 1, FALSE);
+          	send_requested_page_to_client(linkId, html_saved, sizeof(html_saved) - 1, false);
        	}else if(response_page == http_page_exit ){
-           	send_requested_page_to_client(linkId, html_exit, sizeof(html_exit) - 1, FALSE);
+           	send_requested_page_to_client(linkId, html_exit, sizeof(html_exit) - 1, false);
        	}else if(response_page == http_page_start ){
-           	send_requested_page_to_client(linkId, html_portal_options, sizeof(html_portal_options) - 1, FALSE);
+           	send_requested_page_to_client(linkId, html_portal_options, sizeof(html_portal_options) - 1, false);
            	if(esp8266_is_connected()){
-               	send_requested_page_to_client(linkId, html_plus_connect, sizeof(html_plus_connect) - 1, FALSE);
+               	send_requested_page_to_client(linkId, html_plus_connect, sizeof(html_plus_connect) - 1, false);
            	}
        	}else if(response_page == http_page_plus_connect ){
-           	send_requested_page_to_client(linkId, html_connect_form, sizeof(html_connect_form) - 1, FALSE);
+           	send_requested_page_to_client(linkId, html_connect_form, sizeof(html_connect_form) - 1, false);
        	}else if(response_page == http_page_plus_failed ){
-           	send_requested_page_to_client(linkId, html_plus_failed, sizeof(html_plus_failed) - 1, FALSE);
+           	send_requested_page_to_client(linkId, html_plus_failed, sizeof(html_plus_failed) - 1, false);
        	}else if(response_page == http_page_plus_created ){
-           	send_requested_page_to_client(linkId, html_plus_created, sizeof(html_plus_created) - 1, FALSE);
+           	send_requested_page_to_client(linkId, html_plus_created, sizeof(html_plus_created) - 1, false);
        	}else if(response_page == http_page_plus_connected ){
-           	send_requested_page_to_client(linkId, html_plus_connected, sizeof(html_plus_connected) - 1, FALSE);
+           	send_requested_page_to_client(linkId, html_plus_connected, sizeof(html_plus_connected) - 1, false);
        	}
 
        	if(response_page != http_page_start && response_page != http_page_exit){
-           	send_requested_page_to_client(linkId, html_back, sizeof(html_back) - 1, FALSE);
+           	send_requested_page_to_client(linkId, html_back, sizeof(html_back) - 1, false);
        	}
-       	send_requested_page_to_client(linkId, html_end, sizeof(html_end) - 1, TRUE);
+       	send_requested_page_to_client(linkId, html_end, sizeof(html_end) - 1, true);
     }
     return status;
 }
 
-void send_requested_page_to_client(char id, const char* page, unsigned int len, _Bool close_connection)
+void send_requested_page_to_client(char id, const char* page, unsigned int len, bool close_connection)
 {
 	uint16_t len_of_package_to_TX;
     unsigned int page_to_send_address = 0;
@@ -712,13 +712,13 @@ void connect_tcp_link(char link_id ){;
 	esp8266_send_command(tmp_uart_buffer, PLUSSTORE_CONNECT_TIMEOUT);
 }
 
-_Bool init_send_tcp_link(char link_id, uint16_t bytes_to_send){
+bool init_send_tcp_link(char link_id, uint16_t bytes_to_send){
 	sprintf(tmp_uart_buffer, "AT+CIPSEND=%c,%d\r\n", link_id, bytes_to_send);
     if(esp8266_send_command(tmp_uart_buffer, 2000) == ESP8266_OK){
     	wait_response(200); // "> "
-    	return TRUE;
+    	return true;
     }
-    return FALSE;
+    return false;
 }
 
 void close_tcp_link(char link_id){

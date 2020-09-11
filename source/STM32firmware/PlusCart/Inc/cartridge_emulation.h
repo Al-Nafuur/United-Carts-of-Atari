@@ -125,7 +125,7 @@ enum Transmission_State{
 void exit_cartridge(uint16_t , uint16_t );
 
 /* 'Standard' Bankswitching */
-void emulate_standard_cartridge(int, _Bool, uint16_t, uint16_t, int);
+void emulate_standard_cartridge(int, bool, uint16_t, uint16_t, int);
 
 /* FA (CBS RAM plus) Bankswitching */
 void emulate_FA_cartridge(int, bool);
@@ -137,10 +137,10 @@ void emulate_FE_cartridge();
 void emulate_3F_cartridge();
 
 /* 3E (3F + RAM) Bankswitching */
-void emulate_3E_cartridge(int, _Bool);
+void emulate_3E_cartridge(int, bool);
 
 /* 3E+ Bankswitching by Thomas Jentzsch */
-void emulate_3EPlus_cartridge(int, _Bool);
+void emulate_3EPlus_cartridge(int, bool);
 
 /* E0 Bankswitching */
 void emulate_E0_cartridge();

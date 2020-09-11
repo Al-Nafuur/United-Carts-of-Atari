@@ -66,7 +66,7 @@ bool setup_cartridge_image(const char* filename, uint32_t image_size, uint8_t* b
     if(banks > (RAM_BANKS + CCM_BANKS) ){
         uint32_t flash_part_address;
     	if(d->type == Cart_File ){
-    		flash_part_address = flash_download((char*)filename, FLASH_IMAGE_SIZE, FLASH_IMAGE_OFFSET, TRUE);
+    		flash_part_address = flash_download((char*)filename, FLASH_IMAGE_SIZE, FLASH_IMAGE_OFFSET, true);
     	}else{
     		flash_part_address = d->flash_base_address + FLASH_IMAGE_OFFSET;
     	}

@@ -5,6 +5,7 @@
  */
 
 #include <stdint.h>
+#include <stdbool.h>
 #include "global.h"
 
 
@@ -71,8 +72,8 @@ void esp8266_init(void) __attribute__((section(".flash01")));
 
 /** Function prototypes **/
 
-_Bool esp8266_PlusStore_API_connect(void) __attribute__((section(".flash01")));
-void esp8266_PlusStore_API_prepare_request_header(char *, _Bool, _Bool ) __attribute__((section(".flash01")));
+bool esp8266_PlusStore_API_connect(void) __attribute__((section(".flash01")));
+void esp8266_PlusStore_API_prepare_request_header(char *, bool, bool ) __attribute__((section(".flash01")));
 void esp8266_PlusStore_API_end_transmission(void) __attribute__((section(".flash01")));
 
 int esp8266_PlusROM_API_connect(unsigned int) __attribute__((section(".flash01")));
@@ -80,18 +81,18 @@ int esp8266_PlusROM_API_connect(unsigned int) __attribute__((section(".flash01")
 uint16_t esp8266_skip_http_response_header(void) __attribute__((section(".flash01")));
 
 // Check if the module is started (AT)
-_Bool esp8266_is_started(void);
+bool esp8266_is_started(void);
 // Restart module (AT+RST)
-_Bool esp8266_reset(_Bool) __attribute__((section(".flash01")));
-_Bool esp8266_wifi_list(MENU_ENTRY **, int *);
-_Bool esp8266_wifi_connect(char *, char *);
-_Bool esp8266_wps_connect(void) __attribute__((section(".flash01")));
+bool esp8266_reset(bool) __attribute__((section(".flash01")));
+bool esp8266_wifi_list(MENU_ENTRY **, int *);
+bool esp8266_wifi_connect(char *, char *);
+bool esp8266_wps_connect(void) __attribute__((section(".flash01")));
 
 uint32_t esp8266_PlusStore_API_range_request( char *, uint32_t, http_range *, uint8_t *) __attribute__((section(".flash01")));
 uint32_t esp8266_PlusStore_API_file_request( uint8_t *, char *, uint32_t, uint32_t ) __attribute__((section(".flash01")));
 
 // Is connected to AP (AT+CWJAP?)
-_Bool esp8266_is_connected(void) __attribute__((section(".flash01")));
+bool esp8266_is_connected(void) __attribute__((section(".flash01")));
 
 // Disconnect from AP (AT+CWQAP)
 void esp8266_disconnect(void) __attribute__((section(".flash01")));

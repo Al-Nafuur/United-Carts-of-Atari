@@ -54,7 +54,7 @@ void emulate_DPCplus_cartridge( uint32_t image_size)
 	uint8_t  myTops[8] = {0,0,0,0,0,0,0,0}, myBottoms[8] = {0,0,0,0,0,0,0,0};
 	uint8_t  myFractionalIncrements[8] = {0,0,0,0,0,0,0,0}, myParameter[8] = {0,0,0,0,0,0,0,0};
 	uint16_t myMusicWaveforms[3] = {0,0,0}, myCounters[8] = {0,0,0,0,0,0,0,0};
-    _Bool myFastFetch = FALSE;
+    bool myFastFetch = false;
     uint8_t myParameterPointer = 0;
     unsigned char index, function;
 

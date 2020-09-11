@@ -27,9 +27,6 @@ extern "C" {
 #define FLASH_TIMEOUT_VALUE       50000U /* 50 s */
 
 
-// toDo delete !! old pre 0.10.3 Config !
-#define FLASH_CONFIG_ADDRESS         ((uint32_t)0x080FFFFC) /* Base @ of last word in last sector */
-
 // eeprom emulation defines
 #define EEPROM_SECTOR_ID             FLASH_SECTOR_1
 #define EEPROM_START_ADDRESS         ADDR_FLASH_SECTOR_1
@@ -58,12 +55,12 @@ extern "C" {
 
 void flash_firmware_update(uint32_t)__attribute__((section(".data#")));
 
-uint32_t flash_download(char *, uint32_t , uint32_t , _Bool );
+uint32_t flash_download(char *, uint32_t , uint32_t , bool );
 
 
 uint32_t flash_file_request( uint8_t *, uint32_t, uint32_t, uint32_t );
 
-_Bool flash_has_downloaded_roms(void);
+bool flash_has_downloaded_roms(void);
 
 void flash_file_list(char *, MENU_ENTRY **dst, int *);
 uint32_t flash_check_offline_roms_size(void);
