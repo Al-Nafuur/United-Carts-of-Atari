@@ -44,7 +44,7 @@ void exit_cartridge(uint16_t addr, uint16_t addr_prev){
  * SC variants have 128 bytes of RAM:
  * RAM read port is $1080 - $10FF, write port is $1000 - $107F.
  */
-void emulate_standard_cartridge(int header_length, _Bool withPlusFunctions, uint16_t lowBS, uint16_t highBS, int isSC)
+void emulate_standard_cartridge(int header_length, bool withPlusFunctions, uint16_t lowBS, uint16_t highBS, int isSC)
 {
 	setup_cartridge_image_with_ram();
 
@@ -472,7 +472,7 @@ Writing to 3E, however, is what's new.  Writing here selects a 1K RAM bank into
 enough space for 256K of RAM.  When RAM is selected, 1000-13FF is the read port while
 1400-17FF is the write port.
 */
-void emulate_3E_cartridge(int header_length, _Bool withPlusFunctions)
+void emulate_3E_cartridge(int header_length, bool withPlusFunctions)
 {
 	setup_cartridge_image_with_ram();
 
@@ -584,11 +584,11 @@ void emulate_3E_cartridge(int header_length, _Bool withPlusFunctions)
  *   - read $x800, write $xa00
  *   - read $xc00, write $xe00
  */
-void emulate_3EPlus_cartridge(int header_length, _Bool withPlusFunctions)
+void emulate_3EPlus_cartridge(int header_length, bool withPlusFunctions)
 {
 	if (cart_size_bytes > 0x010000) return;
 
-	int cartRAMPages = 32;
+	int cartRAMPages = 64;
 	int cartROMPages = cart_size_bytes / 1024;
 	uint16_t addr, addr_prev = 0, data = 0, data_prev = 0;
 	uint16_t act_bank = 0;
