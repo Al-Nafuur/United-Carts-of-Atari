@@ -12,6 +12,7 @@ const uint8_t * eeprom_pointer;
 // reserve eeprom data storage;
 unsigned const char eeprom_data[16384] __attribute__((__section__(".eeprom"), used)) = {[0 ... 16383] = 0xff };
 
+
 /* Private function prototypes -----------------------------------------------*/
 HAL_StatusTypeDef FLASH_WaitInRAMForLastOperationWithMaxDelay(void) __attribute__((section(".data#")));
 static uint32_t get_sector(uint32_t Address);
@@ -19,21 +20,16 @@ int16_t get_active_eeprom_page(void);
 int16_t get_active_eeprom_page_entry(uint16_t);
 uint32_t get_filesize(uint32_t);
 
+
 USER_SETTINGS flash_get_eeprom_user_settings(void){
-    USER_SETTINGS user_settings = {TV_MODE_NTSC, FLASH_SECTOR_5, ""};
+    USER_SETTINGS user_settings = {TV_MODE_NTSC, FLASH_SECTOR_5, FONT_TJZ};
     int16_t act_page_index = get_active_eeprom_page();
     int16_t act_entry_index = -1;
     if( act_page_index != -1 ){
         act_entry_index = get_active_eeprom_page_entry(act_page_index);
     }
-
-    if( act_entry_index != -1 ){
-        uint32_t settings_pos = (act_page_index * EEPROM_PAGE_SIZE) + EEPROM_PAGE_HEADER_SIZE + (act_entry_index * EEPROM_ENTRY_SIZE) + EEPROM_ENTRY_HEADER_SIZE;
-        user_settings.tv_mode = eeprom_data[settings_pos++];
-        user_settings.first_free_flash_sector = eeprom_data[settings_pos++];
-        strncpy(user_settings.secret_key, (char *) &eeprom_data[settings_pos], 10);
-    }else if( *(__IO uint32_t*)FLASH_CONFIG_ADDRESS <= TV_MODE_PAL60 ){ // old config
-        user_settings.tv_mode = *(__IO uint32_t*)FLASH_CONFIG_ADDRESS;
+    if (act_entry_index != -1){
+    	user_settings = (*(USER_SETTINGS *)(&eeprom_data[(act_page_index * EEPROM_PAGE_SIZE) + EEPROM_PAGE_HEADER_SIZE + (act_entry_index * EEPROM_ENTRY_SIZE) + EEPROM_ENTRY_HEADER_SIZE]));
     }
     return user_settings;
 }
@@ -65,7 +61,7 @@ void flash_set_eeprom_user_settings(USER_SETTINGS user_settings){
                FLASH_Erase_Sector(EEPROM_SECTOR_ID, (uint8_t) FLASH_VOLTAGE_RANGE_3);
                new_page_index = 0;
            }else{ // invalidate act page
-            HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, EEPROM_START_ADDRESS + (act_page_index * EEPROM_PAGE_SIZE ), ((uint32_t)EEPROM_INVALID_PAGE_HEADER) );
+        	   HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, EEPROM_START_ADDRESS + (act_page_index * EEPROM_PAGE_SIZE ), ((uint32_t)EEPROM_INVALID_PAGE_HEADER) );
            }
     }
 
@@ -81,23 +77,16 @@ void flash_set_eeprom_user_settings(USER_SETTINGS user_settings){
     // make new activ entry header!
     new_entry_flash_address++;
     HAL_FLASH_Program(FLASH_TYPEPROGRAM_BYTE, new_entry_flash_address, ((uint8_t)0x55) );
-//    new_entry_flash_address += sizeof(EEPROM_ACTIVE_ENTRY_HEADER);
     new_entry_flash_address++;
 
-    // save new entry data!
-    HAL_FLASH_Program(FLASH_TYPEPROGRAM_BYTE, new_entry_flash_address, user_settings.tv_mode);
-    new_entry_flash_address++;
-    HAL_FLASH_Program(FLASH_TYPEPROGRAM_BYTE, new_entry_flash_address, user_settings.first_free_flash_sector);
-    new_entry_flash_address++;
-    for(uint8_t i = 0; i<10; i++){
-        HAL_FLASH_Program(FLASH_TYPEPROGRAM_BYTE, new_entry_flash_address++, user_settings.secret_key[i]);
+    for(uint8_t i = 0; i<sizeof(USER_SETTINGS); i++){
+        HAL_FLASH_Program(FLASH_TYPEPROGRAM_BYTE, new_entry_flash_address++, ((unsigned char *)&user_settings)[i]);
     }
     HAL_FLASH_Lock();
 }
 
-
 /* write to flash with multiple HTTP range requests */
-uint32_t flash_download(char *filename, uint32_t filesize, uint32_t http_range_start, _Bool append){
+uint32_t flash_download(char *filename, uint32_t filesize, uint32_t http_range_start, bool append){
 
 	uint8_t start_sector;
 
@@ -106,7 +95,7 @@ uint32_t flash_download(char *filename, uint32_t filesize, uint32_t http_range_s
 	else
 		start_sector = (uint8_t)FLASH_SECTOR_5;
 
-	if( start_sector < (uint8_t)FLASH_SECTOR_5 || esp8266_PlusStore_API_connect() == FALSE){
+	if( start_sector < (uint8_t)FLASH_SECTOR_5 || esp8266_PlusStore_API_connect() == false){
     	return 0;
 	}
 
@@ -115,7 +104,7 @@ uint32_t flash_download(char *filename, uint32_t filesize, uint32_t http_range_s
     uint32_t count, http_range_end = http_range_start + 4095;
 	uint32_t Address = DOWNLOAD_AREA_START_ADDRESS + 128 * 1024 * ( start_sector - 5);
 
-	esp8266_PlusStore_API_prepare_request_header((char *)filename, TRUE, FALSE );
+	esp8266_PlusStore_API_prepare_request_header((char *)filename, true, false );
 	strcat(http_request_header, (char *)"     0-  4095\r\n\r\n");
 	http_range_param_pos = strlen((char *)http_request_header) - 5;
 
@@ -336,7 +325,7 @@ uint32_t flash_file_request(uint8_t *ext_buffer, uint32_t base_address, uint32_t
     return length;
 }
 
-_Bool flash_has_downloaded_roms(){
+bool flash_has_downloaded_roms(){
     return user_settings.first_free_flash_sector > 5;
 }
 
@@ -344,7 +333,7 @@ void flash_file_list( char *path, MENU_ENTRY **dst , int *num_p){
     uint32_t base_adress = (uint32_t)( DOWNLOAD_AREA_START_ADDRESS), length, r;
     uint8_t pos, c, path_len = strlen(path);
     char act_tar_file_path_name[100];
-    _Bool is_dir, is_file;
+    bool is_dir, is_file;
     char *tmp_path = (char*) calloc((path_len +2) , sizeof(char));
     if(path_len > 0 ){
         strcpy(tmp_path, &path[1]);
@@ -357,7 +346,7 @@ void flash_file_list( char *path, MENU_ENTRY **dst , int *num_p){
         pos = 0;
         length = get_filesize(base_adress);
         is_dir = ((*(__IO uint8_t*)(base_adress + 156)) == '5');
-        is_file = is_dir ?  FALSE : ((*(__IO uint8_t*)(base_adress + 156)) == '0');
+        is_file = is_dir ?  false : ((*(__IO uint8_t*)(base_adress + 156)) == '0');
 
 
         if(is_dir || is_file){ // ignore hard/symbolic link, (block) device files and named pipes
@@ -493,10 +482,8 @@ static uint32_t get_sector(uint32_t Address)
 int16_t get_active_eeprom_page(){
     int16_t index = 0;
     eeprom_pointer = &eeprom_data[0];
-    for ( ; index <  (EEPROM_MAX_PAGE_ID - 2); index++ ){
-        if((*( uint32_t*)(eeprom_pointer)) != EEPROM_INVALID_PAGE_HEADER ){
-            break;
-        }
+    while ( index <  EEPROM_MAX_PAGE_ID &&  (*( uint32_t*)(eeprom_pointer)) == EEPROM_INVALID_PAGE_HEADER ){
+        index++;
         eeprom_pointer += EEPROM_PAGE_SIZE;
     }
     if((*( uint32_t*)(eeprom_pointer)) != EEPROM_ACTIVE_PAGE_HEADER )
@@ -507,14 +494,11 @@ int16_t get_active_eeprom_page(){
 int16_t get_active_eeprom_page_entry(uint16_t page_index){
     int16_t index = 0;
     eeprom_pointer =  &eeprom_data[(page_index * EEPROM_PAGE_SIZE) + EEPROM_PAGE_HEADER_SIZE];
-    for ( ; index <  (EEPROM_MAX_ENTRY_ID - 2) ; index++ ){
-        if((*( uint16_t*)(eeprom_pointer)) != EEPROM_INVALID_ENTRY_HEADER ){
-            break;
-        }
+    while( index <  EEPROM_MAX_ENTRY_ID && (*( uint16_t*)(eeprom_pointer)) == EEPROM_INVALID_ENTRY_HEADER ){
+        index++;
         eeprom_pointer += EEPROM_ENTRY_SIZE;
     }
     if((*( uint16_t*)(eeprom_pointer)) != EEPROM_ACTIVE_ENTRY_HEADER )
         index = -1;
     return index;
 }
-
