@@ -4,11 +4,8 @@
 #include <stdint.h>
 #include "stm32f4xx_hal.h"
 
-#define VERSION                   "0.14.15"
+#define VERSION                   "0.15.0"
 #define PLUSSTORE_API_HOST        "pluscart.firmaplus.de"
-
-#define TRUE 1
-#define FALSE 0
 
 #define STATUS_MESSAGE_LENGTH           27
 #define NUM_MENU_ITEMS_PER_PAGE      	12
@@ -26,6 +23,9 @@
 #define MENU_TEXT_TV_MODE_PAL               "PAL"
 #define MENU_TEXT_TV_MODE_PAL60             "PAL 60Hz"
 #define MENU_TEXT_TV_MODE_NTSC              "NTSC"
+#define MENU_TEXT_FONT_SETUP                "Set font style"
+#define MENU_TEXT_FONT_TJZ                  "Small Caps Font"
+#define MENU_TEXT_FONT_AD                   "Trichotomic 12 Font"
 #define MENU_TEXT_PRIVATE_KEY               "Private Key"
 #define MENU_TEXT_FIRMWARE_UPDATE           "** Update firmware **"
 #define MENU_TEXT_OFFLINE_ROM_UPDATE        "Download offline ROMs"
@@ -114,7 +114,7 @@ typedef struct {
 typedef struct {
 	uint8_t tv_mode;
 	uint8_t first_free_flash_sector;
-	char secret_key[10];
+	uint8_t font_style;
 } USER_SETTINGS;
 
 
