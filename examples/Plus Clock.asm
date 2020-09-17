@@ -552,6 +552,7 @@ nines	.byte %00100001	;Well... if you're going to use this code in a
         .byte #0	; Receive Buffer
         .byte #0	; Counter for Receive Buffer
 			
-	org $1FFC	       ;Unless it's like the movie "War Games" where the
-	.word start	       ;computer running the game is hooked up to a real
-	.word plusrom_api  ;"Doomsday Machine" then it wouldn't be a good idea.
+	org $1FFA          ;Unless it's like the movie "War Games" where the
+	.word plusrom_api  ;computer running the game is hooked up to a real
+	.word start        ;"Doomsday Machine" then it wouldn't be a good idea.
+    .word start
