@@ -54,13 +54,13 @@ const char html_portal_options[] = "<form action=\"" GET_WIFI "\"method=\"get\">
 		                           "<form action=\"" GET_EXIT "\"method=\"get\"><button>Exit</button></form>";
 
 const char html_form[]           = "<form method='get'action='" GET_SAVE "'><input id='s'name='s'length=32 placeholder='SSID'><br/><input id='p'name='p'length=64 type='password'placeholder='password'><br/>"
-                                   "<br/><button type='submit'>save</button></form>"
+                                   "<br/><button type='submit'>Save</button></form>"
 								   "<br/><form action=\"" GET_WIFI "\"method=\"get\"><button>Rescan WiFi</button></form>";
 
-const char html_plus_connect[]   = "<br/><form action=\"" GET_PLUS_CONNECT "\"method=\"get\"><button>PlusStore connect</button></form>";
+const char html_plus_connect[]   = "<br/><form action=\"" GET_PLUS_CONNECT "\"method=\"get\"><button>PlusStore Connect</button></form>";
 
-const char html_connect_form[]   = "<form method='get'action='" GET_SAVE_CONNECT "'><input id='s'name='s'length=32 placeholder='PlusStore user or email'><br/>"
-                                   "<br/><button type='submit'>request connect</button></form>";
+const char html_connect_form[]   = "<form method='get'action='" GET_SAVE_CONNECT "'><input id='s'name='s'length=32 placeholder='PlusStore User or Email'><br/>"
+                                   "<br/><button type='submit'>Request Connect</button></form>";
 
 const char html_back[]           = "</br><form action=\"/index.html\"method=\"get\"><button>Back</button></form>";
 

@@ -575,7 +575,7 @@ void get_http_request_url_param_values(url_param * param_array , int len){
     }
 }
 
-inline int ishex(char x){
+int ishex(char x){
 	return (x >= '0' && x <= '9') || (x >= 'a' && x <= 'f') || (x >= 'A' && x <= 'F');
 }
 

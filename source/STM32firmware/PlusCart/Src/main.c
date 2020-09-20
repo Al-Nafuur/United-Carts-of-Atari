@@ -122,8 +122,8 @@ static const char status_message[][28]__attribute__((section(".flash01"))) = {
 		"Request timeout"                  ,
 		"Enter WiFi Password"              ,
 		"Enter email or username"          ,
-		"Connected, email send"            ,
-		"User created, email send"         ,
+		"Connected, email sent"            ,
+		"User created, email sent"         ,
 		"PlusStore connect failed"         ,
 		"Disconnected from PlusStore"      ,
 		"Enter Secret-Key"                 ,
@@ -138,7 +138,7 @@ static const char status_message[][28]__attribute__((section(".flash01"))) = {
 		"Offline ROMs detected"            ,
 		"No offline ROMs detected"         ,
 		"DPC+ is not supported"            ,
-		"Emulation exited"
+		"Game exit"
 };
 
 
@@ -155,7 +155,7 @@ UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
 int num_menu_entries = 0;
-char http_request_header[512];
+char http_request_header[512];//__attribute__ ((section (".noinit")));
 
 uint8_t buffer[BUFFER_SIZE * 1024] __attribute__((section(".buffer")));
 unsigned int cart_size_bytes;
@@ -208,8 +208,8 @@ void make_menu_entry( MENU_ENTRY **dst, char *name, int type){
 	num_menu_entries++;
 }
 void make_keyboard(MENU_ENTRY **dst){
-	make_menu_entry(&(*dst), "(GO BACK)", Leave_Menu);
-	make_menu_entry(&(*dst), "(DEL CHAR)", Delete_Keyboard_Char);
+	make_menu_entry(&(*dst), MENU_TEXT_GO_BACK, Leave_Menu);
+	make_menu_entry(&(*dst), MENU_TEXT_DELETE_CHAR, Delete_Keyboard_Char);
 	char Key[2] = "0";
 	for (char i=32; i < 100; i++){
 		Key[0] = i;
@@ -220,7 +220,7 @@ void make_keyboard(MENU_ENTRY **dst){
 }
 
 MENU_ENTRY* generateSetupMenu(MENU_ENTRY *dst) {
-	make_menu_entry(&dst, "(GO Back)", Leave_Menu);
+	make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
 	make_menu_entry(&dst, MENU_TEXT_TV_MODE_SETUP, Setup_Menu);
 	make_menu_entry(&dst, MENU_TEXT_FONT_SETUP, Setup_Menu);
 	make_menu_entry(&dst, MENU_TEXT_WIFI_SETUP, Setup_Menu);
@@ -309,8 +309,10 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 		}else if( strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_FONT_SETUP, sizeof(MENU_TEXT_FONT_SETUP) - 1) == 0 ){
 			if(d->type == Menu_Action){
 				uint8_t new_font_style = FONT_TJZ;
-				if(strcmp(&curPath[sizeof(MENU_TEXT_SETUP) + sizeof(MENU_TEXT_FONT_SETUP)], MENU_TEXT_FONT_AD) == 0){
-					new_font_style = FONT_AD;
+				if(strcmp(&curPath[sizeof(MENU_TEXT_SETUP) + sizeof(MENU_TEXT_FONT_SETUP)], MENU_TEXT_FONT_AD1) == 0){
+					new_font_style = FONT_AD1;
+				}else if(strcmp(&curPath[sizeof(MENU_TEXT_SETUP) + sizeof(MENU_TEXT_FONT_SETUP)], MENU_TEXT_FONT_AD2) == 0){
+					new_font_style = FONT_AD2;
 				}
 				set_my_font(new_font_style);
 				if(user_settings.font_style != new_font_style){
@@ -321,7 +323,8 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			}else{
 				make_menu_entry(&dst, "(GO Back)", Leave_Menu);
 				make_menu_entry(&dst, MENU_TEXT_FONT_TJZ, Menu_Action);
-				make_menu_entry(&dst, MENU_TEXT_FONT_AD, Menu_Action);
+				make_menu_entry(&dst, MENU_TEXT_FONT_AD1, Menu_Action);
+				make_menu_entry(&dst, MENU_TEXT_FONT_AD2, Menu_Action);
 			}
 
 		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_PLUS_CONNECT, sizeof(MENU_TEXT_PLUS_CONNECT) - 1) == 0 ){
@@ -925,6 +928,10 @@ int main(void)
                 emulate_cartridge(cart_type, d);
                 set_menu_status_byte(StatusByteReboot, 0);
                 main_status = exit_emulation;
+                if(d->filesize > (BUFFER_SIZE * 1024)){ // reload menu
+                	truncate_curPath();
+                    menu_status = buildMenuFromPath( d );
+                }
             }else{
             	main_status = romtype_unknown;
             }

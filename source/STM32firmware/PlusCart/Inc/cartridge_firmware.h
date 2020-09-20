@@ -22,7 +22,8 @@
 #define TV_MODE_PAL60   3
 
 #define FONT_TJZ    0
-#define FONT_AD     1
+#define FONT_AD1    1
+#define FONT_AD2    2
 
 
 void set_menu_status_msg(const char* message);

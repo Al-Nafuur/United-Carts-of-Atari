@@ -4,33 +4,36 @@
 #include <stdint.h>
 #include "stm32f4xx_hal.h"
 
-#define VERSION                   "0.15.0"
+#define VERSION                   "0.15.5"
 #define PLUSSTORE_API_HOST        "pluscart.firmaplus.de"
 
 #define STATUS_MESSAGE_LENGTH           27
 #define NUM_MENU_ITEMS_PER_PAGE      	12
 #define NUM_MENU_ITEMS			      1024
 
+#define MENU_TEXT_GO_BACK                   "(Go Back)"
+#define MENU_TEXT_DELETE_CHAR               "(Delete Char)"
 #define MENU_TEXT_OFFLINE_ROMS              "Offline ROMs"
-#define MENU_TEXT_DETECT_OFFLINE_ROMS       "Detect offline ROMs"
-#define MENU_TEXT_DELETE_OFFLINE_ROMS       "Erase offline ROMs"
+#define MENU_TEXT_DETECT_OFFLINE_ROMS       "Detect Offline ROMs"
+#define MENU_TEXT_DELETE_OFFLINE_ROMS       "Erase Offline ROMs"
 #define MENU_TEXT_SETUP 	                "Setup"
 #define MENU_TEXT_WIFI_SETUP 	            "WiFi Setup"
 #define MENU_TEXT_WPS_CONNECT               "WiFi WPS Connect"
-#define MENU_TEXT_WIFI_MANGER               "start WiFi Manager Portal"
-#define MENU_TEXT_WIFI_RECONNECT            "WiFi retry"
+#define MENU_TEXT_WIFI_MANGER               "Start WiFi Manager Portal"
+#define MENU_TEXT_WIFI_RECONNECT            "WiFi Retry"
 #define MENU_TEXT_TV_MODE_SETUP             "Set TV Mode"
 #define MENU_TEXT_TV_MODE_PAL               "PAL"
-#define MENU_TEXT_TV_MODE_PAL60             "PAL 60Hz"
+#define MENU_TEXT_TV_MODE_PAL60             "PAL 60 Hz"
 #define MENU_TEXT_TV_MODE_NTSC              "NTSC"
-#define MENU_TEXT_FONT_SETUP                "Set font style"
+#define MENU_TEXT_FONT_SETUP                "Set Font Style"
 #define MENU_TEXT_FONT_TJZ                  "Small Caps Font"
-#define MENU_TEXT_FONT_AD                   "Trichotomic 12 Font"
+#define MENU_TEXT_FONT_AD1                  "Trichotomic 12 Font"
+#define MENU_TEXT_FONT_AD2                  "Captain Morgan Spiced Font"
 #define MENU_TEXT_PRIVATE_KEY               "Private Key"
-#define MENU_TEXT_FIRMWARE_UPDATE           "** Update firmware **"
-#define MENU_TEXT_OFFLINE_ROM_UPDATE        "Download offline ROMs"
-#define MENU_TEXT_PLUS_CONNECT              "PlusStore connect"
-#define MENU_TEXT_PLUS_REMOVE               "PlusStore disconnect"
+#define MENU_TEXT_FIRMWARE_UPDATE           "** Update Firmware **"
+#define MENU_TEXT_OFFLINE_ROM_UPDATE        "Download Offline ROMs"
+#define MENU_TEXT_PLUS_CONNECT              "PlusStore Connect"
+#define MENU_TEXT_PLUS_REMOVE               "PlusStore Disconnect"
 #define MENU_TEXT_ESP8266_RESTORE           "ESP8266 Factory Reset"
 #define MENU_TEXT_SEARCH_ROM                "Search ROM"
 
