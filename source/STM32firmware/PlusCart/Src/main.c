@@ -38,6 +38,7 @@
 #include <string.h>
 
 #include "main.h"
+#include "font.h"
 #include "esp8266.h"
 #include "flash.h"
 #include "cartridge_io.h"
@@ -138,7 +139,7 @@ static const char status_message[][28]__attribute__((section(".flash01"))) = {
 		"Offline ROMs detected"            ,
 		"No offline ROMs detected"         ,
 		"DPC+ is not supported"            ,
-		"Game exit"
+		"Emulation exited"
 };
 
 
@@ -204,9 +205,21 @@ void make_menu_entry( MENU_ENTRY **dst, char *name, int type){
 	(*dst)->type = type;
 	strcpy((*dst)->entryname, name);
 	(*dst)->filesize = 0U;
+	(*dst)->font = user_settings.font_style;
 	(*dst)++;
 	num_menu_entries++;
 }
+
+void make_menu_entry_font( MENU_ENTRY **dst, char *name, int type, uint8_t font) {
+	(*dst)->type = type;
+	strcpy((*dst)->entryname, name);
+	(*dst)->filesize = 0U;
+	(*dst)->font = font;
+	(*dst)++;
+	num_menu_entries++;
+}
+
+
 void make_keyboard(MENU_ENTRY **dst){
 	make_menu_entry(&(*dst), MENU_TEXT_GO_BACK, Leave_Menu);
 	make_menu_entry(&(*dst), MENU_TEXT_DELETE_CHAR, Delete_Keyboard_Char);
@@ -243,6 +256,14 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 	uint8_t pos = 0, c;
 	num_menu_entries = 0;
 	enum e_status_message menu_status = none;
+
+	char *menu_text[] = {
+			// same ordering as font IDs
+			MENU_TEXT_FONT_TJZ,
+			MENU_TEXT_FONT_TRICHOTOMIC12,
+			MENU_TEXT_FONT_CAPTAIN_MORGAN_SPICE,
+			MENU_TEXT_FONT_GLACIER_BELLE
+	};
 
 	MENU_ENTRY *dst = (MENU_ENTRY *)&menu_entries[0];
 
@@ -308,13 +329,14 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 
 		}else if( strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_FONT_SETUP, sizeof(MENU_TEXT_FONT_SETUP) - 1) == 0 ){
 			if(d->type == Menu_Action){
-				uint8_t new_font_style = FONT_TJZ;
-				if(strcmp(&curPath[sizeof(MENU_TEXT_SETUP) + sizeof(MENU_TEXT_FONT_SETUP)], MENU_TEXT_FONT_AD1) == 0){
-					new_font_style = FONT_AD1;
-				}else if(strcmp(&curPath[sizeof(MENU_TEXT_SETUP) + sizeof(MENU_TEXT_FONT_SETUP)], MENU_TEXT_FONT_AD2) == 0){
-					new_font_style = FONT_AD2;
-				}
-				set_my_font(new_font_style);
+
+				uint8_t new_font_style = 0;
+				while ( strcmp(&curPath[sizeof(MENU_TEXT_SETUP) + 2 + sizeof(MENU_TEXT_FONT_SETUP)],
+						&menu_text[new_font_style][2]) != 0)
+					new_font_style++;
+
+				//set_my_font(new_font_style);
+
 				if(user_settings.font_style != new_font_style){
 					user_settings.font_style = new_font_style;
 					flash_set_eeprom_user_settings(user_settings);
@@ -322,9 +344,20 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 	        	curPath[0] = '\0';
 			}else{
 				make_menu_entry(&dst, "(GO Back)", Leave_Menu);
-				make_menu_entry(&dst, MENU_TEXT_FONT_TJZ, Menu_Action);
-				make_menu_entry(&dst, MENU_TEXT_FONT_AD1, Menu_Action);
-				make_menu_entry(&dst, MENU_TEXT_FONT_AD2, Menu_Action);
+
+				uint8_t fontCount = sizeof menu_text / sizeof *menu_text;
+				char fontLine[fontCount][33];
+				for (uint8_t font=0; font < fontCount; font++) {
+					strcpy(fontLine[font], menu_text[font]);
+					fontLine[font][0] = user_settings.font_style == font ? CHAR_SELECTION: ' ';
+
+					//set_my_font(font);
+					make_menu_entry_font(&dst,
+							fontLine[font],
+							Menu_Action,
+							font);
+				}
+				//set_my_font(user_settings.font_style);
 			}
 
 		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_PLUS_CONNECT, sizeof(MENU_TEXT_PLUS_CONNECT) - 1) == 0 ){
@@ -502,6 +535,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
                     if (c == '\n'){
                     	if(is_entry_row){
                     		dst->entryname[pos] = '\0';
+                    		dst->font = user_settings.font_style;
                             dst++;
                             num_menu_entries++;
                     	}
@@ -810,7 +844,7 @@ void system_secondary_init(void){
 		num_menu_entries = 0;
 		curPath[0] = '\0';
 	}
-	set_my_font(user_settings.font_style);
+	//set_my_font(user_settings.font_style);
 	set_menu_status_byte(StatusByteReboot, 0);
 	generate_udid_string();
 

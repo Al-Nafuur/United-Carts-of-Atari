@@ -7,10 +7,14 @@
 #include "firmware_ntsc_rom.h"
 #include "font.h"
 
+// These are the colours between the top title bar and the rest of the text lines...
+
 #define BACK_COL_NTSC     0x92
 #define BACK_COL_PAL      0xb2
 
-#define t2c(l, r, s)  my_font[ ((l - 32) * 12) + s ] << 4  | my_font[ ((r - 32) * 12) + s ]
+#define t2c(fontType, l, r, s) \
+	sharedFont[ convertAsciiToCharnum(fontType, l) * 12 + s ] << 4 | \
+	sharedFont[ convertAsciiToCharnum(fontType, r) * 12 + s ]
 
 
 static char menu_header[32]__attribute__((section(".ccmram")));
@@ -24,8 +28,8 @@ const uint8_t end_bank[] __attribute__((section(".flash01")))    = { 0x8d, 0xf4,
 const uint8_t switch_bank[]__attribute__((section(".flash01")))  = { 0x4c, 0x07, 0x10};
 
 // with VCS RAM Color
-const uint8_t textline_start_even[]__attribute__((section(".flash01"))) = { 0xa5, 0x83, 0x85, 0x09, 0xa9, 0x2c, 0x8d, 0x06, 0x00, 0xea};
-const uint8_t textline_start_odd[]__attribute__((section(".flash01")))  = { 0x85, 0x2a, 0xa5, 0x83, 0x85, 0x09, 0xa9, 0x2c, 0xea, 0x85, 0x07};
+const uint8_t textline_start_even[]__attribute__((section(".flash01"))) = { 0xa5, 0x83, 0x85, 0x09, 0xa9, 0x0c, 0x8d, 0x06, 0x00, 0xea};
+const uint8_t textline_start_odd[]__attribute__((section(".flash01")))  = { 0x85, 0x2a, 0xa5, 0x83, 0x85, 0x09, 0xa9, 0x0c, 0xea, 0x85, 0x07};
 
 
 const uint8_t next_scanline_a[]__attribute__((section(".flash01"))) = { 0x85, 0x2a, 0x04, 0x00, 0xea, 0xea, 0xea, 0xea, 0xea};
@@ -33,9 +37,9 @@ const uint8_t next_scanline_b[]__attribute__((section(".flash01"))) = { 0xea, 0x
 const uint8_t kernel_a[]__attribute__((section(".flash01"))) = { 0xa2, 0x30, 0xa9, 0x10, 0x85, 0x1c, 0xa9, 0x60, 0x85, 0x1b, 0xa0, 0x00, 0x8e, 0x1b, 0x00, 0xea, 0xa2, 0x04, 0xa9, 0x00, 0x85, 0x1c, 0xa9, 0x80, 0x8d, 0x1c, 0x00, 0x85, 0x10, 0x84, 0x1b, 0x85, 0x10,0x8e, 0x1b, 0x00, 0xa9, 0xce, 0x8d, 0x1b, 0x00, 0xa2, 0x80, 0x86, 0x21, 0xea, 0x85, 0x10};
 const uint8_t kernel_b[]__attribute__((section(".flash01"))) = { 0xa0, 0x03, 0xa9, 0x60, 0x85, 0x1c, 0xa2, 0x03, 0xa9, 0x77, 0x85, 0x1b, 0xa9, 0x52, 0x85, 0x1b, 0xa9, 0x50, 0x8d, 0x1b, 0x00, 0x86, 0x1c, 0x85, 0x10, 0x84, 0x1c, 0x85, 0x10, 0xa9, 0x1f, 0x8d, 0x1b, 0x00, 0xa9, 0x74, 0x85, 0x1b, 0xa2, 0x00, 0x86, 0x21, 0x8d, 0x2a, 0x00, 0x85, 0x10};
 
-const uint8_t header_bottom[]__attribute__((section(".flash01")))   = { 0x85, 0x02, 0xa9, 0xb2, 0x85, 0x02, 0x85, 0x09, 0x85, 0x02, 0x85, 0x02, 0x85, 0x02, 0x85, 0x09, 0x85, 0x02, 0x85, 0x02, 0x85, 0x02, 0x85, 0x02 };
+const uint8_t header_bottom[]__attribute__((section(".flash01")))   = { 0x85, 0x02, 0xa9, 0xb2, 0x85, 0x02, 0x85, 0x09, 0x85, 0x02, 0x85, 0x02, 0x85, 0x02, 0x85, 0x09, 0x85, 0x02, /*0x85, 0x02, 0x85, 0x02, 0x85, 0x02*/ };
 const uint8_t normal_bottom[]__attribute__((section(".flash01")))   = { 0x85, 0x02 };
-const uint8_t normal_top[]__attribute__((section(".flash01")))      = { 0x85, 0x02, 0x85, 0x02 };
+const uint8_t normal_top[]__attribute__((section(".flash01")))      = { 0x85, 0x02 /*, 0x85, 0x02*/ };
 const uint8_t exit_kernel[]__attribute__((section(".flash01")))     = { 0x4c, 0x00, 0x10};
 const uint8_t end_kernel_even[]__attribute__((section(".flash01"))) = { 0x86, 0x1b, 0x86, 0x1c};
 const uint8_t end_kernel_odd[]__attribute__((section(".flash01")))  = { 0xa2, 0x00};
@@ -44,38 +48,41 @@ uint8_t * my_font;
 
 uint8_t * bufferp;
 
-enum eStatus_icons_char_num {
-	CHAR_L_Wifi = 128,
-	CHAR_R_Wifi,
-	CHAR_L_NoWifi,
-	CHAR_R_NoWifi,
-	CHAR_L_Page,
-	CHAR_R_Page,
-	CHAR_L_Account,
-	CHAR_R_Account,
-	CHAR_L_NoAccount,
-	CHAR_R_NoAccount
-};
+
+void inline add_end_kernel(bool is_even);
+void inline add_next_scanline(bool is_a);
+void inline add_start_bank(int bank_id);
+void inline add_end_bank(int bank_id);
+void inline add_textline_start(bool even, uint8_t entry, bool isFolder);
+void inline add_kernel_a(uint8_t fontType, uint8_t scanline, uint8_t * text);
+void inline add_kernel_b(uint8_t fontType, uint8_t scanline, uint8_t * text);
+void inline add_header_bottom();
+void inline add_normal_bottom();
+void inline add_normal_top();
+void inline add_exit_kernel();
+
+
+
 
 /*
  * Functions to append to the buffer the const "templates"
  * and fill in the dynamic values
  */
-void inline add_start_bank(int bank_id){
+void add_start_bank(int bank_id){
     bufferp =  &buffer[ (bank_id - 1) * 0x1000];
     memcpy( bufferp, start_bank, sizeof(start_bank));
     bufferp[8] += bank_id;
     bufferp += sizeof(start_bank);
 }
 
-void inline add_end_bank(int bank_id){
+void add_end_bank(int bank_id){
     uint16_t next_bank = 0x1000 * bank_id ;
     memcpy( bufferp, switch_bank, sizeof(switch_bank));
     bufferp = &buffer[ next_bank - 0x12];
     memcpy( bufferp, end_bank, sizeof(end_bank));
 }
 
-void inline add_textline_start(bool even, uint8_t entry, bool isFolder){
+void add_textline_start(bool even, uint8_t entry, bool isFolder){
     if(even){
         memcpy( bufferp, textline_start_even, sizeof(textline_start_even));
         bufferp[1]  += entry;
@@ -90,37 +97,44 @@ void inline add_textline_start(bool even, uint8_t entry, bool isFolder){
 }
 
 //displays: 00--00--11--11--11----00--00--00
-void inline add_kernel_a(uint8_t scanline, uint8_t * text){
+void add_kernel_a(uint8_t fontType, uint8_t scanline, uint8_t * text){
     memcpy( bufferp, kernel_a, sizeof(kernel_a));
-    bufferp[1]  = t2c(text[4], text[5], scanline);          // #{3}
-    bufferp[3]  = t2c(text[8], text[9], scanline);          // #{4}
-    bufferp[7]  = t2c(text[0], text[1], scanline);          // #{2}
-    bufferp[11] = (t2c(text[22], text[23], scanline)) << 1; // #{7} << 1
-    bufferp[17] = (t2c(text[26], text[27], scanline)) << 1; // #{8} << 1
-    bufferp[19] = t2c(text[12], text[13], scanline);        // #{5}
-    bufferp[23] = t2c(text[16], text[17], scanline);        // #{6}
-    bufferp[37] = (t2c(text[30], text[31], scanline)) << 1; // #{9} << 1
+
+    if (fontType > 3)
+    	fontType = 0;				// cater for uninit'd font
+
+    bufferp[1]  = t2c(fontType, text[4], text[5], scanline);          // #{3}
+    bufferp[3]  = t2c(fontType, text[8], text[9], scanline);          // #{4}
+    bufferp[7]  = t2c(fontType, text[0], text[1], scanline);          // #{2}
+    bufferp[11] = (t2c(fontType, text[22], text[23], scanline)) << 1; // #{7} << 1
+    bufferp[17] = (t2c(fontType, text[26], text[27], scanline)) << 1; // #{8} << 1
+    bufferp[19] = t2c(fontType, text[12], text[13], scanline);        // #{5}
+    bufferp[23] = t2c(fontType, text[16], text[17], scanline);        // #{6}
+    bufferp[37] = (t2c(fontType, text[30], text[31], scanline)) << 1; // #{9} << 1
 
     bufferp += sizeof(kernel_a);
 }
 
 //displays: --00--00--11--11--1100--00--00--
-void inline add_kernel_b(uint8_t scanline, uint8_t * text){
+void add_kernel_b(uint8_t fontType, uint8_t scanline, uint8_t * text){
     memcpy( bufferp, kernel_b, sizeof(kernel_b));
 
-    bufferp[1]  = t2c(text[18], text[19], scanline);        // #{6}
-    bufferp[3]  = t2c(text[10], text[11], scanline);        // #{4}
-    bufferp[7]  = t2c(text[14], text[15], scanline);        // #{5}
-    bufferp[9]  = t2c(text[2], text[3], scanline);          // #{2}
-    bufferp[13] = t2c(text[6], text[7], scanline);          // #{3}
-    bufferp[17] = t2c(text[20], text[21], scanline);        // #{7}
-    bufferp[30] = t2c(text[24], text[25], scanline);        // #{8}
-    bufferp[35] = t2c(text[28], text[29], scanline);        // #{9}
+    if (fontType > 3)
+    	fontType = 0;				// cater for uninit'd font
+
+    bufferp[1]  = t2c(fontType, text[18], text[19], scanline);        // #{6}
+    bufferp[3]  = t2c(fontType, text[10], text[11], scanline);        // #{4}
+    bufferp[7]  = t2c(fontType, text[14], text[15], scanline);        // #{5}
+    bufferp[9]  = t2c(fontType, text[2], text[3], scanline);          // #{2}
+    bufferp[13] = t2c(fontType, text[6], text[7], scanline);          // #{3}
+    bufferp[17] = t2c(fontType, text[20], text[21], scanline);        // #{7}
+    bufferp[30] = t2c(fontType, text[24], text[25], scanline);        // #{8}
+    bufferp[35] = t2c(fontType, text[28], text[29], scanline);        // #{9}
 
     bufferp += sizeof(kernel_b);
 }
 
-void inline add_end_kernel(bool is_even){
+void add_end_kernel(bool is_even){
     if(! is_even){
         memcpy( bufferp, end_kernel_odd, sizeof(end_kernel_odd));
         bufferp += sizeof(end_kernel_odd);
@@ -129,7 +143,7 @@ void inline add_end_kernel(bool is_even){
     bufferp += sizeof(end_kernel_even);
 }
 
-void inline add_next_scanline(bool is_a){
+void add_next_scanline(bool is_a){
     if(is_a){
         memcpy( bufferp, next_scanline_a, sizeof(next_scanline_a));
         bufferp += sizeof(next_scanline_a);
@@ -139,7 +153,7 @@ void inline add_next_scanline(bool is_a){
     }
 }
 
-void inline add_header_bottom(){
+void add_header_bottom(){
     memcpy( bufferp, header_bottom, sizeof(header_bottom));
     if(user_settings.tv_mode == TV_MODE_NTSC)
     	bufferp[3] = BACK_COL_NTSC;
@@ -147,15 +161,15 @@ void inline add_header_bottom(){
     bufferp += sizeof(header_bottom);
 }
 
-void inline add_normal_bottom(){
+void add_normal_bottom(){
     memcpy( bufferp, normal_bottom, sizeof(normal_bottom));
     bufferp += sizeof(normal_bottom);
 }
-void inline add_normal_top(){
+void add_normal_top(){
     memcpy( bufferp, normal_top, sizeof(normal_top));
     bufferp += sizeof(normal_top);
 }
-void inline add_exit_kernel(){
+void add_exit_kernel(){
     memcpy( bufferp, exit_kernel, sizeof(exit_kernel));
     bufferp += sizeof(exit_kernel);
 }
@@ -220,6 +234,9 @@ void createMenuForAtari( MENU_ENTRY * menu_entries, uint8_t page_id, int num_men
             int list_entry = entry + offset - 1;
             if(entry == 0){
                 memcpy(menu_string, menu_header, 32);
+
+                // TITLE BAR - set to user font -- OR hardwire to specific font if required
+                menu_entries[offset - 1].font = user_settings.font_style; // <-- OR, font # hardwire
                 isFolder = true;
             }else if(list_entry < num_menu_entries){
             	str_len = strlen(menu_entries[list_entry].entryname);
@@ -230,15 +247,15 @@ void createMenuForAtari( MENU_ENTRY * menu_entries, uint8_t page_id, int num_men
             	memset(menu_string, ' ', 32);
             }
     		for (uint8_t i=0; i < 32; i++) {
-    			if(menu_string[i] < 32 || menu_string[i] > 137 )
+    			if(menu_string[i] < 32 || menu_string[i] > HIGHEST_ASCII_CHAR)
     				menu_string[i] = 32;
     		}
             add_textline_start(is_kernel_a , entry, isFolder);
-            for (sc = 0; sc<12; sc++){
+            for (sc = 0; sc < CHAR_HEIGHT; sc++){
                 if(is_kernel_a){
-                    add_kernel_a(sc,  menu_string );
+                    add_kernel_a(menu_entries[list_entry].font, sc,  menu_string );
                 }else{
-                    add_kernel_b(sc, menu_string );
+                    add_kernel_b(menu_entries[list_entry].font, sc, menu_string );
                 }
                 if(sc<11)
                     add_next_scanline(is_kernel_a);
@@ -308,9 +325,9 @@ void set_tv_mode(int tv_mode) {
 	}
 }
 
-void set_my_font(int new_font) {
-	my_font = (uint8_t *)font[new_font];
-}
+//void set_my_font(int new_font) {
+//	my_font = (uint8_t *)font[new_font];
+//}
 
 // We require the menu to do a write to $1FF4 to unlock the comms area.
 // This is because the 7800 bios accesses this area on console startup, and we wish to ignore these
