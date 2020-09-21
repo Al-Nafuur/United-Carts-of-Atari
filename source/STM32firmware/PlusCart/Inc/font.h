@@ -89,6 +89,12 @@ enum charNumbers {
  // SMALL CAPS FONT
  // OK to add variable # more chars here...
 
+ CH_SC_EXCLAIM,
+ CH_SC_QUESTION,
+ CH_SC_PERIOD,
+ CH_SC_SEMICOLON,
+ CH_SC_COLON,
+
  CH_SC_0,
  CH_SC_1,
  CH_SC_2,
@@ -224,6 +230,38 @@ enum charNumbers {
 
  // CAPTAIN MORGAN SPICE
  // OK to add variable # more chars here...
+ CH_MORGAN_Exclamation,
+ CH_MORGAN_Quote,
+ CH_MORGAN_Hash,
+ CH_MORGAN_Dollar,
+ CH_MORGAN_Percent,
+ CH_MORGAN_At,
+ CH_MORGAN_Ampersand,
+ CH_MORGAN_Apostrophe,
+ CH_MORGAN_RoundOpen,
+ CH_MORGAN_RoundClose,
+ CH_MORGAN_Asterisk,
+ CH_MORGAN_Plus,
+ CH_MORGAN_Comma,
+ CH_MORGAN_Minus,
+ CH_MORGAN_Period,
+ CH_MORGAN_Slash,
+ CH_MORGAN_Colon,
+ CH_MORGAN_SemiColon,
+ CH_MORGAN_Less,
+ CH_MORGAN_Equal,
+ CH_MORGAN_Greater,
+ CH_MORGAN_Question,
+ CH_MORGAN_SquareOpen,
+ CH_MORGAN_BackSlash,
+ CH_MORGAN_SquareClose,
+ CH_MORGAN_Accent,
+ CH_MORGAN_UnderScore,
+ CH_MORGAN_Grave,
+ CH_MORGAN_CurlyOpen,
+ CH_MORGAN_Vertical,
+ CH_MORGAN_CurlyClose,
+ CH_MORGAN_Tilde,
 
  CH_MORGAN_0,
  CH_MORGAN_1,
