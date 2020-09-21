@@ -236,7 +236,7 @@ void createMenuForAtari( MENU_ENTRY * menu_entries, uint8_t page_id, int num_men
                 memcpy(menu_string, menu_header, 32);
 
                 // TITLE BAR - set to user font -- OR hardwire to specific font if required
-                menu_entries[offset - 1].font = user_settings.font_style; // <-- OR, font # hardwire
+                menu_entries[offset - 1].font = FONT_TJZ; // user_settings.font_style; // <-- OR, font # hardwire
                 isFolder = true;
             }else if(list_entry < num_menu_entries){
             	str_len = strlen(menu_entries[list_entry].entryname);
