@@ -265,6 +265,14 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			MENU_TEXT_FONT_GLACIER_BELLE
 	};
 
+	char *tvModes[] = {
+			0,
+			MENU_TEXT_TV_MODE_NTSC,		// -->1
+			MENU_TEXT_TV_MODE_PAL,		// -->2
+			MENU_TEXT_TV_MODE_PAL60,	// -->3
+	};
+
+
 	MENU_ENTRY *dst = (MENU_ENTRY *)&menu_entries[0];
 
 	if(strncmp(MENU_TEXT_SETUP, curPath, sizeof(MENU_TEXT_SETUP) - 1) == 0 ){
@@ -301,19 +309,26 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 
 			}else{
 				menu_status = select_wifi_network;
-				make_menu_entry(&dst, "(GO BACK)", Leave_Menu);
+				make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
 				if( esp8266_wifi_list( &dst, &num_menu_entries) == false){
 		    		return esp_timeout;
 		    	}
 			}
 		}else if( strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_TV_MODE_SETUP, sizeof(MENU_TEXT_TV_MODE_SETUP) - 1) == 0 ){
 			if(d->type == Menu_Action){
+
 				uint8_t new_tv_mode = TV_MODE_NTSC;
+				while ( strcmp(&curPath[sizeof(MENU_TEXT_SETUP) + 2 + sizeof(MENU_TEXT_TV_MODE_SETUP)],
+						&tvModes[new_tv_mode][2]) != 0)
+					new_tv_mode++;
+
+/*				uint8_t new_tv_mode = TV_MODE_NTSC;
 				if(strcmp(&curPath[sizeof(MENU_TEXT_SETUP) + sizeof(MENU_TEXT_TV_MODE_SETUP)], MENU_TEXT_TV_MODE_PAL) == 0){
 					new_tv_mode = TV_MODE_PAL;
 				}else if(strcmp(&curPath[sizeof(MENU_TEXT_SETUP) + sizeof(MENU_TEXT_TV_MODE_SETUP)], MENU_TEXT_TV_MODE_PAL60) == 0){
 					new_tv_mode = TV_MODE_PAL60;
 				}
+*/
 				set_tv_mode(new_tv_mode);
 				if(user_settings.tv_mode != new_tv_mode){
 					user_settings.tv_mode = new_tv_mode;
@@ -321,10 +336,21 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 				}
 	        	curPath[0] = '\0';
 			}else{
-				make_menu_entry(&dst, "(GO Back)", Leave_Menu);
-				make_menu_entry(&dst, MENU_TEXT_TV_MODE_PAL, Menu_Action);
-				make_menu_entry(&dst, MENU_TEXT_TV_MODE_PAL60, Menu_Action);
-				make_menu_entry(&dst, MENU_TEXT_TV_MODE_NTSC, Menu_Action);
+
+				make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
+
+
+				for (int tv = 1; tv < sizeof tvModes / sizeof *tvModes; tv++) {
+					char tvLine[33];
+					strcpy(tvLine, tvModes[tv]);
+					if (user_settings.tv_mode == tv)
+						tvLine[0] = CHAR_SELECTION;
+					make_menu_entry(&dst, tvLine, Menu_Action);
+				}
+
+//				make_menu_entry(&dst, MENU_TEXT_TV_MODE_PAL, Menu_Action);
+//				make_menu_entry(&dst, MENU_TEXT_TV_MODE_PAL60, Menu_Action);
+//				make_menu_entry(&dst, MENU_TEXT_TV_MODE_NTSC, Menu_Action);
 			}
 
 		}else if( strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_FONT_SETUP, sizeof(MENU_TEXT_FONT_SETUP) - 1) == 0 ){
@@ -343,7 +369,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 				}
 	        	curPath[0] = '\0';
 			}else{
-				make_menu_entry(&dst, "(GO Back)", Leave_Menu);
+				make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
 
 				uint8_t fontCount = sizeof menu_text / sizeof *menu_text;
 				char fontLine[fontCount][33];
