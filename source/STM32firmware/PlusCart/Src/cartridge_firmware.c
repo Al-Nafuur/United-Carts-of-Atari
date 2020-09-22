@@ -9,8 +9,8 @@
 
 // These are the colours between the top title bar and the rest of the text lines...
 
-#define BACK_COL_NTSC     0x92
-#define BACK_COL_PAL      0xb2
+#define BACK_COL_NTSC     0x90
+#define BACK_COL_PAL      0xb0
 
 #define t2c(fontType, l, r, s) \
 	sharedFont[ convertAsciiToCharnum(fontType, l) * 12 + s ] << 4 | \
@@ -28,8 +28,8 @@ const uint8_t end_bank[] __attribute__((section(".flash01")))    = { 0x8d, 0xf4,
 const uint8_t switch_bank[]__attribute__((section(".flash01")))  = { 0x4c, 0x07, 0x10};
 
 // with VCS RAM Color
-const uint8_t textline_start_even[]__attribute__((section(".flash01"))) = { 0xa5, 0x83, 0x85, 0x09, 0xa9, 0x0c, 0x8d, 0x06, 0x00, 0xea};
-const uint8_t textline_start_odd[]__attribute__((section(".flash01")))  = { 0x85, 0x2a, 0xa5, 0x83, 0x85, 0x09, 0xa9, 0x0c, 0xea, 0x85, 0x07};
+const uint8_t textline_start_even[]__attribute__((section(".flash01"))) = { 0xa5, 0x83, 0x85, 0x09, 0xa9, 0x0c, 0x8d, 0x3F, 0x00, 0xea};
+const uint8_t textline_start_odd[]__attribute__((section(".flash01")))  = { 0x85, 0x2a, 0xa5, 0x83, 0x85, 0x09, 0xa9, 0x0c, 0xea, 0x85, 0x3F};
 
 
 const uint8_t next_scanline_a[]__attribute__((section(".flash01"))) = { 0x85, 0x2a, 0x04, 0x00, 0xea, 0xea, 0xea, 0xea, 0xea};
@@ -37,8 +37,10 @@ const uint8_t next_scanline_b[]__attribute__((section(".flash01"))) = { 0xea, 0x
 const uint8_t kernel_a[]__attribute__((section(".flash01"))) = { 0xa2, 0x30, 0xa9, 0x10, 0x85, 0x1c, 0xa9, 0x60, 0x85, 0x1b, 0xa0, 0x00, 0x8e, 0x1b, 0x00, 0xea, 0xa2, 0x04, 0xa9, 0x00, 0x85, 0x1c, 0xa9, 0x80, 0x8d, 0x1c, 0x00, 0x85, 0x10, 0x84, 0x1b, 0x85, 0x10,0x8e, 0x1b, 0x00, 0xa9, 0xce, 0x8d, 0x1b, 0x00, 0xa2, 0x80, 0x86, 0x21, 0xea, 0x85, 0x10};
 const uint8_t kernel_b[]__attribute__((section(".flash01"))) = { 0xa0, 0x03, 0xa9, 0x60, 0x85, 0x1c, 0xa2, 0x03, 0xa9, 0x77, 0x85, 0x1b, 0xa9, 0x52, 0x85, 0x1b, 0xa9, 0x50, 0x8d, 0x1b, 0x00, 0x86, 0x1c, 0x85, 0x10, 0x84, 0x1c, 0x85, 0x10, 0xa9, 0x1f, 0x8d, 0x1b, 0x00, 0xa9, 0x74, 0x85, 0x1b, 0xa2, 0x00, 0x86, 0x21, 0x8d, 0x2a, 0x00, 0x85, 0x10};
 
-const uint8_t header_bottom[]__attribute__((section(".flash01")))   = { 0x85, 0x02, 0xa9, 0xb2, 0x85, 0x02, 0x85, 0x09, 0x85, 0x02, 0x85, 0x02, 0x85, 0x02, 0x85, 0x09, 0x85, 0x02, /*0x85, 0x02, 0x85, 0x02, 0x85, 0x02*/ };
+const uint8_t header_bottom[]__attribute__((section(".flash01")))   = { 0x85, 0x02, 0xa9, 0xb0, 0x85, 0x02, 0x85, 0x09 };
 const uint8_t normal_bottom[]__attribute__((section(".flash01")))   = { 0x85, 0x02 };
+
+const uint8_t text_colour[]__attribute__((section(".flash01"))) = {0xa9, 0x00, 0x85, 0x06, 0x85, 0x07};
 const uint8_t normal_top[]__attribute__((section(".flash01")))      = { 0x85, 0x02 /*, 0x85, 0x02*/ };
 const uint8_t exit_kernel[]__attribute__((section(".flash01")))     = { 0x4c, 0x00, 0x10};
 const uint8_t end_kernel_even[]__attribute__((section(".flash01"))) = { 0x86, 0x1b, 0x86, 0x1c};
@@ -56,12 +58,46 @@ void inline add_end_bank(int bank_id);
 void inline add_textline_start(bool even, uint8_t entry, bool isFolder);
 void inline add_kernel_a(uint8_t fontType, uint8_t scanline, uint8_t * text);
 void inline add_kernel_b(uint8_t fontType, uint8_t scanline, uint8_t * text);
-void inline add_header_bottom();
+void inline add_header_bottom(uint8_t colour);
 void inline add_normal_bottom();
+void inline add_text_colour(uint8_t colour);
 void inline add_normal_top();
 void inline add_exit_kernel();
 
 
+uint8_t textColour[2][11] = {
+
+		{	// NTSC...
+
+//	0x0C, //Root_Menu = -1,
+	0x4C, //Leave_Menu,
+	0x0C, //Sub_Menu,
+	0x5C, //Cart_File,
+	0x6C, //Input_Field,
+	0x7C, //Keyboard_Char,
+	0X8C, //Menu_Action,
+	0x9C, //Delete_Keyboard_Char,
+	0xAC, //Offline_Cart_File,
+	0xBC, //Offline_Sub_Menu,
+	0X28, //Setup_Menu				"Setup"
+		},
+
+		{	// PAL...
+
+//	0, //Root_Menu = -1,
+	0x8C, //Leave_Menu,
+	0x0C, //Sub_Menu,
+	0xCC, //Cart_File,
+	0x6C, //Input_Field,
+	0xDC, //Keyboard_Char,
+	0xBC, //Menu_Action,
+	0x9C, //Delete_Keyboard_Char,
+	0x7C, //Offline_Cart_File,
+	0x3C, //Offline_Sub_Menu,
+	0x48, //Setup_Menu
+		},
+
+};
 
 
 /*
@@ -153,12 +189,16 @@ void add_next_scanline(bool is_a){
     }
 }
 
-void add_header_bottom(){
+void add_header_bottom(uint8_t colour){
     memcpy( bufferp, header_bottom, sizeof(header_bottom));
     if(user_settings.tv_mode == TV_MODE_NTSC)
     	bufferp[3] = BACK_COL_NTSC;
 
     bufferp += sizeof(header_bottom);
+
+    add_text_colour(colour);
+    add_normal_bottom();
+
 }
 
 void add_normal_bottom(){
@@ -169,6 +209,13 @@ void add_normal_top(){
     memcpy( bufferp, normal_top, sizeof(normal_top));
     bufferp += sizeof(normal_top);
 }
+
+void add_text_colour(uint8_t colour) {
+    memcpy( bufferp, text_colour, sizeof(text_colour));
+    bufferp[1] = colour;
+    bufferp += sizeof(text_colour);
+}
+
 void add_exit_kernel(){
     memcpy( bufferp, exit_kernel, sizeof(exit_kernel));
     bufferp += sizeof(exit_kernel);
@@ -265,7 +312,7 @@ void createMenuForAtari( MENU_ENTRY * menu_entries, uint8_t page_id, int num_men
         	add_end_kernel(is_kernel_a);
 
         	if( entry == 0){
-        	    add_header_bottom();
+        	    add_header_bottom(textColour[user_settings.tv_mode > 1 ? 1: 0][(int)(menu_entries[list_entry+1].type)]);
         	} else if(entry == 4 || entry == 9 || entry == 12 ){
                 if(entry > 4){
         	        add_normal_bottom();
@@ -280,11 +327,14 @@ void createMenuForAtari( MENU_ENTRY * menu_entries, uint8_t page_id, int num_men
                 if(entry == 4){
         	        add_normal_bottom();
                 }
-                if(entry != 12)
-        	        add_normal_top();
+                if(entry != 12) {
+                	add_text_colour(textColour[user_settings.tv_mode > 1 ? 1: 0][(int)(menu_entries[list_entry+1].type)]);
+                	add_normal_top();
+                }
 
             } else {
         	    add_normal_bottom();
+            	add_text_colour(textColour[user_settings.tv_mode > 1 ? 1: 0][(int)(menu_entries[list_entry+1].type)]);
         	    add_normal_top();
         	}
     	}

@@ -57,7 +57,12 @@ FONT = FONT_{1}
     ENDM
 
 
-    USEFONT GlacierBelle  ; << change as needed
+    ;USEFONT Trichotomic_12  ; << change as needed
+
+;... or...
+FONT = 3
+
+
 
 ;===============================================================================
 ; C O N S T A N T S
@@ -237,8 +242,9 @@ PatchA_BkCol_{1}_{2} = . + 1
     sta     COLUBK              ;3      @05
 PatchA_TxtCol_{1}_{2} = . + 1
     lda     #TXT_COL ;#{3}                ;2
-    sta.w     COLUP0              ;3      @10
-    nop
+    ;sta.w     COLUP0              ;3      @10
+    ;nop
+    SLEEP 6
 ;    sta.w   COLUP1              ;4      @14
     _KERNEL_A {1}_{2}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}
   ENDM
@@ -295,8 +301,9 @@ PatchB_BkCol_{1}_{2} = . + 1
 PatchB_TxtCol_{1}_{2} = . + 1
     lda     #TXT_COL ;#{3}                ;2
 ;    sta     COLUP0              ;3      @13
-    nop
-    sta     COLUP1              ;3      @16
+    ;nop
+    ;sta     COLUP1              ;3      @16
+    SLEEP 5
     _KERNEL_B {1}_{2}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}
   ENDM
 
@@ -330,6 +337,8 @@ PatchB_TxtCol_{1}_{2} = . + 1
 
   MAC KERNEL_EVEN ; {index}, {bk-color}, {txt-color}, {32 x chars...}
     ; 10 lines/char, each line has individual color
+
+
     KERNEL_AXC_BOTH {1},  0, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}, {15}, {16}, {17}, {18}, {19}, {20}, {21}, {22}, {23}, {24}, {25}, {26}, {27}, {28}, {29}, {30}, {31}, {32}, {33}, {34}, {35}
     KERNEL_BXC      {1},  1,  0,   0 , {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}, {15}, {16}, {17}, {18}, {19}, {20}, {21}, {22}, {23}, {24}, {25}, {26}, {27}, {28}, {29}, {30}, {31}, {32}, {33}, {34}, {35}
     KERNEL_AXC      {1},  2,  0,   0 , {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}, {15}, {16}, {17}, {18}, {19}, {20}, {21}, {22}, {23}, {24}, {25}, {26}, {27}, {28}, {29}, {30}, {31}, {32}, {33}, {34}, {35}
@@ -373,6 +382,14 @@ PatchB_TxtCol_{1}_{2} = . + 1
     stx     GRP1
   ENDM
 
+
+    MAC TEXT_COLOUR ; {colour}
+        lda #{1}
+        sta COLUP0
+        sta COLUP1
+    ENDM
+
+
   MAC TOP_NORMAL
    IF CHAR_H >= 12
     ;sta     WSYNC
@@ -382,6 +399,11 @@ PatchB_TxtCol_{1}_{2} = . + 1
 
 
   MAC BTM_NORMAL
+
+    lda #$1C
+    sta COLUP0
+    sta COLUP1
+
     ;sta     WSYNC
   ENDM
 
@@ -391,10 +413,14 @@ PatchB_TxtCol_{1}_{2} = . + 1
 ;    lda     #LINE_COL
 ;    sta     COLUBK
     ;sta     WSYNC
+
+
+
     lda     #BACK_COL        ;               back to normal background color
     sta     WSYNC
    IF CHAR_H >= 12
     sta     COLUBK          ; 3
+
     ;sta     WSYNC
    ENDIF
   ENDM
@@ -928,19 +954,27 @@ SetActiveItem
     sta     WSYNC
     sta     WSYNC
     sta     WSYNC
-    sta     WSYNC
+
+    lda #%00011100
+    sta COLUP0
+    sta COLUP1
     
+    sta     WSYNC
+
     KERNEL_EVEN 1, BACK_COL, TXT_COL, Quote,I,Blank,b,e,l,i,e,v,e,Blank,t,h,i,s,Blank,n,a,t,i,o,n,Blank,s,h,o,u,l,d,Blank,Blank,Blank,Blank
     BTM_NORMAL
 
+    TEXT_COLOUR %00101100
     TOP_NORMAL
     KERNEL_EVEN 2, BACK_COL, TXT_COL, c,o,m,m,i,t,Blank,i,t,s,e,l,f,Blank,t,o,Blank,a,c,h,i,e,v,i,n,g,Blank,t,h,e,Blank,Blank
     BTM_NORMAL
 
+    TEXT_COLOUR %00111100
     TOP_NORMAL
     KERNEL_EVEN 3, BACK_COL, TXT_COL, g,o,a,l,Blank,o,f,Blank,l,a,n,d,i,n,g,Blank,a,Blank,m,a,n,Blank,o,n,Blank,t,h,e,Blank,Blank,Blank,Blank
     BTM_NORMAL
 
+    TEXT_COLOUR %01001100
     TOP_NORMAL
     KERNEL_EVEN 4, BACK_COL, TXT_COL,  M,o,o,n,Comma,Blank,a,n,d,Blank,r,e,t,u,r,n,i,n,g,Blank,h,i,m,Blank,s,a,f,e,l,y,Blank,Blank
 
@@ -955,22 +989,27 @@ SetActiveItem
 
     BTM_NORMAL
 
+    TEXT_COLOUR %01011100
     TOP_NORMAL
     KERNEL_EVEN 5, BACK_COL, TXT_COL, t,o,Blank,t,h,e,Blank,E,a,r,t,h,Period,Quote,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank
     BTM_NORMAL
 
+    TEXT_COLOUR %01101100
     TOP_NORMAL
     KERNEL_EVEN 6, BACK_COL, TXT_COL, Blank,Blank,Minus,Blank,J,o,h,n,Blank,F,Period,Blank,K,e,n,n,e,d,y,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank
     BTM_NORMAL
 
+    TEXT_COLOUR %01111100
     TOP_NORMAL
     KERNEL_EVEN 7, BACK_COL, TXT_COL, a,b,c,d,e,f,Blank,Blank,Blank,A,B,C,D,E,F,Blank,Blank,Blank,Blank,0,1,Blank,Blank,Blank,Blank,Exclamation,Quote,Hash,Dollar,Percent,At,Blank
     BTM_NORMAL
 
+    TEXT_COLOUR %10001100
     TOP_NORMAL
     KERNEL_EVEN 8, BACK_COL, TXT_COL, g,h,i,j,k,l,m,Blank,Blank,G,H,I,J,K,L,M,Blank,Blank,9,Blank,Blank,2,Blank,Blank,Blank,Ampersand,Apostrophe,OpenRound,CloseRound,Asterisk,OpenCurly,CloseCurly
     BTM_NORMAL
 
+    TEXT_COLOUR %10011100
     TOP_NORMAL
     KERNEL_EVEN 9, BACK_COL, TXT_COL,  n,o,p,q,r,s,t,Blank,Blank,N,O,P,Q,R,S,T,Blank,8,Blank,Blank,Blank,Blank,3,Blank,Blank,Plus,Minus,Comma,Period,Slash,BackSlash,Tilde
     BTM_NORMAL
@@ -984,22 +1023,27 @@ SetActiveItem
 
     START_BANK 3
 
+    TEXT_COLOUR %10101100
     TOP_NORMAL
     KERNEL_EVEN 10, BACK_COL, TXT_COL, u,v,w,x,y,z,Blank,Blank,Blank,U,V,W,X,Y,Z,Blank,Blank,Blank,7,Blank,Blank,4,Blank,Blank,Blank,Colon,SemiColon,Less,Equal,Greater,Question,Blank
     BTM_NORMAL
 
+    TEXT_COLOUR %10111100
     TOP_NORMAL
     KERNEL_EVEN 11, BACK_COL, TXT_COL, Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,6,5,Blank,Blank,Blank,Blank,OpenSquare,CloseSquare,Accent,UnderScore,Grave,Blank,Blank
     BTM_NORMAL
 
+    TEXT_COLOUR %11001100
     TOP_NORMAL
     KERNEL_EVEN 12, BACK_COL, TXT_COL, T,h,e,Blank,f,o,l,l,o,w,i,n,g,Blank,a,r,e,Blank,B,O,N,U,S,Blank,l,i,n,e,s,Exclamation,Blank,Blank
     BTM_NORMAL
 
+    TEXT_COLOUR %11011100
     TOP_NORMAL
     KERNEL_EVEN 13, BACK_COL, TXT_COL, O,u,r,s,Blank,i,s,Blank,n,o,t,Blank,t,o,Blank,r,e,a,s,o,n,Blank,w,h,y,SemiColon,Blank,Blank,Blank,Blank,Blank,Blank
     BTM_NORMAL
 
+    TEXT_COLOUR %11101100
     TOP_NORMAL
     KERNEL_EVEN 14, BACK_COL, TXT_COL, Period,Period,Period,o,u,r,s,Blank,i,s,Blank,b,u,t,Blank,t,o,Blank,d,o,Blank,o,r,Blank,d,i,e,Period,Blank,Blank,Blank,Blank
     BTM_NORMAL
@@ -1007,6 +1051,7 @@ SetActiveItem
   IF CHAR_H = 10
 
 
+    TEXT_COLOUR %11111100
     TOP_NORMAL
     KERNEL_EVEN 15, BACK_COL, TXT_COL, F,o,n,t,Colon,Blank,T,r,i,c,h,o,t,o,m,i,c,Blank,1,0,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank
     BTM_NORMAL
@@ -1033,20 +1078,26 @@ SetActiveItem
     sta     WSYNC
     sta     WSYNC
     sta     WSYNC
+
+    TEXT_COLOUR %00011100
+
     sta     WSYNC
     
     KERNEL_ODD 1, BACK_COL, TXT_COL, Quote,I,Blank,b,e,l,i,e,v,e,Blank,t,h,i,s,Blank,n,a,t,i,o,n,Blank,s,h,o,u,l,d,Blank,Blank,Blank,Blank
 bp100:
     BTM_NORMAL
 
+    TEXT_COLOUR %00101100
     TOP_NORMAL
     KERNEL_ODD 2, BACK_COL, TXT_COL, c,o,m,m,i,t,Blank,i,t,s,e,l,f,Blank,t,o,Blank,a,c,h,i,e,v,i,n,g,Blank,t,h,e,Blank,Blank
     BTM_NORMAL
 
+    TEXT_COLOUR %00111100
     TOP_NORMAL
     KERNEL_ODD 3, BACK_COL, TXT_COL, g,o,a,l,Blank,o,f,Blank,l,a,n,d,i,n,g,Blank,a,Blank,m,a,n,Blank,o,n,Blank,t,h,e,Blank,Blank,Blank,Blank
     BTM_NORMAL
 
+    TEXT_COLOUR %01001100
     TOP_NORMAL
     KERNEL_ODD 4, BACK_COL, TXT_COL,  M,o,o,n,Comma,Blank,a,n,d,Blank,r,e,t,u,r,n,i,n,g,Blank,h,i,m,Blank,s,a,f,e,l,y,Blank,Blank
 
@@ -1060,22 +1111,27 @@ bp100:
     START_BANK 5
     BTM_NORMAL
 
+    TEXT_COLOUR %01011100
     TOP_NORMAL
     KERNEL_ODD 5, BACK_COL, TXT_COL, t,o,Blank,t,h,e,Blank,E,a,r,t,h,Period,Quote,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank
     BTM_NORMAL
 
+    TEXT_COLOUR %01101100
     TOP_NORMAL
     KERNEL_ODD 6, BACK_COL, TXT_COL, Blank,Blank,Minus,Blank,J,o,h,n,Blank,F,Period,Blank,K,e,n,n,e,d,y,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank
     BTM_NORMAL
 
+    TEXT_COLOUR %01111100
     TOP_NORMAL
     KERNEL_ODD 7, BACK_COL, TXT_COL, a,b,c,d,e,f,Blank,Blank,Blank,A,B,C,D,E,F,Blank,Blank,Blank,Blank,0,1,Blank,Blank,Blank,Blank,Exclamation,Quote,Hash,Dollar,Percent,At,Blank
     BTM_NORMAL
 
+    TEXT_COLOUR %10001100
     TOP_NORMAL
     KERNEL_ODD 8, BACK_COL, TXT_COL, g,h,i,j,k,l,m,Blank,Blank,G,H,I,J,K,L,M,Blank,Blank,9,Blank,Blank,2,Blank,Blank,Blank,Ampersand,Apostrophe,OpenRound,CloseRound,Asterisk,OpenCurly,CloseCurly
     BTM_NORMAL
 
+    TEXT_COLOUR %10011100
     TOP_NORMAL
     KERNEL_ODD 9, BACK_COL, TXT_COL,  n,o,p,q,r,s,t,Blank,Blank,N,O,P,Q,R,S,T,Blank,8,Blank,Blank,Blank,Blank,3,Blank,Blank,Plus,Minus,Comma,Period,Slash,BackSlash,Tilde
     BTM_NORMAL
@@ -1089,22 +1145,27 @@ bp100:
     START_BANK 6
 
 
+    TEXT_COLOUR %10101100
     TOP_NORMAL
     KERNEL_ODD 10, BACK_COL, TXT_COL, u,v,w,x,y,z,Blank,Blank,Blank,U,V,W,X,Y,Z,Blank,Blank,Blank,7,Blank,Blank,4,Blank,Blank,Blank,Colon,SemiColon,Less,Equal,Greater,Question,Blank
     BTM_NORMAL
 
+    TEXT_COLOUR %10111100
     TOP_NORMAL
     KERNEL_ODD 11, BACK_COL, TXT_COL, Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,6,5,Blank,Blank,Blank,Blank,OpenSquare,CloseSquare,Accent,UnderScore,Grave,Blank,Blank
     BTM_NORMAL
 
+    TEXT_COLOUR %11001100
     TOP_NORMAL
     KERNEL_ODD 12, BACK_COL, TXT_COL, T,h,e,Blank,f,o,l,l,o,w,i,n,g,Blank,a,r,e,Blank,B,O,N,U,S,Blank,l,i,n,e,s,Exclamation,Blank,Blank
     BTM_NORMAL
 
+    TEXT_COLOUR %11011100
     TOP_NORMAL
     KERNEL_ODD 13, BACK_COL, TXT_COL, O,u,r,s,Blank,i,s,Blank,n,o,t,Blank,t,o,Blank,r,e,a,s,o,n,Blank,w,h,y,SemiColon,Blank,Blank,Blank,Blank,Blank,Blank
     BTM_NORMAL
 
+    TEXT_COLOUR %11101100
     TOP_NORMAL
     KERNEL_ODD 14, BACK_COL, TXT_COL, Period,Period,Period,o,u,r,s,Blank,i,s,Blank,b,u,t,Blank,t,o,Blank,d,o,Blank,o,r,Blank,d,i,e,Period,Blank,Blank,Blank,Blank
     BTM_NORMAL
@@ -1112,6 +1173,7 @@ bp100:
   IF CHAR_H = 10
 
 
+    TEXT_COLOUR %11111100
     TOP_NORMAL
     KERNEL_ODD 15, BACK_COL, TXT_COL, F,o,n,t,Colon,Blank,T,r,i,c,h,o,t,o,m,i,c,Blank,1,0,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank
     BTM_NORMAL
