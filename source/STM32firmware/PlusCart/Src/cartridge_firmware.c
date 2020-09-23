@@ -51,14 +51,13 @@ const uint8_t textline_start_even[]__attribute__((section(".flash01"))) = {
 #define PATCH_START_EVEN_BG 1
 // bg_colour[14] = $83 (array of BG colours for lines)
 
-		0xa5, 0x83,				// lda bg_colour (*** PATCHED ***)
+		0xa5, 0x83,				// lda bg_colour (*** PATCHED ***) (indexed,x)
 		0x85, 0x09,				// sta COLUBK
 
-			// 8 cycles, 6 bytes of nothing...
-
-		0xa9, 0x0c,				// lda #$C
-		0x8d, 0x3F, 0x00,		// sta $003F					DUMMIED OUT BY AD
-		0xea					// nop
+		0xea,					// nop				SLEEP 8
+		0xea,					// nop
+		0xea,					// nop
+		0xea,					// nop
 	};
 
 const uint8_t textline_start_odd[]__attribute__((section(".flash01")))  = {
@@ -68,11 +67,9 @@ const uint8_t textline_start_odd[]__attribute__((section(".flash01")))  = {
 		0xa5, 0x83,				// lda bg_colour (*** PATCHED ***)
 		0x85, 0x09,				// sta COLUBK
 
-			// 7 cycles, 5 bytes of nothing...
-
-		0xa9, 0x0c,				// lda #$C
+		0x04, 0x00,				// nop 0			SLEEP 7
 		0xea,					// nop
-		0x85, 0x3F				// sta $3F						DUMMIED OUT BY AD
+		0xea,					// nop
 };
 
 
@@ -80,9 +77,7 @@ const uint8_t next_scanline_a[]__attribute__((section(".flash01"))) = {
 
 		0x85, 0x2a,				// sta HMOVE
 
-			// SLEEP 13
-
-		0x04, 0x00,				// nop 0
+		0x04, 0x00,				// nop 0			SLEEP 13
 		0xea,					// nop
 		0xea,					// nop
 		0xea,					// nop
@@ -92,9 +87,7 @@ const uint8_t next_scanline_a[]__attribute__((section(".flash01"))) = {
 
 const uint8_t next_scanline_b[]__attribute__((section(".flash01"))) = {
 
-			// SLEEP 14
-
-		0xea,					// nop
+		0xea,					// nop				SLEEP 14
 		0xea,					// nop
 		0xea,					// nop
 		0xea,					// nop
@@ -106,24 +99,35 @@ const uint8_t next_scanline_b[]__attribute__((section(".flash01"))) = {
 
 const uint8_t kernel_a[]__attribute__((section(".flash01"))) = {
 
-		0xa2, 0x30,				// ldx #$30
-		0xa9, 0x10,				// lda #$10
+#define PATCH 0
+
+#define PATCH_A_1	1
+#define PATCH_A_2 	3
+#define PATCH_A_3 	7
+#define PATCH_A_4 	11
+#define PATCH_A_5 	17
+#define PATCH_A_6 	19
+#define PATCH_A_7 	23
+#define PATCH_A_8 	37
+
+		0xa2, PATCH,			// ldx #??			(*** PATCHED ***) @1
+		0xa9, PATCH,			// lda #??			(*** PATCHED ***) @3
 		0x85, 0x1c,				// sta GRP1
-		0xa9, 0x60,				// lda #$60
+		0xa9, PATCH,			// lda #??			(*** PATCHED ***) @7
 		0x85, 0x1b,				// sta GRP0
-		0xa0, 0x00,				// ldy #0
+		0xa0, PATCH,			// ldy #??			(*** PATCHED ***) @11
 		0x8e, 0x1b, 0x00,		// stx.w GRP0
 		0xea,					// nop
-		0xa2, 0x04,				// ldx #4
-		0xa9, 0x00,				// lda #0
+		0xa2, PATCH,			// ldx #??			(*** PATCHED ***) @17
+		0xa9, PATCH,			// lda #??			(*** PATCHED ***) @19
 		0x85, 0x1c,				// sta GRP0
-		0xa9, 0x80,				// lda #$80
+		0xa9, PATCH,			// lda #??			(*** PATCHED ***) @23
 		0x8d, 0x1c, 0x00,		// sta GRP0
 		0x85, 0x10,				// sta RESP0
 		0x84, 0x1b,				// sty GRP0
 		0x85, 0x10,				// sta RESP0
 		0x8e, 0x1b, 0x00,		// stx.w GRP0
-		0xa9, 0xce,				// lda #$CE
+		0xa9, PATCH,			// lda #??			(*** PATCHED ***) @37
 		0x8d, 0x1b, 0x00,		// sta GRP0
 		0xa2, 0x80,				// ldx #$80
 		0x86, 0x21,				// stx HMP1
@@ -133,23 +137,32 @@ const uint8_t kernel_a[]__attribute__((section(".flash01"))) = {
 
 const uint8_t kernel_b[]__attribute__((section(".flash01"))) = {
 
-		0xa0, 0x03,				// ldy #3
-		0xa9, 0x60,				// lda #$60
+#define PATCH_B_1 	1
+#define PATCH_B_2	3
+#define PATCH_B_3	7
+#define PATCH_B_4	9
+#define PATCH_B_5	13
+#define PATCH_B_6	17
+#define PATCH_B_7	30
+#define PATCH_B_8	35
+
+		0xa0, PATCH,			// ldy #??			(*** PATCHED ***) @1
+		0xa9, PATCH,			// lda #??			(*** PATCHED ***) @3
 		0x85, 0x1c,				// sta GRP1
-		0xa2, 0x03,				// ldx #3
-		0xa9, 0x77,				// lda #$77
+		0xa2, PATCH,			// ldx #??			(*** PATCHED ***) @7
+		0xa9, PATCH,			// lda #??			(*** PATCHED ***) @9
 		0x85, 0x1b,				// sta GRP0
-		0xa9, 0x52,				// lda #$52
+		0xa9, PATCH,			// lda #??			(*** PATCHED ***) @13
 		0x85, 0x1b,				// sta GRP0
-		0xa9, 0x50,				// lda #$50
+		0xa9, PATCH,			// lda #??			(*** PATCHED ***) @17
 		0x8d, 0x1b, 0x00,		// sta GRP0
 		0x86, 0x1c,				// stx GRP1
 		0x85, 0x10,				// sta RESP0
 		0x84, 0x1c,				// sty GRP0
 		0x85, 0x10,				// sta RESP0
-		0xa9, 0x1f,				// lda #$1F
+		0xa9, PATCH,			// lda #??			(*** PATCHED ***) @30
 		0x8d, 0x1b, 0x00,		// sta GRP0
-		0xa9, 0x74,				// lda #$74
+		0xa9, PATCH,			// lda #??			(*** PATCHED ***) @35
 		0x85, 0x1b,				// sta GRP0
 		0xa2, 0x00,				// ldx #0
 		0x86, 0x21,				// stx HMP1
@@ -158,6 +171,7 @@ const uint8_t kernel_b[]__attribute__((section(".flash01"))) = {
 	};
 
 const uint8_t header_bottom[]__attribute__((section(".flash01")))   = {
+
 #define PATCH_HEADER_BOTTOM_BG 3
 
 		0x85, 0x02,				// sta WSYNC
@@ -172,8 +186,10 @@ const uint8_t normal_bottom[]__attribute__((section(".flash01")))   = {
 	};
 
 const uint8_t text_colour[]__attribute__((section(".flash01"))) = {
+
 #define PATCH_TEXT_COLOUR 1
-		0xa9, 0x00,				// lda # (***PATCH***)
+
+		0xa9, 0x00,				// lda #??			 (*** PATCHED ***)
 		0x85, 0x06,				// sta COLUP0
 		0x85, 0x07				// sta COLUP1
 	};
@@ -182,7 +198,6 @@ const uint8_t text_colour[]__attribute__((section(".flash01"))) = {
 const uint8_t normal_top[]__attribute__((section(".flash01")))      = {
 
 		0x85, 0x02				// sta WSYNC
-		/*, 0x85, 0x02*/
 	};
 
 const uint8_t exit_kernel[]__attribute__((section(".flash01")))     = {
@@ -194,11 +209,16 @@ const uint8_t exit_kernel[]__attribute__((section(".flash01")))     = {
 const uint8_t end_kernel_even[]__attribute__((section(".flash01"))) = {
 
 		0x86, 0x1b,				// stx GRP0
-		0x86, 0x1c				// stx GRP1
-	};
+		0x86, 0x1c,				// stx GRP1
+};
+
+const uint8_t restore_BG_colour[]__attribute__((section(".flash01"))) = {
+#define PATCH_RESTORE_BG 1
+		0xa9, PATCH,			// lda #??				(*** PATCHED ***)
+		0x85, 0x09,				// sta COLUBK
+};
 
 const uint8_t end_kernel_odd[]__attribute__((section(".flash01")))  = {
-
 		0xa2, 0x00				// ldx #0
 	};
 
@@ -210,7 +230,7 @@ uint8_t * my_font;
 uint8_t * bufferp;
 
 
-void inline add_end_kernel(bool is_even);
+void inline add_end_kernel(bool is_even, uint8_t line);
 void inline add_next_scanline(bool is_a);
 void inline add_start_bank(int bank_id);
 void inline add_end_bank(int bank_id);
@@ -281,14 +301,10 @@ void add_textline_start(bool even, uint8_t entry, bool isFolder){
     if(even){
         memcpy( bufferp, textline_start_even, sizeof(textline_start_even));
         bufferp[PATCH_START_EVEN_BG]  += entry;
-
-        //change colour for folder - now handled differently so disabled...
-        //if(isFolder) bufferp[5] = 0x0e;
         bufferp += sizeof(textline_start_even);
     } else {
         memcpy( bufferp, textline_start_odd, sizeof(textline_start_odd));
         bufferp[PATCH_START_ODD_BG]  += entry;
-        //if(isFolder) bufferp[7] = 0x0e;			// colours handled differently now
         bufferp += sizeof(textline_start_odd);
     }
 }
@@ -300,14 +316,14 @@ void add_kernel_a(uint8_t fontType, uint8_t scanline, uint8_t * text){
     if (fontType > 3)
     	fontType = 0;				// cater for uninit'd font
 
-    bufferp[1]  = t2c(fontType, text[4], text[5], scanline);          // #{3}
-    bufferp[3]  = t2c(fontType, text[8], text[9], scanline);          // #{4}
-    bufferp[7]  = t2c(fontType, text[0], text[1], scanline);          // #{2}
-    bufferp[11] = (t2c(fontType, text[22], text[23], scanline)) << 1; // #{7} << 1
-    bufferp[17] = (t2c(fontType, text[26], text[27], scanline)) << 1; // #{8} << 1
-    bufferp[19] = t2c(fontType, text[12], text[13], scanline);        // #{5}
-    bufferp[23] = t2c(fontType, text[16], text[17], scanline);        // #{6}
-    bufferp[37] = (t2c(fontType, text[30], text[31], scanline)) << 1; // #{9} << 1
+    bufferp[PATCH_A_1] = t2c(fontType, text[4], text[5], scanline);          // #{3}
+    bufferp[PATCH_A_2] = t2c(fontType, text[8], text[9], scanline);          // #{4}
+    bufferp[PATCH_A_3] = t2c(fontType, text[0], text[1], scanline);          // #{2}
+    bufferp[PATCH_A_4] = (t2c(fontType, text[22], text[23], scanline)) << 1; // #{7} << 1
+    bufferp[PATCH_A_5] = (t2c(fontType, text[26], text[27], scanline)) << 1; // #{8} << 1
+    bufferp[PATCH_A_6] = t2c(fontType, text[12], text[13], scanline);        // #{5}
+    bufferp[PATCH_A_7] = t2c(fontType, text[16], text[17], scanline);        // #{6}
+    bufferp[PATCH_A_8] = (t2c(fontType, text[30], text[31], scanline)) << 1; // #{9} << 1
 
     bufferp += sizeof(kernel_a);
 }
@@ -319,25 +335,33 @@ void add_kernel_b(uint8_t fontType, uint8_t scanline, uint8_t * text){
     if (fontType > 3)
     	fontType = 0;				// cater for uninit'd font
 
-    bufferp[1]  = t2c(fontType, text[18], text[19], scanline);        // #{6}
-    bufferp[3]  = t2c(fontType, text[10], text[11], scanline);        // #{4}
-    bufferp[7]  = t2c(fontType, text[14], text[15], scanline);        // #{5}
-    bufferp[9]  = t2c(fontType, text[2], text[3], scanline);          // #{2}
-    bufferp[13] = t2c(fontType, text[6], text[7], scanline);          // #{3}
-    bufferp[17] = t2c(fontType, text[20], text[21], scanline);        // #{7}
-    bufferp[30] = t2c(fontType, text[24], text[25], scanline);        // #{8}
-    bufferp[35] = t2c(fontType, text[28], text[29], scanline);        // #{9}
+    bufferp[PATCH_B_1] = t2c(fontType, text[18], text[19], scanline);        // #{6}
+    bufferp[PATCH_B_2] = t2c(fontType, text[10], text[11], scanline);        // #{4}
+    bufferp[PATCH_B_3] = t2c(fontType, text[14], text[15], scanline);        // #{5}
+    bufferp[PATCH_B_4] = t2c(fontType, text[2], text[3], scanline);          // #{2}
+    bufferp[PATCH_B_5] = t2c(fontType, text[6], text[7], scanline);          // #{3}
+    bufferp[PATCH_B_6] = t2c(fontType, text[20], text[21], scanline);        // #{7}
+    bufferp[PATCH_B_7] = t2c(fontType, text[24], text[25], scanline);        // #{8}
+    bufferp[PATCH_B_8] = t2c(fontType, text[28], text[29], scanline);        // #{9}
 
     bufferp += sizeof(kernel_b);
 }
 
-void add_end_kernel(bool is_even){
+void add_end_kernel(bool is_even, uint8_t line){
     if(! is_even){
         memcpy( bufferp, end_kernel_odd, sizeof(end_kernel_odd));
         bufferp += sizeof(end_kernel_odd);
     }
     memcpy( bufferp, end_kernel_even, sizeof(end_kernel_even));
     bufferp += sizeof(end_kernel_even);
+
+    memcpy(bufferp, restore_BG_colour, sizeof(restore_BG_colour));
+    // hacked/hardwired colour until can use the array...
+    bufferp[PATCH_RESTORE_BG] = user_settings.tv_mode == TV_MODE_NTSC ? BACK_COL_NTSC : BACK_COL_PAL;
+    if (line > 0)
+    	bufferp[PATCH_RESTORE_BG] += 2;
+
+    bufferp += sizeof(restore_BG_colour);
 }
 
 void add_next_scanline(bool is_a){
@@ -466,7 +490,7 @@ void createMenuForAtari( MENU_ENTRY * menu_entries, uint8_t page_id, int num_men
 
                 is_kernel_a = ! is_kernel_a;
         	}
-        	add_end_kernel(is_kernel_a);
+        	add_end_kernel(is_kernel_a, entry);
 
         	if( entry == 0){
         	    add_header_bottom(textColour[user_settings.tv_mode == TV_MODE_NTSC ? 0 : 1][(int)(menu_entries[list_entry+1].type)]);

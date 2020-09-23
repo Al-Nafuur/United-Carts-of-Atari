@@ -322,13 +322,6 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 						&tvModes[new_tv_mode][2]) != 0)
 					new_tv_mode++;
 
-/*				uint8_t new_tv_mode = TV_MODE_NTSC;
-				if(strcmp(&curPath[sizeof(MENU_TEXT_SETUP) + sizeof(MENU_TEXT_TV_MODE_SETUP)], MENU_TEXT_TV_MODE_PAL) == 0){
-					new_tv_mode = TV_MODE_PAL;
-				}else if(strcmp(&curPath[sizeof(MENU_TEXT_SETUP) + sizeof(MENU_TEXT_TV_MODE_SETUP)], MENU_TEXT_TV_MODE_PAL60) == 0){
-					new_tv_mode = TV_MODE_PAL60;
-				}
-*/
 				set_tv_mode(new_tv_mode);
 				if(user_settings.tv_mode != new_tv_mode){
 					user_settings.tv_mode = new_tv_mode;
@@ -347,10 +340,6 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 						tvLine[0] = CHAR_SELECTION;
 					make_menu_entry(&dst, tvLine, Menu_Action);
 				}
-
-//				make_menu_entry(&dst, MENU_TEXT_TV_MODE_PAL, Menu_Action);
-//				make_menu_entry(&dst, MENU_TEXT_TV_MODE_PAL60, Menu_Action);
-//				make_menu_entry(&dst, MENU_TEXT_TV_MODE_NTSC, Menu_Action);
 			}
 
 		}else if( strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_FONT_SETUP, sizeof(MENU_TEXT_FONT_SETUP) - 1) == 0 ){
