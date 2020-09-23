@@ -80,7 +80,7 @@ BACK_COL    = $92
 TXT_COL     = $0C       ; complimentary color to create better white
 
 HEADER_COL  = $90
-HTXT_COL    = $2e       ; complimentary color to create better white
+HTXT_COL    = $C6       ; complimentary color to create better white
 
    IF COLOR = 0         ; orange selection
 STXT_COL    = $ae       ; complimentary color to create better white
@@ -105,7 +105,7 @@ SEL_COL     = $a4
 
   ELSE ;/NTSC
 
-BACK_COL    = $D2
+BACK_COL    = $D4
 TXT_COL     = $0C       ; complimentary color to create better white
 
 HEADER_COL  = $b0
@@ -794,9 +794,9 @@ VerticalBlank SUBROUTINE
 
     inc     frameCnt
   IF NTSC_TIM
-    lda     #44-8
+    lda     #44-8-3
   ELSE
-    lda     #77-8-1
+    lda     #77-8-1-3
   ENDIF
     sta     TIM64T
     rts
@@ -943,6 +943,8 @@ SetActiveItem
 
     START_BANK 1
 
+    TEXT_COLOUR HTXT_COL
+
     sta     WSYNC
     
     KERNEL_EVEN 0, HEADER_COL, HTXT_COL, Q,u,o,t,e,Blank,o,f,Blank,t,h,e,Blank,D,a,y,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Wifi,Blank,Blank,Blank
@@ -955,9 +957,7 @@ SetActiveItem
     sta     WSYNC
     sta     WSYNC
 
-    lda #%00011100
-    sta COLUP0
-    sta COLUP1
+    TEXT_COLOUR %00011100
     
     sta     WSYNC
 
@@ -1048,14 +1048,6 @@ SetActiveItem
     KERNEL_EVEN 14, BACK_COL, TXT_COL, Period,Period,Period,o,u,r,s,Blank,i,s,Blank,b,u,t,Blank,t,o,Blank,d,o,Blank,o,r,Blank,d,i,e,Period,Blank,Blank,Blank,Blank
     BTM_NORMAL
 
-  IF CHAR_H = 10
-
-
-    TEXT_COLOUR %11111100
-    TOP_NORMAL
-    KERNEL_EVEN 15, BACK_COL, TXT_COL, F,o,n,t,Colon,Blank,T,r,i,c,h,o,t,o,m,i,c,Blank,1,0,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank
-    BTM_NORMAL
-  ENDIF
     jmp ExitKernel
 
     END_BANK 3
@@ -1066,6 +1058,8 @@ SetActiveItem
 ;-------------------------------------------------------------------------------
 
     START_BANK 4
+
+    TEXT_COLOUR HTXT_COL
 
     sta     WSYNC
     
@@ -1170,14 +1164,6 @@ bp100:
     KERNEL_ODD 14, BACK_COL, TXT_COL, Period,Period,Period,o,u,r,s,Blank,i,s,Blank,b,u,t,Blank,t,o,Blank,d,o,Blank,o,r,Blank,d,i,e,Period,Blank,Blank,Blank,Blank
     BTM_NORMAL
 
-  IF CHAR_H = 10
-
-
-    TEXT_COLOUR %11111100
-    TOP_NORMAL
-    KERNEL_ODD 15, BACK_COL, TXT_COL, F,o,n,t,Colon,Blank,T,r,i,c,h,o,t,o,m,i,c,Blank,1,0,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank
-    BTM_NORMAL
-  ENDIF
     jmp ExitKernel
     END_BANK 6
 
@@ -1188,6 +1174,13 @@ bp100:
 ; empty
 
     START_BANK 7
+
+
+
+
+
+
+    
     END_BANK 7
 
 ; digit graphics definititions (3x10 pixel, looks nicer than 3x5 with doubled lines)

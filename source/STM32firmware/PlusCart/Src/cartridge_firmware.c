@@ -22,29 +22,188 @@ static char menu_status[7]__attribute__((section(".ccmram")));
 static unsigned const char *firmware_rom = firmware_ntsc_rom;
 
 
-const uint8_t start_bank[]__attribute__((section(".flash01")))   = { 0xd8, 0x8d, 0xf4, 0xff, 0x4c, 0x37, 0x12, 0x9d, 0xf5, 0xff };
-const uint8_t end_bank[] __attribute__((section(".flash01")))    = { 0x8d, 0xf4, 0xff, 0x4c, 0x43, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0a, 0x10, 0x0a, 0x10 };
+const uint8_t start_bank[]__attribute__((section(".flash01")))   = {
+#define PATCH_START_BANK 8
 
-const uint8_t switch_bank[]__attribute__((section(".flash01")))  = { 0x4c, 0x07, 0x10};
+		0xd8,					// cld
+		0x8d, 0xf4, 0xff,		// sta HOTSPOT
+		0x4c, 0x37, 0x12,		// jmp ContDrawScreen
+		0x9d, 0xf5, 0xff		// sta $FFF5,x					*** PATCH LOW BYTE OF ADDRESS ***
+
+};
+
+const uint8_t end_bank[] __attribute__((section(".flash01")))    = {
+
+		0x8d, 0xf4, 0xff,		// sta HOTSPOT
+		0x4c, 0x43, 0x10,		// jmp $1043					???
+
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0a, 0x10, 0x0a, 0x10			// ??
+	};
+
+const uint8_t switch_bank[]__attribute__((section(".flash01")))  = {
+
+		0x4c, 0x07, 0x10		// jmp SwitchBank
+
+};
 
 // with VCS RAM Color
-const uint8_t textline_start_even[]__attribute__((section(".flash01"))) = { 0xa5, 0x83, 0x85, 0x09, 0xa9, 0x0c, 0x8d, 0x3F, 0x00, 0xea};
-const uint8_t textline_start_odd[]__attribute__((section(".flash01")))  = { 0x85, 0x2a, 0xa5, 0x83, 0x85, 0x09, 0xa9, 0x0c, 0xea, 0x85, 0x3F};
+const uint8_t textline_start_even[]__attribute__((section(".flash01"))) = {
+#define PATCH_START_EVEN_BG 1
+// bg_colour[14] = $83 (array of BG colours for lines)
+
+		0xa5, 0x83,				// lda bg_colour (*** PATCHED ***)
+		0x85, 0x09,				// sta COLUBK
+
+			// 8 cycles, 6 bytes of nothing...
+
+		0xa9, 0x0c,				// lda #$C
+		0x8d, 0x3F, 0x00,		// sta $003F					DUMMIED OUT BY AD
+		0xea					// nop
+	};
+
+const uint8_t textline_start_odd[]__attribute__((section(".flash01")))  = {
+#define PATCH_START_ODD_BG 3
+
+		0x85, 0x2a,				// sta HMOVE
+		0xa5, 0x83,				// lda bg_colour (*** PATCHED ***)
+		0x85, 0x09,				// sta COLUBK
+
+			// 7 cycles, 5 bytes of nothing...
+
+		0xa9, 0x0c,				// lda #$C
+		0xea,					// nop
+		0x85, 0x3F				// sta $3F						DUMMIED OUT BY AD
+};
 
 
-const uint8_t next_scanline_a[]__attribute__((section(".flash01"))) = { 0x85, 0x2a, 0x04, 0x00, 0xea, 0xea, 0xea, 0xea, 0xea};
-const uint8_t next_scanline_b[]__attribute__((section(".flash01"))) = { 0xea, 0xea, 0xea, 0xea, 0xea, 0xea, 0xea};
-const uint8_t kernel_a[]__attribute__((section(".flash01"))) = { 0xa2, 0x30, 0xa9, 0x10, 0x85, 0x1c, 0xa9, 0x60, 0x85, 0x1b, 0xa0, 0x00, 0x8e, 0x1b, 0x00, 0xea, 0xa2, 0x04, 0xa9, 0x00, 0x85, 0x1c, 0xa9, 0x80, 0x8d, 0x1c, 0x00, 0x85, 0x10, 0x84, 0x1b, 0x85, 0x10,0x8e, 0x1b, 0x00, 0xa9, 0xce, 0x8d, 0x1b, 0x00, 0xa2, 0x80, 0x86, 0x21, 0xea, 0x85, 0x10};
-const uint8_t kernel_b[]__attribute__((section(".flash01"))) = { 0xa0, 0x03, 0xa9, 0x60, 0x85, 0x1c, 0xa2, 0x03, 0xa9, 0x77, 0x85, 0x1b, 0xa9, 0x52, 0x85, 0x1b, 0xa9, 0x50, 0x8d, 0x1b, 0x00, 0x86, 0x1c, 0x85, 0x10, 0x84, 0x1c, 0x85, 0x10, 0xa9, 0x1f, 0x8d, 0x1b, 0x00, 0xa9, 0x74, 0x85, 0x1b, 0xa2, 0x00, 0x86, 0x21, 0x8d, 0x2a, 0x00, 0x85, 0x10};
+const uint8_t next_scanline_a[]__attribute__((section(".flash01"))) = {
 
-const uint8_t header_bottom[]__attribute__((section(".flash01")))   = { 0x85, 0x02, 0xa9, 0xb0, 0x85, 0x02, 0x85, 0x09 };
-const uint8_t normal_bottom[]__attribute__((section(".flash01")))   = { 0x85, 0x02 };
+		0x85, 0x2a,				// sta HMOVE
 
-const uint8_t text_colour[]__attribute__((section(".flash01"))) = {0xa9, 0x00, 0x85, 0x06, 0x85, 0x07};
-const uint8_t normal_top[]__attribute__((section(".flash01")))      = { 0x85, 0x02 /*, 0x85, 0x02*/ };
-const uint8_t exit_kernel[]__attribute__((section(".flash01")))     = { 0x4c, 0x00, 0x10};
-const uint8_t end_kernel_even[]__attribute__((section(".flash01"))) = { 0x86, 0x1b, 0x86, 0x1c};
-const uint8_t end_kernel_odd[]__attribute__((section(".flash01")))  = { 0xa2, 0x00};
+			// SLEEP 13
+
+		0x04, 0x00,				// nop 0
+		0xea,					// nop
+		0xea,					// nop
+		0xea,					// nop
+		0xea,					// nop
+		0xea					// nop
+	};
+
+const uint8_t next_scanline_b[]__attribute__((section(".flash01"))) = {
+
+			// SLEEP 14
+
+		0xea,					// nop
+		0xea,					// nop
+		0xea,					// nop
+		0xea,					// nop
+		0xea,					// nop
+		0xea,					// nop
+		0xea					// nop
+	};
+
+
+const uint8_t kernel_a[]__attribute__((section(".flash01"))) = {
+
+		0xa2, 0x30,				// ldx #$30
+		0xa9, 0x10,				// lda #$10
+		0x85, 0x1c,				// sta GRP1
+		0xa9, 0x60,				// lda #$60
+		0x85, 0x1b,				// sta GRP0
+		0xa0, 0x00,				// ldy #0
+		0x8e, 0x1b, 0x00,		// stx.w GRP0
+		0xea,					// nop
+		0xa2, 0x04,				// ldx #4
+		0xa9, 0x00,				// lda #0
+		0x85, 0x1c,				// sta GRP0
+		0xa9, 0x80,				// lda #$80
+		0x8d, 0x1c, 0x00,		// sta GRP0
+		0x85, 0x10,				// sta RESP0
+		0x84, 0x1b,				// sty GRP0
+		0x85, 0x10,				// sta RESP0
+		0x8e, 0x1b, 0x00,		// stx.w GRP0
+		0xa9, 0xce,				// lda #$CE
+		0x8d, 0x1b, 0x00,		// sta GRP0
+		0xa2, 0x80,				// ldx #$80
+		0x86, 0x21,				// stx HMP1
+		0xea,					// nop
+		0x85, 0x10				// sta RESP0
+	};
+
+const uint8_t kernel_b[]__attribute__((section(".flash01"))) = {
+
+		0xa0, 0x03,				// ldy #3
+		0xa9, 0x60,				// lda #$60
+		0x85, 0x1c,				// sta GRP1
+		0xa2, 0x03,				// ldx #3
+		0xa9, 0x77,				// lda #$77
+		0x85, 0x1b,				// sta GRP0
+		0xa9, 0x52,				// lda #$52
+		0x85, 0x1b,				// sta GRP0
+		0xa9, 0x50,				// lda #$50
+		0x8d, 0x1b, 0x00,		// sta GRP0
+		0x86, 0x1c,				// stx GRP1
+		0x85, 0x10,				// sta RESP0
+		0x84, 0x1c,				// sty GRP0
+		0x85, 0x10,				// sta RESP0
+		0xa9, 0x1f,				// lda #$1F
+		0x8d, 0x1b, 0x00,		// sta GRP0
+		0xa9, 0x74,				// lda #$74
+		0x85, 0x1b,				// sta GRP0
+		0xa2, 0x00,				// ldx #0
+		0x86, 0x21,				// stx HMP1
+		0x8d, 0x2a, 0x00,		// sta HMOVE
+		0x85, 0x10				// sta RESP0
+	};
+
+const uint8_t header_bottom[]__attribute__((section(".flash01")))   = {
+#define PATCH_HEADER_BOTTOM_BG 3
+
+		0x85, 0x02,				// sta WSYNC
+		0xa9, 0xb0,				// lda #$B0			(*** PATCHED ***)
+		0x85, 0x02,				// sta WSYNC
+		0x85, 0x09				// sta COLUBK
+	};
+
+const uint8_t normal_bottom[]__attribute__((section(".flash01")))   = {
+
+		0x85, 0x02				// STA WSYNC
+	};
+
+const uint8_t text_colour[]__attribute__((section(".flash01"))) = {
+#define PATCH_TEXT_COLOUR 1
+		0xa9, 0x00,				// lda # (***PATCH***)
+		0x85, 0x06,				// sta COLUP0
+		0x85, 0x07				// sta COLUP1
+	};
+
+
+const uint8_t normal_top[]__attribute__((section(".flash01")))      = {
+
+		0x85, 0x02				// sta WSYNC
+		/*, 0x85, 0x02*/
+	};
+
+const uint8_t exit_kernel[]__attribute__((section(".flash01")))     = {
+
+		0x4c, 0x00, 0x10		// jmp $1000
+	};
+
+
+const uint8_t end_kernel_even[]__attribute__((section(".flash01"))) = {
+
+		0x86, 0x1b,				// stx GRP0
+		0x86, 0x1c				// stx GRP1
+	};
+
+const uint8_t end_kernel_odd[]__attribute__((section(".flash01")))  = {
+
+		0xa2, 0x00				// ldx #0
+	};
+
+
+
 
 uint8_t * my_font;
 
@@ -107,7 +266,7 @@ uint8_t textColour[2][11] = {
 void add_start_bank(int bank_id){
     bufferp =  &buffer[ (bank_id - 1) * 0x1000];
     memcpy( bufferp, start_bank, sizeof(start_bank));
-    bufferp[8] += bank_id;
+    bufferp[PATCH_START_BANK] += bank_id;
     bufferp += sizeof(start_bank);
 }
 
@@ -121,13 +280,15 @@ void add_end_bank(int bank_id){
 void add_textline_start(bool even, uint8_t entry, bool isFolder){
     if(even){
         memcpy( bufferp, textline_start_even, sizeof(textline_start_even));
-        bufferp[1]  += entry;
-        if(isFolder) bufferp[5] = 0x0e;
+        bufferp[PATCH_START_EVEN_BG]  += entry;
+
+        //change colour for folder - now handled differently so disabled...
+        //if(isFolder) bufferp[5] = 0x0e;
         bufferp += sizeof(textline_start_even);
     } else {
         memcpy( bufferp, textline_start_odd, sizeof(textline_start_odd));
-        bufferp[3]  += entry;
-        if(isFolder) bufferp[7] = 0x0e;
+        bufferp[PATCH_START_ODD_BG]  += entry;
+        //if(isFolder) bufferp[7] = 0x0e;			// colours handled differently now
         bufferp += sizeof(textline_start_odd);
     }
 }
@@ -191,14 +352,10 @@ void add_next_scanline(bool is_a){
 
 void add_header_bottom(uint8_t colour){
     memcpy( bufferp, header_bottom, sizeof(header_bottom));
-    if(user_settings.tv_mode == TV_MODE_NTSC)
-    	bufferp[3] = BACK_COL_NTSC;
-
+	bufferp[PATCH_HEADER_BOTTOM_BG] = user_settings.tv_mode == TV_MODE_NTSC ? BACK_COL_NTSC : BACK_COL_PAL;
     bufferp += sizeof(header_bottom);
-
     add_text_colour(colour);
     add_normal_bottom();
-
 }
 
 void add_normal_bottom(){
@@ -212,7 +369,7 @@ void add_normal_top(){
 
 void add_text_colour(uint8_t colour) {
     memcpy( bufferp, text_colour, sizeof(text_colour));
-    bufferp[1] = colour;
+    bufferp[PATCH_TEXT_COLOUR] = colour;
     bufferp += sizeof(text_colour);
 }
 
@@ -312,7 +469,7 @@ void createMenuForAtari( MENU_ENTRY * menu_entries, uint8_t page_id, int num_men
         	add_end_kernel(is_kernel_a);
 
         	if( entry == 0){
-        	    add_header_bottom(textColour[user_settings.tv_mode > 1 ? 1: 0][(int)(menu_entries[list_entry+1].type)]);
+        	    add_header_bottom(textColour[user_settings.tv_mode == TV_MODE_NTSC ? 0 : 1][(int)(menu_entries[list_entry+1].type)]);
         	} else if(entry == 4 || entry == 9 || entry == 12 ){
                 if(entry > 4){
         	        add_normal_bottom();
@@ -328,13 +485,13 @@ void createMenuForAtari( MENU_ENTRY * menu_entries, uint8_t page_id, int num_men
         	        add_normal_bottom();
                 }
                 if(entry != 12) {
-                	add_text_colour(textColour[user_settings.tv_mode > 1 ? 1: 0][(int)(menu_entries[list_entry+1].type)]);
+                	add_text_colour(textColour[user_settings.tv_mode == TV_MODE_NTSC ? 0 : 1][(int)(menu_entries[list_entry+1].type)]);
                 	add_normal_top();
                 }
 
             } else {
         	    add_normal_bottom();
-            	add_text_colour(textColour[user_settings.tv_mode > 1 ? 1: 0][(int)(menu_entries[list_entry+1].type)]);
+            	add_text_colour(textColour[user_settings.tv_mode == TV_MODE_NTSC ? 0 : 1][(int)(menu_entries[list_entry+1].type)]);
         	    add_normal_top();
         	}
     	}
