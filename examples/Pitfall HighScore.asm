@@ -2562,7 +2562,7 @@ SendPlusROMScore:
     sta    WriteToBuffer
     lda    scoreLo
     sta    WriteToBuffer
-    lda    #8                  ; H.E.R.O game id in Highscore DB
+    lda    #8                  ; Pitfall game id in Highscore DB
     sta    WriteSendBuffer     ; send request to backend..
     rts
 
