@@ -12,6 +12,10 @@
 #define BACK_COL_NTSC     0x90
 #define BACK_COL_PAL      0xb0
 
+#define HEADER_BACK_COL_NTSC     0x20
+#define HEADER_BACK_COL_PAL      0x40
+
+
 #define t2c(fontType, l, r, s) \
 	sharedFont[ convertAsciiToCharnum(fontType, l) * 12 + s ] << 4 | \
 	sharedFont[ convertAsciiToCharnum(fontType, r) * 12 + s ]
@@ -48,11 +52,15 @@ const uint8_t switch_bank[]__attribute__((section(".flash01")))  = {
 
 // with VCS RAM Color
 const uint8_t textline_start_even[]__attribute__((section(".flash01"))) = {
-#define PATCH_START_EVEN_BG 1
+//#define PATCH_START_EVEN_BG 1
 // bg_colour[14] = $83 (array of BG colours for lines)
 
-		0xa5, 0x83,				// lda bg_colour (*** PATCHED ***) (indexed,x)
-		0x85, 0x09,				// sta COLUBK
+//		0xa5, MENU,				// lda $83+?? 		(*** PATCHED ***)
+//		0x85, 0x09,				// sta COLUBK
+
+		0xea,
+		0xea,
+		0xea,
 
 		0xea,					// nop				SLEEP 8
 		0xea,					// nop
@@ -61,11 +69,15 @@ const uint8_t textline_start_even[]__attribute__((section(".flash01"))) = {
 	};
 
 const uint8_t textline_start_odd[]__attribute__((section(".flash01")))  = {
-#define PATCH_START_ODD_BG 3
+//#define PATCH_START_ODD_BG 3
 
 		0x85, 0x2a,				// sta HMOVE
-		0xa5, 0x83,				// lda bg_colour (*** PATCHED ***)
-		0x85, 0x09,				// sta COLUBK
+//		0xa5, MENU,				// lda $83+??		(*** PATCHED ***)
+//		0x85, 0x09,				// sta COLUBK
+
+		0xea,
+		0xea,
+		0xea,
 
 		0x04, 0x00,				// nop 0			SLEEP 7
 		0xea,					// nop
@@ -172,15 +184,27 @@ const uint8_t kernel_b[]__attribute__((section(".flash01"))) = {
 
 const uint8_t header_bottom[]__attribute__((section(".flash01")))   = {
 
-#define PATCH_HEADER_BOTTOM_BG 3
+//#define PATCH_HEADER_BOTTOM_BG 7
 
-		0x85, 0x02,				// sta WSYNC
-		0xa9, 0xb0,				// lda #$B0			(*** PATCHED ***)
-		0x85, 0x02,				// sta WSYNC
-		0x85, 0x09				// sta COLUBK
+//		0x85, 0x02,				// sta WSYNC
+//		0x85, 0x02,				// sta WSYNC
+//		0x85, 0x02,				// sta WSYNC
+
+		//0xa9, 0xb0,				// lda #$B0			(*** PATCHED ***)
+//		0x85, 0x02,				// sta WSYNC
+		//0x85, 0x09,				// sta COLUBK
 	};
 
 const uint8_t normal_bottom[]__attribute__((section(".flash01")))   = {
+#define PATCH_NORMAL_BOTTOM_COLOUR_CHANGE 1
+
+//		0xa9, 0x44,			// colour for TOP of next line
+//		0x85, 0x09,
+
+		0xa5, MENU,				// lda $83+??		(*** PATCHED ***)
+		0x85, 0x09,				// sta COLUBK
+
+
 
 		0x85, 0x02				// STA WSYNC
 	};
@@ -197,10 +221,17 @@ const uint8_t text_colour[]__attribute__((section(".flash01"))) = {
 
 const uint8_t normal_top[]__attribute__((section(".flash01")))      = {
 
+		//0xa9, 0x00,				// colour for BOTTOM of this line
+		//0x85, 0x09,
 		0x85, 0x02				// sta WSYNC
 	};
 
 const uint8_t exit_kernel[]__attribute__((section(".flash01")))     = {
+
+		// bottom of screen, switch BG to black after bottom of last menu line
+
+		0xa9, 0x00,				// lda #0
+		0x85, 0x09,				// sta COLUBK
 
 		0x4c, 0x00, 0x10		// jmp $1000
 	};
@@ -238,42 +269,84 @@ void inline add_textline_start(bool even, uint8_t entry, bool isFolder);
 void inline add_kernel_a(uint8_t fontType, uint8_t scanline, uint8_t * text);
 void inline add_kernel_b(uint8_t fontType, uint8_t scanline, uint8_t * text);
 void inline add_header_bottom(uint8_t colour);
-void inline add_normal_bottom();
+void inline add_normal_bottom(uint8_t entry);
 void inline add_text_colour(uint8_t colour);
 void inline add_normal_top();
 void inline add_exit_kernel();
+void inline add_restore_BG_colour(uint8_t line);
 
+// for colours see...
+// https://www.randomterrain.com/atari-2600-memories-tia-color-charts.html
 
-uint8_t textColour[2][11] = {
+// COLOUR		NTSC		PAL
+// 0			WHITE		WHITE
+// 1			YELLOW		WHITE
+// 2			ORANGE		YELLOW
+// 3			RED			GREEN
+// 4			PINKY		ORANGE
+// 5			PURPLE		GREEN
+// 6			PURPLE/BLUE	PINK
+// 7			BLUE		PASTEL GREEN
+// 8			AQUA		PINK/PURPLE
+// 9			AQUA		AQUA
+// A			PASTEL GREEN	PURPLE
+// B			GREEN		BLUE
+// C			GREEN		PURPLE
+// D			OLIVE		PURPLE/BLUE
+// E			YELLOW		WHITE
+// F			ORANGE		WHITE
+
+uint8_t textColour[2][12] = {
 
 		{	// NTSC...
 
-//	0x0C, //Root_Menu = -1,
-	0x4C, //Leave_Menu,
-	0x0C, //Sub_Menu,
-	0x5C, //Cart_File,
-	0x6C, //Input_Field,
-	0x7C, //Keyboard_Char,
-	0X8C, //Menu_Action,
-	0x9C, //Delete_Keyboard_Char,
-	0xAC, //Offline_Cart_File,
-	0xBC, //Offline_Sub_Menu,
-	0X28, //Setup_Menu				"Setup"
+	// see MENU_ENTRY_Type
+
+	0xC8, //Leave_Menu,
+		// --> ..
+		// --> (Go Back)
+		// .txt file
+
+	0x2A, //Sub_Menu,
+	0x48, //Cart_File,
+	0x0A, //Input_Field,
+	0x0A, //Keyboard_Char,
+	0x0A, // keyboard row
+	0X0A, //Menu_Action,
+	0x0A, //Delete_Keyboard_Char,
+	0x0A, //Offline_Cart_File,
+	0x0A, //Offline_Sub_Menu,
+
+	0X8C, //Setup_Menu
+		// --> "Setup"
+		// --> "Set TV Mode"
+		// --> "Set Font Style"
+		// --> "WiFi Setup"
+		//		--> individual WiFi IDs
+
+	//0x2A	// header line
+
+	0x46, // Extend Keyboard
 		},
 
 		{	// PAL...
 
 //	0, //Root_Menu = -1,
-	0x8C, //Leave_Menu,
-	0x0C, //Sub_Menu,
-	0xCC, //Cart_File,
-	0x6C, //Input_Field,
-	0xDC, //Keyboard_Char,
-	0xBC, //Menu_Action,
-	0x9C, //Delete_Keyboard_Char,
-	0x7C, //Offline_Cart_File,
-	0x3C, //Offline_Sub_Menu,
-	0x48, //Setup_Menu
+	0x5A, //Leave_Menu,
+	0x4A, //Sub_Menu,
+	0x88, //Cart_File,
+	0x0A, //Input_Field,
+	0x0A, //Keyboard_Char,
+	0x0A, // keyboard row
+	0x0A, //Menu_Action,
+	0x0A, //Delete_Keyboard_Char,
+	0x0A, //Offline_Cart_File,
+	0x0A, //Offline_Sub_Menu,
+	0xBC, //Setup_Menu
+
+	//0x0A	// header line
+
+	0x46, // Extend Keyboard
 		},
 
 };
@@ -298,13 +371,14 @@ void add_end_bank(int bank_id){
 }
 
 void add_textline_start(bool even, uint8_t entry, bool isFolder){
-    if(even){
+
+	if(even){
         memcpy( bufferp, textline_start_even, sizeof(textline_start_even));
-        bufferp[PATCH_START_EVEN_BG]  += entry;
+//        bufferp[PATCH_START_EVEN_BG]  += entry;
         bufferp += sizeof(textline_start_even);
     } else {
         memcpy( bufferp, textline_start_odd, sizeof(textline_start_odd));
-        bufferp[PATCH_START_ODD_BG]  += entry;
+//        bufferp[PATCH_START_ODD_BG]  += entry;
         bufferp += sizeof(textline_start_odd);
     }
 }
@@ -348,18 +422,23 @@ void add_kernel_b(uint8_t fontType, uint8_t scanline, uint8_t * text){
 }
 
 void add_end_kernel(bool is_even, uint8_t line){
-    if(! is_even){
+
+    //add_restore_BG_colour(line);
+
+	if(! is_even){
         memcpy( bufferp, end_kernel_odd, sizeof(end_kernel_odd));
         bufferp += sizeof(end_kernel_odd);
     }
     memcpy( bufferp, end_kernel_even, sizeof(end_kernel_even));
     bufferp += sizeof(end_kernel_even);
+}
 
-    memcpy(bufferp, restore_BG_colour, sizeof(restore_BG_colour));
-    // hacked/hardwired colour until can use the array...
+void add_restore_BG_colour(uint8_t line){
+    memcpy(bufferp, restore_BG_colour, sizeof(restore_BG_colour));    // hacked/hardwired colour until can use the array...
+
     bufferp[PATCH_RESTORE_BG] = user_settings.tv_mode == TV_MODE_NTSC ? BACK_COL_NTSC : BACK_COL_PAL;
-    if (line > 0)
-    	bufferp[PATCH_RESTORE_BG] += 2;
+//    if (line > 0)
+//    	bufferp[PATCH_RESTORE_BG] += 2;
 
     bufferp += sizeof(restore_BG_colour);
 }
@@ -376,14 +455,23 @@ void add_next_scanline(bool is_a){
 
 void add_header_bottom(uint8_t colour){
     memcpy( bufferp, header_bottom, sizeof(header_bottom));
-	bufferp[PATCH_HEADER_BOTTOM_BG] = user_settings.tv_mode == TV_MODE_NTSC ? BACK_COL_NTSC : BACK_COL_PAL;
+	//bufferp[PATCH_HEADER_BOTTOM_BG] = user_settings.tv_mode == TV_MODE_NTSC ? BACK_COL_NTSC : BACK_COL_PAL;
     bufferp += sizeof(header_bottom);
+
     add_text_colour(colour);
-    add_normal_bottom();
+    add_normal_top();
+    add_normal_top();
+    //add_restore_BG_colour(0);
+
+
+    add_normal_bottom(0);
 }
 
-void add_normal_bottom(){
+void add_normal_bottom(uint8_t entry){
     memcpy( bufferp, normal_bottom, sizeof(normal_bottom));
+
+    if (entry < NUM_MENU_ITEMS_PER_PAGE)
+    	bufferp[PATCH_NORMAL_BOTTOM_COLOUR_CHANGE] += (entry + 1);
     bufferp += sizeof(normal_bottom);
 }
 void add_normal_top(){
@@ -398,7 +486,12 @@ void add_text_colour(uint8_t colour) {
 }
 
 void add_exit_kernel(){
-    memcpy( bufferp, exit_kernel, sizeof(exit_kernel));
+
+	// Set HEADER font colour
+	add_text_colour(0x0C);			//white in PAL/NTSC
+
+
+	memcpy( bufferp, exit_kernel, sizeof(exit_kernel));
     bufferp += sizeof(exit_kernel);
 }
 
@@ -451,10 +544,12 @@ void createMenuForAtari( MENU_ENTRY * menu_entries, uint8_t page_id, int num_men
     	menu_header[STATUS_MESSAGE_LENGTH + 4] = CHAR_R_NoAccount;
     }
 
+    uint8_t colourSet = user_settings.tv_mode == TV_MODE_NTSC ? 0 : 1;
 
 	add_start_bank(bank);
 	for( odd_even = 0; odd_even < 2; odd_even++){
-        memcpy( bufferp, normal_bottom, sizeof(normal_bottom));
+
+		memcpy( bufferp, normal_bottom, sizeof(normal_bottom));
         bufferp += sizeof(normal_bottom);
 
        	for ( entry = 0; entry < (NUM_MENU_ITEMS_PER_PAGE + 1); entry++){
@@ -464,7 +559,7 @@ void createMenuForAtari( MENU_ENTRY * menu_entries, uint8_t page_id, int num_men
                 memcpy(menu_string, menu_header, 32);
 
                 // TITLE BAR - set to user font -- OR hardwire to specific font if required
-                menu_entries[offset - 1].font = FONT_TJZ; // user_settings.font_style; // <-- OR, font # hardwire
+                menu_entries[offset - 1].font = user_settings.font_style; // <-- OR, font # hardwire
                 isFolder = true;
             }else if(list_entry < num_menu_entries){
             	str_len = strlen(menu_entries[list_entry].entryname);
@@ -485,38 +580,43 @@ void createMenuForAtari( MENU_ENTRY * menu_entries, uint8_t page_id, int num_men
                 }else{
                     add_kernel_b(menu_entries[list_entry].font, sc, menu_string );
                 }
-                if(sc<11)
+                if(sc < CHAR_HEIGHT - 1)
                     add_next_scanline(is_kernel_a);
 
                 is_kernel_a = ! is_kernel_a;
         	}
         	add_end_kernel(is_kernel_a, entry);
 
+
+
+
         	if( entry == 0){
-        	    add_header_bottom(textColour[user_settings.tv_mode == TV_MODE_NTSC ? 0 : 1][(int)(menu_entries[list_entry+1].type)]);
-        	} else if(entry == 4 || entry == 9 || entry == 12 ){
-                if(entry > 4){
-        	        add_normal_bottom();
-        	        if(entry == 12){
-        	            add_exit_kernel();
-        	        }
-                }
-                add_end_bank(bank);
-                bank++;
+        	    add_header_bottom(textColour[colourSet][(int)(menu_entries[list_entry+1].type)]);
+        	} else {
 
-                add_start_bank(bank);
-                if(entry == 4){
-        	        add_normal_bottom();
-                }
-                if(entry != 12) {
-                	add_text_colour(textColour[user_settings.tv_mode == TV_MODE_NTSC ? 0 : 1][(int)(menu_entries[list_entry+1].type)]);
-                	add_normal_top();
-                }
+        		if(entry == 4 || entry == 9 || entry == NUM_MENU_ITEMS_PER_PAGE ){
+					if(entry > 4){
+						add_normal_bottom(entry);
+						if(entry == NUM_MENU_ITEMS_PER_PAGE){
+							add_exit_kernel();
+						}
+					}
+					add_end_bank(bank);
+					bank++;
 
-            } else {
-        	    add_normal_bottom();
-            	add_text_colour(textColour[user_settings.tv_mode == TV_MODE_NTSC ? 0 : 1][(int)(menu_entries[list_entry+1].type)]);
-        	    add_normal_top();
+					add_start_bank(bank);
+					if(entry == 4){
+						add_normal_bottom(entry);
+					}
+
+				} else
+					add_normal_bottom(entry);
+
+
+        		if (entry != NUM_MENU_ITEMS_PER_PAGE) {
+        			add_text_colour(textColour[colourSet][(int)(menu_entries[list_entry+1].type)]);
+					add_normal_top();
+				}
         	}
     	}
 	}

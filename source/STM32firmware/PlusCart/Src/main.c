@@ -52,6 +52,8 @@
 #include "cartridge_emulation_dpcp.h"
 
 
+void truncate_curPath();
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -220,17 +222,88 @@ void make_menu_entry_font( MENU_ENTRY **dst, char *name, int type, uint8_t font)
 }
 
 
-void make_keyboard(MENU_ENTRY **dst){
-	make_menu_entry(&(*dst), MENU_TEXT_GO_BACK, Leave_Menu);
-	make_menu_entry(&(*dst), MENU_TEXT_DELETE_CHAR, Delete_Keyboard_Char);
-	char Key[2] = "0";
-	for (char i=32; i < 100; i++){
-		Key[0] = i;
-		make_menu_entry(&(*dst), Key, Keyboard_Char);
-	}
-	make_menu_entry(&(*dst), "Enter", Menu_Action);
 
+
+char *keyboardUppercase[] = {
+	" 1  2  3  4  5  6  7  8  9  0",
+	"  Q  W  E  R  T  Y  U  I  O  P",
+	"   A  S  D  F  G  H  J  K  L",
+	"    Z  X  C  V  B  N  M",
+	0
+};
+
+char *keyboardLowercase[] = {
+	" 1  2  3  4  5  6  7  8  9  0",
+	"  q  w  e  r  t  y  u  i  o  p",
+	"   a  s  d  f  g  h  j  k  l",
+	"    z  x  c  v  b  n  m",
+	0
+};
+
+char *keyboardSymbols[] = {
+	" " MENU_TEXT_SPACE "  (  )  {  }  [  ]",
+	" !  \"  '  #  $  %  &  ;  :",
+	" ?  @  ^  `  |  \\  /  ~  .  ,",
+	" +  -  *  /  <  >  = _",
+	0
+};
+
+enum keyboardType {
+	KEYBOARD_UPPERCASE,
+	KEYBOARD_LOWERCASE,
+	KEYBOARD_SYMBOLS,
+	KEYBOARD_NONE,
+};
+
+char **keyboards[] = {
+	keyboardUppercase,
+	keyboardLowercase,
+	keyboardSymbols,
+	0
+};
+
+enum keyboardType lastKb = KEYBOARD_UPPERCASE;
+
+
+void make_keyboardFromLine(MENU_ENTRY **dst, char *line) {
+
+//	num_menu_entries = 0;
+	make_menu_entry(dst, MENU_TEXT_GO_BACK, Leave_Menu);
+	char item[33];
+	while (*line) {
+		char *entry = item;
+		while (*line && *line == ' ')
+			line++;
+		while (*line && *line != ' ')
+			*entry++ = *line++;
+		*entry = 0;
+		if (*item)
+			make_menu_entry(dst, item, Keyboard_Char);
+	}
 }
+
+
+void make_keyboard(MENU_ENTRY **dst, enum keyboardType selector){
+
+//	num_menu_entries = 0;
+	make_menu_entry(dst, MENU_TEXT_GO_BACK, Leave_Menu);
+
+//	make_menu_entry(dst, "0", Keyboard_Char);	//tmp
+
+	for (uint8_t row = 0; keyboards[selector][row]; row++)
+		make_menu_entry(dst, keyboards[selector][row], Setup_Menu);
+
+	if (selector != KEYBOARD_LOWERCASE)
+		make_menu_entry(dst, MENU_TEXT_LOWERCASE, Setup_Menu);
+	if (selector != KEYBOARD_UPPERCASE)
+		make_menu_entry(dst, MENU_TEXT_UPPERCASE, Setup_Menu);
+	if (selector != KEYBOARD_SYMBOLS)
+		make_menu_entry(dst, MENU_TEXT_SYMBOLS, Setup_Menu);
+
+	make_menu_entry(dst, MENU_TEXT_DELETE_CHAR, Delete_Keyboard_Char);
+	make_menu_entry(dst, "Enter", Menu_Action);
+}
+
 
 MENU_ENTRY* generateSetupMenu(MENU_ENTRY *dst) {
 	make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
@@ -249,6 +322,37 @@ MENU_ENTRY* generateSetupMenu(MENU_ENTRY *dst) {
 	return dst;
 }
 
+enum e_status_message generateKeyboard(MENU_ENTRY **dst, MENU_ENTRY *d, enum e_status_message menu_status) {
+
+	// Scan for any keyboard rows, and if found then generate menu for row
+	for (char ***kb = keyboards; *kb; kb++)
+		for (char **row = *kb; *row; row++)
+			if (!strcmp(*row, d->entryname)) {
+				make_keyboardFromLine(dst, d->entryname);
+				truncate_curPath();
+				return menu_status;
+			}
+
+	// look for change of keyboard
+	if (!strcmp(d->entryname, MENU_TEXT_LOWERCASE))
+		lastKb = KEYBOARD_LOWERCASE;
+	else if (!strcmp(d->entryname, MENU_TEXT_UPPERCASE))
+		lastKb = KEYBOARD_UPPERCASE;
+	else if (!strcmp(d->entryname, MENU_TEXT_SYMBOLS))
+		lastKb = KEYBOARD_SYMBOLS;
+	else {
+
+		// initial case - use previous keyboard
+		menu_status = insert_password;
+		strcat(curPath, "/");
+	}
+
+	make_keyboard(dst, lastKb);
+	truncate_curPath();
+	return menu_status;
+}
+
+
 enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 	int count = 0;
 	bool loadStore = false;
@@ -257,7 +361,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 	num_menu_entries = 0;
 	enum e_status_message menu_status = none;
 
-	char *menu_text[] = {
+	char *menuFontNames[] = {
 			// same ordering as font IDs
 			MENU_TEXT_FONT_TJZ,
 			MENU_TEXT_FONT_TRICHOTOMIC12,
@@ -274,15 +378,19 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 
 
 	MENU_ENTRY *dst = (MENU_ENTRY *)&menu_entries[0];
-
 	if(strncmp(MENU_TEXT_SETUP, curPath, sizeof(MENU_TEXT_SETUP) - 1) == 0 ){
 		//char *  curPathPos = (char *) &curPath[sizeof(MENU_TEXT_SETUP)];
+
 		if(strlen(curPath) == sizeof(MENU_TEXT_SETUP) - 1 ){
 			dst = generateSetupMenu(dst);
         	menu_status = version;
 			loadStore = true;
-		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_WIFI_SETUP, sizeof(MENU_TEXT_WIFI_SETUP) - 1) == 0 ){
+		}
+
+		// WiFi Setup
+		else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_WIFI_SETUP, sizeof(MENU_TEXT_WIFI_SETUP) - 1) == 0 ){
 			if(strlen(curPath) > sizeof(MENU_TEXT_WIFI_SETUP) + sizeof(MENU_TEXT_SETUP) ){
+
 				if(d->type == Menu_Action){ // if actual Entry is of type Menu_Action -> Connect to WiFi
 					// curPath is: MENU_TEXT_SETUP + "/" + MENU_TEXT_WIFI_SETUP + "/" SSID[33] + Password + "/Enter" + '\0'
 					curPath[strlen(curPath) - 6 ] = '\0'; // delete "/Enter" at end of Path
@@ -294,17 +402,18 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			        }
 			        curPath[i] = 0;
 
-			    	if(esp8266_wifi_connect( &curPath[sizeof(MENU_TEXT_WIFI_SETUP) + sizeof(MENU_TEXT_SETUP)  ], &curPath[sizeof(MENU_TEXT_WIFI_SETUP) + sizeof(MENU_TEXT_SETUP) + 32])){
+			    	if(esp8266_wifi_connect( &curPath[sizeof(MENU_TEXT_WIFI_SETUP) + sizeof(MENU_TEXT_SETUP)  ],
+			    			&curPath[sizeof(MENU_TEXT_WIFI_SETUP) + sizeof(MENU_TEXT_SETUP) + 32])){
 			        	menu_status = wifi_connected;
 			    	}else{
 			        	menu_status = wifi_not_connected;
 			    	}
 					curPath[0] = '\0';
 				}else{
-					if(d->type == Setup_Menu){
-						menu_status = insert_password;
-					}
-					make_keyboard(&dst);
+
+					//if (d->type == Setup_Menu)
+					menu_status = generateKeyboard(&dst, d, menu_status);
+
 				}
 
 			}else{
@@ -314,7 +423,9 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 		    		return esp_timeout;
 		    	}
 			}
-		}else if( strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_TV_MODE_SETUP, sizeof(MENU_TEXT_TV_MODE_SETUP) - 1) == 0 ){
+		}
+
+		else if( strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_TV_MODE_SETUP, sizeof(MENU_TEXT_TV_MODE_SETUP) - 1) == 0 ){
 			if(d->type == Menu_Action){
 
 				uint8_t new_tv_mode = TV_MODE_NTSC;
@@ -342,12 +453,14 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 				}
 			}
 
-		}else if( strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_FONT_SETUP, sizeof(MENU_TEXT_FONT_SETUP) - 1) == 0 ){
+		}
+
+		else if( strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_FONT_SETUP, sizeof(MENU_TEXT_FONT_SETUP) - 1) == 0 ){
 			if(d->type == Menu_Action){
 
 				uint8_t new_font_style = 0;
 				while ( strcmp(&curPath[sizeof(MENU_TEXT_SETUP) + 2 + sizeof(MENU_TEXT_FONT_SETUP)],
-						&menu_text[new_font_style][2]) != 0)
+						&menuFontNames[new_font_style][2]) != 0)
 					new_font_style++;
 
 				//set_my_font(new_font_style);
@@ -360,10 +473,10 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			}else{
 				make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
 
-				uint8_t fontCount = sizeof menu_text / sizeof *menu_text;
+				uint8_t fontCount = sizeof menuFontNames / sizeof *menuFontNames;
 				char fontLine[fontCount][33];
 				for (uint8_t font=0; font < fontCount; font++) {
-					strcpy(fontLine[font], menu_text[font]);
+					strcpy(fontLine[font], menuFontNames[font]);
 					fontLine[font][0] = user_settings.font_style == font ? CHAR_SELECTION: ' ';
 
 					//set_my_font(font);
@@ -375,8 +488,13 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 				//set_my_font(user_settings.font_style);
 			}
 
-		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_PLUS_CONNECT, sizeof(MENU_TEXT_PLUS_CONNECT) - 1) == 0 ){
+		}
+
+		else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_PLUS_CONNECT, sizeof(MENU_TEXT_PLUS_CONNECT) - 1) == 0 ){
 			if(d->type == Menu_Action){ // if actual Entry is of type Menu_Action -> Connect user
+
+				strcat(curPath,"0000000000");
+
 				if( esp8266_PlusStore_API_connect() == false){
 					return esp_timeout;
 				}
@@ -399,9 +517,11 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 				if(strcmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_PLUS_CONNECT) == 0){
 					menu_status = plus_connect;
 				}
-				make_keyboard(&dst);
+				make_keyboard(&dst, KEYBOARD_UPPERCASE);
 			}
-		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_PLUS_REMOVE, sizeof(MENU_TEXT_PLUS_REMOVE) - 1) == 0 ){
+		}
+
+		else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_PLUS_REMOVE, sizeof(MENU_TEXT_PLUS_REMOVE) - 1) == 0 ){
 			if( esp8266_PlusStore_API_connect() == false){
 				return esp_timeout;
 			}
@@ -419,21 +539,26 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
         	esp8266_PlusStore_API_end_transmission();
 
         	curPath[0] = '\0';
+		}
 
-		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_OFFLINE_ROM_UPDATE, sizeof(MENU_TEXT_OFFLINE_ROM_UPDATE) - 1) == 0 ){
+		else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_OFFLINE_ROM_UPDATE, sizeof(MENU_TEXT_OFFLINE_ROM_UPDATE) - 1) == 0 ){
 			if( flash_download("&r=1", d->filesize , 0 , false ) != DOWNLOAD_AREA_START_ADDRESS){
 		    	menu_status = download_failed;
 			}else{
 	    		menu_status = done;
 	        	curPath[0] = '\0';
 			}
-		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_DELETE_OFFLINE_ROMS, sizeof(MENU_TEXT_DELETE_OFFLINE_ROMS) - 1) == 0 ){
+		}
+
+		else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_DELETE_OFFLINE_ROMS, sizeof(MENU_TEXT_DELETE_OFFLINE_ROMS) - 1) == 0 ){
 			flash_erase_storage((uint8_t)FLASH_SECTOR_5);
 			user_settings.first_free_flash_sector = (uint8_t) FLASH_SECTOR_5;
 		    flash_set_eeprom_user_settings(user_settings);
     		menu_status = offline_roms_deleted;
         	curPath[0] = '\0';
-		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_DETECT_OFFLINE_ROMS, sizeof(MENU_TEXT_DELETE_OFFLINE_ROMS) - 1) == 0 ){
+		}
+
+		else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_DETECT_OFFLINE_ROMS, sizeof(MENU_TEXT_DELETE_OFFLINE_ROMS) - 1) == 0 ){
 			uint32_t last_address = flash_check_offline_roms_size();
 			if(last_address > DOWNLOAD_AREA_START_ADDRESS + 1024){
 			    user_settings.first_free_flash_sector = ((last_address - ADDR_FLASH_SECTOR_5) / 0x20000 ) + 6;
@@ -444,7 +569,9 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			}
     		num_menu_entries = 0;
         	curPath[0] = '\0';
-		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_WPS_CONNECT, sizeof(MENU_TEXT_WPS_CONNECT) - 1) == 0 ){
+		}
+
+		else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_WPS_CONNECT, sizeof(MENU_TEXT_WPS_CONNECT) - 1) == 0 ){
 	    	if(esp8266_wps_connect()){
 	        	menu_status = wifi_connected;
 	    	}else{
@@ -452,19 +579,24 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 	    	}
 			curPath[0] = '\0';
 			HAL_Delay(2000);
-		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_WIFI_MANGER, sizeof(MENU_TEXT_WIFI_MANGER) - 1) == 0 ){
+		}
+
+		else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_WIFI_MANGER, sizeof(MENU_TEXT_WIFI_MANGER) - 1) == 0 ){
 			menu_status = done;
 			esp8266_AT_WiFiManager();
 	    	curPath[0] = '\0';
-		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_ESP8266_RESTORE, sizeof(MENU_TEXT_ESP8266_RESTORE) - 1) == 0 ){
+		}
+
+		else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_ESP8266_RESTORE, sizeof(MENU_TEXT_ESP8266_RESTORE) - 1) == 0 ){
 	    	if(esp8266_reset(true)){
 	        	menu_status = done;
 	    	}else{
 	        	menu_status = failed;
 	    	}
 			curPath[0] = '\0';
+		}
 
-		}else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_PRIVATE_KEY, sizeof(MENU_TEXT_PRIVATE_KEY) - 1) == 0 ){
+		else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_PRIVATE_KEY, sizeof(MENU_TEXT_PRIVATE_KEY) - 1) == 0 ){
 			if(d->type == Menu_Action){ // if actual Entry is of type Menu_Action -> Save Private key
 				menu_status = private_key_saved;
 	        	curPath[0] = '\0';
@@ -472,23 +604,27 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 				if(strcmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_PRIVATE_KEY ) == 0){
 					menu_status = private_key;
 				}
-				make_keyboard( &dst);
+				make_keyboard(&dst, KEYBOARD_UPPERCASE);
 			}
 		}
 	}else if(strncmp(MENU_TEXT_OFFLINE_ROMS, curPath, sizeof(MENU_TEXT_OFFLINE_ROMS) - 1) == 0 ){
 		make_menu_entry(&dst, "..", Leave_Menu);
 		flash_file_list(&curPath[sizeof(MENU_TEXT_OFFLINE_ROMS) - 1], &dst, &num_menu_entries);
-	}else if(strncmp(MENU_TEXT_SEARCH_ROM, curPath, sizeof(MENU_TEXT_SEARCH_ROM) - 1) == 0 ){
+	}
+
+	else if(strncmp(MENU_TEXT_SEARCH_ROM, curPath, sizeof(MENU_TEXT_SEARCH_ROM) - 1) == 0 ){
 		if(d->type == Menu_Action){ // if actual Entry is of type Menu_Action -> Send search to API
 			for (char* p = curPath; (p = strchr(p, ' ')); ++p) {
 				*p = '+';
 			}
 			loadStore = true;
 		}else{
-			make_keyboard( &dst);
+			menu_status = generateKeyboard(&dst, d, menu_status);
 		}
 
-	}else if(d->type == Menu_Action){
+	}
+
+	else if(d->type == Menu_Action){
 		if(strncmp(MENU_TEXT_FIRMWARE_UPDATE, curPath, sizeof(MENU_TEXT_FIRMWARE_UPDATE) - 1) == 0 ){
 	    	curPath[0] = '\0';
 		    strcat(curPath, (char *)"&u=1");
@@ -564,7 +700,17 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 
         	esp8266_PlusStore_API_end_transmission();
         }else if(strlen(curPath) == 0){
-        	make_menu_entry(&dst, MENU_TEXT_WIFI_RECONNECT, Menu_Action);
+
+        	// re-ask for wifi connection details
+			menu_status = select_wifi_network;
+			make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
+			if( esp8266_wifi_list( &dst, &num_menu_entries) == false){
+	    		return esp_timeout;
+	    	}
+
+
+
+//        	make_menu_entry(&dst, MENU_TEXT_WIFI_RECONNECT, Menu_Action);
     	}
     }
 
@@ -1012,7 +1158,12 @@ int main(void)
     		    strcat(curPath, "/");
   		  }
 
-  		  append_entry_to_path(d);
+  		  if (!strcmp(d->entryname, MENU_TEXT_SPACE))
+  			  strcpy(d->entryname, " ");
+
+  		  if ( d->type != Keyboard_Extend )
+   			  append_entry_to_path(d);
+
   		  if(d->type == Keyboard_Char){
   			  strcat((char *)input_field, d->entryname);
   			  if(strlen((char *)input_field) > STATUS_MESSAGE_LENGTH){
@@ -1021,8 +1172,10 @@ int main(void)
   	  			  }
   			  }
   	    	  main_status = keyboard_input;
-  		  }else if(d->type == Menu_Action){
-  			input_field[0] = 0;
+  		  }else {
+  	  		  if(d->type == Menu_Action){
+  	  			  input_field[0] = 0;
+  	  		  }
   		  }
   	    }
   		menu_status = buildMenuFromPath( d );

@@ -8,11 +8,11 @@
 #define PLUSSTORE_API_HOST        "pluscart.firmaplus.de"
 
 #define STATUS_MESSAGE_LENGTH           27
-#define NUM_MENU_ITEMS_PER_PAGE      	12
+#define NUM_MENU_ITEMS_PER_PAGE      	13
 #define NUM_MENU_ITEMS			      1024
 
 #define MENU_TEXT_GO_BACK                   "(Go Back)"
-#define MENU_TEXT_DELETE_CHAR               "(Delete Char)"
+#define MENU_TEXT_DELETE_CHAR               "Delete Character"
 #define MENU_TEXT_OFFLINE_ROMS              "Offline ROMs"
 #define MENU_TEXT_DETECT_OFFLINE_ROMS       "Detect Offline ROMs"
 #define MENU_TEXT_DELETE_OFFLINE_ROMS       "Erase Offline ROMs"
@@ -37,6 +37,10 @@
 #define MENU_TEXT_PLUS_REMOVE               "PlusStore Disconnect"
 #define MENU_TEXT_ESP8266_RESTORE           "ESP8266 Factory Reset"
 #define MENU_TEXT_SEARCH_ROM                "Search ROM"
+#define MENU_TEXT_SPACE						"Space"
+#define MENU_TEXT_LOWERCASE					"Lowercase"
+#define MENU_TEXT_UPPERCASE					"Uppercase"
+#define MENU_TEXT_SYMBOLS					"Symbols"
 
 #define URLENCODE_MENU_TEXT_PLUS_CONNECT            "PlusStore%20connect"
 #define URLENCODE_MENU_TEXT_SETUP 	                "Setup"
@@ -70,11 +74,13 @@ enum MENU_ENTRY_Type {
 	Cart_File,
 	Input_Field,
 	Keyboard_Char,
+	Keyboard_Row,
 	Menu_Action,
 	Delete_Keyboard_Char,
 	Offline_Cart_File,
 	Offline_Sub_Menu,
-	Setup_Menu
+	Setup_Menu,
+	Keyboard_Extend,
 };
 
 enum cart_base_type{
