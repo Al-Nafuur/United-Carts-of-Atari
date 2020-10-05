@@ -3161,7 +3161,6 @@ WindmillBladeGraphic_02
   IF PLUSROM
 PlusROM_API:
     .byte "a", 0, "h.firmaplus.de", 0
-    .byte 0
   ELSE
    FILL_BOUNDARY 252, 234           ; push to RESET vector (this was done 
                                     ; instead of using an .ORG to easily keep
