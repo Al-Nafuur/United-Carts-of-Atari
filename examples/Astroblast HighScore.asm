@@ -7,6 +7,9 @@
 ;  by Dennis Debro
 ; Last Update: August 16, 2017
 ;
+; PlusROM functions for High Score sending added
+;  by Wolfgang Stubig (05.10.2020)
+;
 ; *** 115 BYTES OF RAM USED 13 BYTES FREE
 ;
 ; NTSC & PAL60 ROM usage stats
@@ -85,7 +88,7 @@ PAL60                   = 2
 
    IFNCONST COMPILE_REGION
 
-COMPILE_REGION          = PAL60      ; change to compile for different regions
+COMPILE_REGION          = NTSC      ; change to compile for different regions
 
    ENDIF
 
@@ -2414,6 +2417,8 @@ SendPlusROMScore:
    lda playerScore+1
    sta WriteToBuffer
    lda playerScore+2
+   sta WriteToBuffer
+   lda rightPF0DigitPointer 
    sta WriteToBuffer
    lda #10                  	     ; Astroblast game id in Highscore DB
    sta WriteSendBuffer              ; send request to backend..
