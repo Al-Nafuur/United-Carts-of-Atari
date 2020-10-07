@@ -267,8 +267,7 @@ enum keyboardType lastKb = KEYBOARD_UPPERCASE;
 
 void make_keyboardFromLine(MENU_ENTRY **dst, char *line) {
 
-//	num_menu_entries = 0;
-	make_menu_entry(dst, MENU_TEXT_GO_BACK, Leave_Menu);
+	make_menu_entry(dst, MENU_TEXT_GO_BACK, Leave_SubKeyboard_Menu);
 	char item[33];
 	while (*line) {
 		char *entry = item;
@@ -285,13 +284,10 @@ void make_keyboardFromLine(MENU_ENTRY **dst, char *line) {
 
 void make_keyboard(MENU_ENTRY **dst, enum keyboardType selector){
 
-//	num_menu_entries = 0;
 	make_menu_entry(dst, MENU_TEXT_GO_BACK, Leave_Menu);
 
-//	make_menu_entry(dst, "0", Keyboard_Char);	//tmp
-
-	for (uint8_t row = 0; keyboards[selector][row]; row++)
-		make_menu_entry(dst, keyboards[selector][row], Setup_Menu);
+	for (char **kbRow = keyboards[selector]; *kbRow; kbRow++)
+		make_menu_entry(dst, *kbRow, Setup_Menu);
 
 	if (selector != KEYBOARD_LOWERCASE)
 		make_menu_entry(dst, MENU_TEXT_LOWERCASE, Setup_Menu);
@@ -983,7 +979,7 @@ void emulate_cartridge(CART_TYPE cart_type, MENU_ENTRY *d)
 
 void truncate_curPath(){
     int len = strlen(curPath);
-  	while (len && curPath[--len] != '/');
+  	while (len && curPath[--len] != PATH_SEPERATOR);
   	curPath[len] = 0;
 }
 
@@ -1140,9 +1136,16 @@ int main(void)
   		  // go back clear_curPath();//
   		  truncate_curPath();
   		  input_field[0] = 0; // Reset Keyboard input field
-  		} else if(d->type == Delete_Keyboard_Char){
+  		}
+
+  		else if (d->type == Leave_SubKeyboard_Menu) {
+  			main_status = keyboard_input;
+  			// nothing!
+  		}
+
+  		else if(d->type == Delete_Keyboard_Char){
     		  int len = strlen(curPath);
-    		  if(len && curPath[--len] != '/' ){
+    		  if(len && curPath[--len] != PATH_SEPERATOR ){
     	  		  curPath[len] = 0;
     		  }
     		  len = strlen((char *) input_field);

@@ -327,6 +327,7 @@ uint8_t textColour[2][12] = {
 	//0x2A	// header line
 
 	0x46, // Extend Keyboard
+	0x46, // Leave SubKeyboard Menu
 		},
 
 		{	// PAL...
@@ -347,6 +348,7 @@ uint8_t textColour[2][12] = {
 	//0x0A	// header line
 
 	0x46, // Extend Keyboard
+	0x46, // Leave SubKeyboard Menu
 		},
 
 };
@@ -517,7 +519,7 @@ void createMenuForAtari( MENU_ENTRY * menu_entries, uint8_t page_id, int num_men
             menu_header[i--] =  (max_page % 10) + '0';
             max_page = max_page/10;
         }
-    	menu_header[i--] = '/';
+    	menu_header[i--] = PATH_SEPERATOR;
 
     	page_id++;
         while(page_id != 0) {
@@ -628,12 +630,18 @@ void createMenuForAtari( MENU_ENTRY * menu_entries, uint8_t page_id, int num_men
 
 
 void set_menu_status_msg(const char* message) {
+
+/*    memset(menu_header, ' ', STATUS_MESSAGE_LENGTH );
+	strncpy(menu_header, message, sizeof(message));
+*/
+
 	uint8_t msg_len = strlen(message);
     memset(menu_header, ' ', 32 );
 	menu_header[0] = '\0';
     strncat(menu_header, message, STATUS_MESSAGE_LENGTH);
     if(msg_len < STATUS_MESSAGE_LENGTH)
     	menu_header[msg_len] = 32;
+
 }
 
 void set_menu_status_byte(uint8_t byte_id, char status_byte) {

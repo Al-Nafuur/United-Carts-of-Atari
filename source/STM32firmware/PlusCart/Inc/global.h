@@ -47,6 +47,8 @@
 
 #define AUTOSTART_FILENAME_PREFIX           "Autostart."
 
+#define PATH_SEPERATOR '/' /*CHAR_SELECTION*/
+
 extern UART_HandleTypeDef huart1;
 extern char http_request_header[];
 
@@ -81,6 +83,7 @@ enum MENU_ENTRY_Type {
 	Offline_Sub_Menu,
 	Setup_Menu,
 	Keyboard_Extend,
+	Leave_SubKeyboard_Menu,
 };
 
 enum cart_base_type{
