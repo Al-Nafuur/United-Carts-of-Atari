@@ -326,7 +326,6 @@ uint8_t textColour[2][12] = {
 
 	//0x2A	// header line
 
-	0x46, // Extend Keyboard
 	0x46, // Leave SubKeyboard Menu
 		},
 
@@ -347,7 +346,6 @@ uint8_t textColour[2][12] = {
 
 	//0x0A	// header line
 
-	0x46, // Extend Keyboard
 	0x46, // Leave SubKeyboard Menu
 		},
 

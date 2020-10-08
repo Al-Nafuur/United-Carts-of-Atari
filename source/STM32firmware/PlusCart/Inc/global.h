@@ -82,7 +82,6 @@ enum MENU_ENTRY_Type {
 	Offline_Cart_File,
 	Offline_Sub_Menu,
 	Setup_Menu,
-	Keyboard_Extend,
 	Leave_SubKeyboard_Menu,
 };
 

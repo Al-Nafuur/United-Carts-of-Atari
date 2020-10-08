@@ -357,6 +357,10 @@ PatchB_TxtCol_{1}_{2} = . + 1
    ENDIF
     stx     GRP0
     stx     GRP1
+
+    lda #0 ;2
+    sta ENABL
+
   ENDM
 
   MAC KERNEL_ODD ; {index}, {bk-color}, {txt-color}, {32 x chars...}
@@ -380,6 +384,9 @@ PatchB_TxtCol_{1}_{2} = . + 1
     ldx #0
     stx     GRP0
     stx     GRP1
+
+    lda #0
+        sta ENABL
   ENDM
 
 
@@ -387,6 +394,11 @@ PatchB_TxtCol_{1}_{2} = . + 1
         lda #{1}
         sta COLUP0
         sta COLUP1
+    ENDM
+
+    MAC BALL ; (on/off)
+        lda #{1}
+        sta ENABL
     ENDM
 
 
@@ -640,7 +652,7 @@ GameInit
     sta     COLUBK
     lda     #%01110000           ; mask left and right border
     sta     PF0
-    lda     #%1
+    lda     #%00110001
     sta     CTRLPF
     lda     #HEADER_COL          ; set HEADER_COL for first textline in RAM
     sta     LineBackColor
@@ -666,7 +678,7 @@ add
 	  dey
 	  bne add
 ; score mode
-  	lda #2
+  	lda #%00110010
   	sta CTRLPF
   	lda #BACK_COL
   	sta COLUBK
@@ -815,6 +827,13 @@ GameCalc SUBROUTINE
     inx
     lda     #48
     jsr     SetXPos
+
+    ldx #4
+    lda #82
+    jsr SetXPos
+;    lda #0 ;%11000000
+;    sta HMBL
+
     sta     WSYNC
     sta     HMOVE
     sta     WSYNC
@@ -823,6 +842,9 @@ GameCalc SUBROUTINE
     sta     HMP0
     lda     #$80
     sta     HMP1
+
+   ; sta WSYNC
+    ; ball
 
 ;    lda     frameCnt
 ;    and     #$0f
@@ -961,22 +983,22 @@ SetActiveItem
     
     sta     WSYNC
 
-    KERNEL_EVEN 1, BACK_COL, TXT_COL, Quote,I,Blank,b,e,l,i,e,v,e,Blank,t,h,i,s,Blank,n,a,t,i,o,n,Blank,s,h,o,u,l,d,Blank,Blank,Blank,Blank
+    KERNEL_EVEN 1, BACK_COL, TXT_COL, N,o,v,e,m,b,e,r,Blank,M,o,v,e,m,y,e,r,Blank,Blank,i,o,n,Blank,s,h,o,u,l,d,Blank,Blank,Blank,Blank
     BTM_NORMAL
 
     TEXT_COLOUR %00101100
     TOP_NORMAL
-    KERNEL_EVEN 2, BACK_COL, TXT_COL, c,o,m,m,i,t,Blank,i,t,s,e,l,f,Blank,t,o,Blank,a,c,h,i,e,v,i,n,g,Blank,t,h,e,Blank,Blank
+    KERNEL_EVEN 2, BACK_COL, TXT_COL, I,N,T,Blank,I,M,T,Blank,Blank,Blank,A,N,N,O,l,A,T,I,O,N,Blank,e,v,i,n,g,Blank,t,h,e,Blank,Blank
     BTM_NORMAL
 
     TEXT_COLOUR %00111100
     TOP_NORMAL
-    KERNEL_EVEN 3, BACK_COL, TXT_COL, g,o,a,l,Blank,o,f,Blank,l,a,n,d,i,n,g,Blank,a,Blank,m,a,n,Blank,o,n,Blank,t,h,e,Blank,Blank,Blank,Blank
+    KERNEL_EVEN 3, BACK_COL, TXT_COL, A,N,G,R,Y,Blank,N,O,T,Blank,A,M,M,O,T,A,T,I,O,M,Blank,Blank,o,n,Blank,t,h,e,Blank,Blank,Blank,Blank
     BTM_NORMAL
 
     TEXT_COLOUR %01001100
     TOP_NORMAL
-    KERNEL_EVEN 4, BACK_COL, TXT_COL,  M,o,o,n,Comma,Blank,a,n,d,Blank,r,e,t,u,r,n,i,n,g,Blank,h,i,m,Blank,s,a,f,e,l,y,Blank,Blank
+    KERNEL_EVEN 4, BACK_COL, TXT_COL,  A,M,G,R,Y,Blank,M,O,T,Blank,r,e,t,u,r,n,i,n,g,Blank,h,i,m,Blank,s,a,f,e,l,y,Blank,Blank
 
     END_BANK 1
 
@@ -1077,23 +1099,23 @@ SetActiveItem
 
     sta     WSYNC
     
-    KERNEL_ODD 1, BACK_COL, TXT_COL, Quote,I,Blank,b,e,l,i,e,v,e,Blank,t,h,i,s,Blank,n,a,t,i,o,n,Blank,s,h,o,u,l,d,Blank,Blank,Blank,Blank
-bp100:
+    KERNEL_ODD 1, BACK_COL, TXT_COL, N,o,v,e,m,b,e,r,Blank,M,o,v,e,m,y,e,r,Blank,Blank,i,o,n,Blank,s,h,o,u,l,d,Blank,Blank,Blank,Blank
     BTM_NORMAL
 
     TEXT_COLOUR %00101100
     TOP_NORMAL
-    KERNEL_ODD 2, BACK_COL, TXT_COL, c,o,m,m,i,t,Blank,i,t,s,e,l,f,Blank,t,o,Blank,a,c,h,i,e,v,i,n,g,Blank,t,h,e,Blank,Blank
+    KERNEL_ODD 2, BACK_COL, TXT_COL, I,N,T,Blank,I,M,T,Blank,Blank,Blank,A,N,N,O,l,A,T,I,O,N,Blank,e,v,i,n,g,Blank,t,h,e,Blank,Blank
     BTM_NORMAL
 
     TEXT_COLOUR %00111100
     TOP_NORMAL
-    KERNEL_ODD 3, BACK_COL, TXT_COL, g,o,a,l,Blank,o,f,Blank,l,a,n,d,i,n,g,Blank,a,Blank,m,a,n,Blank,o,n,Blank,t,h,e,Blank,Blank,Blank,Blank
+    KERNEL_ODD 3, BACK_COL, TXT_COL, A,N,G,R,Y,Blank,N,O,T,Blank,A,M,M,O,T,A,T,I,O,M,Blank,Blank,o,n,Blank,t,h,e,Blank,Blank,Blank,Blank
     BTM_NORMAL
 
     TEXT_COLOUR %01001100
     TOP_NORMAL
-    KERNEL_ODD 4, BACK_COL, TXT_COL,  M,o,o,n,Comma,Blank,a,n,d,Blank,r,e,t,u,r,n,i,n,g,Blank,h,i,m,Blank,s,a,f,e,l,y,Blank,Blank
+    KERNEL_ODD 4, BACK_COL, TXT_COL,  A,M,G,R,Y,Blank,M,O,T,Blank,r,e,t,u,r,n,i,n,g,Blank,h,i,m,Blank,s,a,f,e,l,y,Blank,Blank
+
 
     END_BANK 4
 

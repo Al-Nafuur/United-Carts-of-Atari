@@ -489,8 +489,6 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 		else if(strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_PLUS_CONNECT, sizeof(MENU_TEXT_PLUS_CONNECT) - 1) == 0 ){
 			if(d->type == Menu_Action){ // if actual Entry is of type Menu_Action -> Connect user
 
-				strcat(curPath,"0000000000");
-
 				if( esp8266_PlusStore_API_connect() == false){
 					return esp_timeout;
 				}
@@ -1138,21 +1136,29 @@ int main(void)
   		  input_field[0] = 0; // Reset Keyboard input field
   		}
 
-  		else if (d->type == Leave_SubKeyboard_Menu) {
+  		else if (d->type == Leave_SubKeyboard_Menu)
   			main_status = keyboard_input;
-  			// nothing!
-  		}
 
   		else if(d->type == Delete_Keyboard_Char){
-    		  int len = strlen(curPath);
-    		  if(len && curPath[--len] != PATH_SEPERATOR ){
+
+  		    uint8_t len = strlen(input_field);
+  		    if (len) {
+  		    	input_field[--len] = 0;
+  		    	curPath[strlen(curPath) - 1] = 0;
+
+/*  		    	len = strlen(curPath);
+  		    	if(len && curPath[--len] != PATH_SEPERATOR ){
     	  		  curPath[len] = 0;
     		  }
     		  len = strlen((char *) input_field);
     		  if(len){
     			  input_field[--len] = 0;
     		  }
-  	    	  main_status = keyboard_input;
+
+*/
+  		    }
+		    main_status = keyboard_input;
+
   		} else {
   		  // go into Menu TODO find better way for separation of first keyboard char!!
   		  if( ( d->type != Keyboard_Char && strlen(curPath) > 0)
@@ -1164,12 +1170,11 @@ int main(void)
   		  if (!strcmp(d->entryname, MENU_TEXT_SPACE))
   			  strcpy(d->entryname, " ");
 
-  		  if ( d->type != Keyboard_Extend )
-   			  append_entry_to_path(d);
+		  append_entry_to_path(d);
 
   		  if(d->type == Keyboard_Char){
-  			  strcat((char *)input_field, d->entryname);
-  			  if(strlen((char *)input_field) > STATUS_MESSAGE_LENGTH){
+  			  strcat(input_field, d->entryname);
+  			  if(strlen(input_field) > STATUS_MESSAGE_LENGTH){
   	  			  for(int i = 0 ; i < STATUS_MESSAGE_LENGTH; i++){
   	  				input_field[i] = input_field[i + 1];
   	  			  }
