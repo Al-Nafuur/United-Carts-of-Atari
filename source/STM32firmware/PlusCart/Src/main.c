@@ -695,16 +695,16 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
         	esp8266_PlusStore_API_end_transmission();
         }else if(strlen(curPath) == 0){
 
-        	// re-ask for wifi connection details
+/*        	// re-ask for wifi connection details
 			menu_status = select_wifi_network;
 			make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
 			if( esp8266_wifi_list( &dst, &num_menu_entries) == false){
 	    		return esp_timeout;
 	    	}
+*/
 
 
-
-//        	make_menu_entry(&dst, MENU_TEXT_WIFI_RECONNECT, Menu_Action);
+        	make_menu_entry(&dst, MENU_TEXT_WIFI_RECONNECT, Menu_Action);
     	}
     }
 
