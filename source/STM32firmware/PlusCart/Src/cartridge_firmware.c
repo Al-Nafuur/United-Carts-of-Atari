@@ -22,7 +22,7 @@
 
 
 static char menu_header[32]__attribute__((section(".ccmram")));
-static char menu_status[7]__attribute__((section(".ccmram")));
+static unsigned char menu_status[7]__attribute__((section(".ccmram")));
 static unsigned const char *firmware_rom = firmware_ntsc_rom;
 
 
@@ -662,9 +662,6 @@ void set_tv_mode(int tv_mode) {
 	}
 }
 
-//void set_my_font(int new_font) {
-//	my_font = (uint8_t *)font[new_font];
-//}
 
 // We require the menu to do a write to $1FF4 to unlock the comms area.
 // This is because the 7800 bios accesses this area on console startup, and we wish to ignore these
@@ -676,54 +673,73 @@ int emulate_firmware_cartridge() {
 	uint16_t addr, addr_prev = 0;
 	uint8_t data = 0, data_prev = 0;
 	unsigned const char *bankPtr = &firmware_rom[0];
+
+
 	while (1)
 	{
 		while ((addr = ADDR_IN) != addr_prev)
 			addr_prev = addr;
+
 		// got a stable address
 		if (addr & 0x1000)
 		{ // A12 high
-			if (comms_enabled)
-			{	// normal mode, once the cartridge code has done its init.
+			if (comms_enabled) {
+
+				// normal mode, once the cartridge code has done its init.
 				// on a 7800, we know we are in 2600 mode now.
-				if (addr > 0x1FF4 && addr <= 0x1FFB){	// bank-switch
-					bankPtr = &buffer[(addr-0x1FF5)*4*1024];
-					DATA_OUT = ((uint16_t)bankPtr[addr&0xFFF]);
-				}else if (addr == 0x1FF4){
-					bankPtr = &firmware_rom[0];
-					DATA_OUT = ((uint16_t)bankPtr[addr&0xFFF]);
-				}else if (addr == CART_CMD_HOTSPOT){	// atari 2600 has send an command
-					while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-					addr = data_prev;
-					break;
-				}else if(addr > CART_STATUS_BYTES_START - 1 && addr < CART_STATUS_BYTES_END + 1 ){
-					DATA_OUT = ((uint16_t)menu_status[addr - CART_STATUS_BYTES_START]);
-				}else if(addr > CART_STATUS_BYTES_END ){
-					DATA_OUT = ((uint16_t)end_bank[addr - (CART_STATUS_BYTES_END + 1)]);
-				}else{
-					DATA_OUT = ((uint16_t)bankPtr[addr&0xFFF]);
-				}
-				SET_DATA_MODE_OUT
-				// wait for address bus to change
-				while (ADDR_IN == addr) ;
-				SET_DATA_MODE_IN
+
+				// Quick-check range to prevent normal access doing 5+ comparisons...
+
+				if (addr >= CART_CMD_HOTSPOT) {
+
+					if (addr > 0x1FF4 && addr <= 0x1FFB){	// bank-switch
+						bankPtr = &buffer[(addr-0x1FF5)*4*1024];
+						DATA_OUT = bankPtr[addr&0xFFF];
+					}
+
+					else if (addr == 0x1FF4){
+						bankPtr = &firmware_rom[0];
+						DATA_OUT = bankPtr[addr&0xFFF];
+					}
+
+					else if (addr == CART_CMD_HOTSPOT){	// atari 2600 has send an command
+						while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+						addr = data_prev;
+						break;
+					}
+
+					else if(addr > CART_STATUS_BYTES_START - 1 && addr < CART_STATUS_BYTES_END + 1 ){
+						DATA_OUT = menu_status[addr - CART_STATUS_BYTES_START];
+					}
+
+					else if(addr > CART_STATUS_BYTES_END ){
+						DATA_OUT = end_bank[addr - (CART_STATUS_BYTES_END + 1)];
+					}else{
+						DATA_OUT = bankPtr[addr&0xFFF];
+					}
+
+
+				} else
+					DATA_OUT = bankPtr[addr & 0xFFF];
+
+
+
 			}
 			else
 			{	// prior to an access to $1FF4, we might be running on a 7800 with the CPU at
 				// ~1.8MHz so we've got less time than usual - keep this short.
 				if(addr > CART_STATUS_BYTES_END ){
-					DATA_OUT = ((uint16_t)end_bank[addr - (CART_STATUS_BYTES_END + 1)]);
+					DATA_OUT = end_bank[addr - (CART_STATUS_BYTES_END + 1)];
 				}else {
-					DATA_OUT = ((uint16_t)bankPtr[addr&0xFFF]);
+					DATA_OUT = bankPtr[addr & 0xFFF];
 				}
-				SET_DATA_MODE_OUT
-				// wait for address bus to change
-				while (ADDR_IN == addr) ;
-				SET_DATA_MODE_IN
-
 				if (addr == 0x1FF4) // we should move this comm enable hotspot because it is in the bankswitch area..
 					comms_enabled = true;
 			}
+
+			SET_DATA_MODE_OUT
+			while ((addr_prev = ADDR_IN) == addr);
+			SET_DATA_MODE_IN
 		}
 	}
 
