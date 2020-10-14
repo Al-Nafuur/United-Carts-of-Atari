@@ -511,7 +511,8 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 				if(strcmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_PLUS_CONNECT) == 0){
 					menu_status = plus_connect;
 				}
-				make_keyboard(&dst, KEYBOARD_UPPERCASE);
+				menu_status = generateKeyboard(&dst, d, menu_status);
+				//make_keyboard(&dst, KEYBOARD_UPPERCASE);
 			}
 		}
 
@@ -598,7 +599,8 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 				if(strcmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_PRIVATE_KEY ) == 0){
 					menu_status = private_key;
 				}
-				make_keyboard(&dst, KEYBOARD_UPPERCASE);
+//				make_keyboard(&dst, KEYBOARD_UPPERCASE);
+				/*menu_status = */generateKeyboard(&dst, d, menu_status);
 			}
 		}
 	}else if(strncmp(MENU_TEXT_OFFLINE_ROMS, curPath, sizeof(MENU_TEXT_OFFLINE_ROMS) - 1) == 0 ){
@@ -1054,7 +1056,7 @@ int main(void)
 	char input_field[STATUS_MESSAGE_LENGTH + 1];
 
   /* USER CODE END 1 */
-  
+
 
   /* MCU Configuration--------------------------------------------------------*/
 
@@ -1225,11 +1227,11 @@ void SystemClock_Config(void)
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-  /** Configure the main internal regulator output voltage 
+  /** Configure the main internal regulator output voltage
   */
   __HAL_RCC_PWR_CLK_ENABLE();
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
-  /** Initializes the CPU, AHB and APB busses clocks 
+  /** Initializes the CPU, AHB and APB busses clocks
   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
@@ -1244,7 +1246,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  /** Initializes the CPU, AHB and APB busses clocks 
+  /** Initializes the CPU, AHB and APB busses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
@@ -1310,22 +1312,22 @@ static void MX_GPIO_Init(void)
 //  READ_BIT(RCC->AHB1ENR, RCC_AHB1ENR_GPIOCEN);
 //  READ_BIT(RCC->AHB1ENR, RCC_AHB1ENR_GPIODEN);
 
-  /*Configure GPIO pins : PC0 PC1 PC2 PC3 
+  /*Configure GPIO pins : PC0 PC1 PC2 PC3
                            PC4 PC5 PC6 PC7 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3 
+  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3
                           |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_MEDIUM;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PD8 PD9 PD10 PD11 
-                           PD12 PD13 PD14 PD15 
-                           PD0 PD1 PD2 PD3 
+  /*Configure GPIO pins : PD8 PD9 PD10 PD11
+                           PD12 PD13 PD14 PD15
+                           PD0 PD1 PD2 PD3
                            PD4 PD5 PD6 PD7 */
-  GPIO_InitStruct.Pin = GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_11 
-                          |GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15 
-                          |GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3 
+  GPIO_InitStruct.Pin = GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_11
+                          |GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15
+                          |GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3
                           |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
