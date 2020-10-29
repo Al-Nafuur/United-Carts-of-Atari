@@ -3650,11 +3650,11 @@ SetYRegisterToDiv8
 
   IF PLUSROM
 SendPlusROMScore:
-   lda score+2
+   lda score
    sta WriteToBuffer
    lda score+1
    sta WriteToBuffer
-   lda score
+   lda score+2
    sta WriteToBuffer
    lda #HIGHSCORE_ID          	    ; game id in Highscore DB
    sta WriteSendBuffer              ; send request to backend..
