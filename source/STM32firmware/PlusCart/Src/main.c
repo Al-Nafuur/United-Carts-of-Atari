@@ -116,7 +116,7 @@ const EXT_TO_CART_TYPE_MAP ext_to_cart_type_map[]__attribute__((section(".flash0
 };
 
 static const char status_message[][28]__attribute__((section(".flash01"))) = {
-		"PlusCart(+) by W.Stubig"          ,
+		"PlusCart(+)", // by W.Stubig"          ,
 		"PlusCart(+) Ver. " VERSION        ,
 		"PlusCart(+)"                      ,
 		"Select your WiFi Network"         ,
@@ -141,7 +141,9 @@ static const char status_message[][28]__attribute__((section(".flash01"))) = {
 		"Offline ROMs detected"            ,
 		"No offline ROMs detected"         ,
 		"DPC+ is not supported"            ,
-		"Emulation exited"
+		"Emulation exited"				   ,
+		"Enter Search Details"             ,
+
 };
 
 
@@ -166,6 +168,7 @@ unsigned int cart_size_bytes;
 USER_SETTINGS user_settings;
 
 char curPath[256];
+char input_field[STATUS_MESSAGE_LENGTH + 1];
 
 uint8_t plus_store_status[1];
 
@@ -318,7 +321,11 @@ MENU_ENTRY* generateSetupMenu(MENU_ENTRY *dst) {
 	return dst;
 }
 
-enum e_status_message generateKeyboard(MENU_ENTRY **dst, MENU_ENTRY *d, enum e_status_message menu_status) {
+enum e_status_message generateKeyboard(
+		MENU_ENTRY **dst,
+		MENU_ENTRY *d,
+		enum e_status_message menu_status,
+		enum e_status_message new_status) {
 
 	// Scan for any keyboard rows, and if found then generate menu for row
 	for (char ***kb = keyboards; *kb; kb++)
@@ -339,8 +346,8 @@ enum e_status_message generateKeyboard(MENU_ENTRY **dst, MENU_ENTRY *d, enum e_s
 	else {
 
 		// initial case - use previous keyboard
-		menu_status = insert_password;
-		strcat(curPath, "/");
+		menu_status = new_status;
+		strcat(curPath, "/");				// trimmed off, below
 	}
 
 	make_keyboard(dst, lastKb);
@@ -406,10 +413,8 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			    	}
 					curPath[0] = '\0';
 				}else{
-
-					//if (d->type == Setup_Menu)
-					menu_status = generateKeyboard(&dst, d, menu_status);
-
+					menu_status = strlen(input_field) ? keyboard_input : insert_password;
+					menu_status = generateKeyboard(&dst, d, menu_status, menu_status);
 				}
 
 			}else{
@@ -508,11 +513,10 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 
 	        	curPath[0] = '\0';
 			}else{
-				if(strcmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_PLUS_CONNECT) == 0){
-					menu_status = plus_connect;
-				}
-				menu_status = generateKeyboard(&dst, d, menu_status);
-				//make_keyboard(&dst, KEYBOARD_UPPERCASE);
+				if (strlen(input_field))
+					menu_status = keyboard_input;
+
+				menu_status = generateKeyboard(&dst, d, menu_status, plus_connect);
 			}
 		}
 
@@ -600,7 +604,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 					menu_status = private_key;
 				}
 //				make_keyboard(&dst, KEYBOARD_UPPERCASE);
-				/*menu_status = */generateKeyboard(&dst, d, menu_status);
+				menu_status = generateKeyboard(&dst, d, menu_status, private_key);
 			}
 		}
 	}else if(strncmp(MENU_TEXT_OFFLINE_ROMS, curPath, sizeof(MENU_TEXT_OFFLINE_ROMS) - 1) == 0 ){
@@ -615,7 +619,10 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			}
 			loadStore = true;
 		}else{
-			menu_status = generateKeyboard(&dst, d, menu_status);
+			if (strlen(input_field))
+				menu_status = keyboard_input;
+
+			menu_status = generateKeyboard(&dst, d, menu_status, insert_search);
 		}
 
 	}
@@ -1053,7 +1060,6 @@ int main(void)
 
 	uint8_t act_page = 0;
     MENU_ENTRY *d = &menu_entries[0];
-	char input_field[STATUS_MESSAGE_LENGTH + 1];
 
   /* USER CODE END 1 */
 

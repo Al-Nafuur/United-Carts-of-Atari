@@ -22,7 +22,7 @@ uint32_t get_filesize(uint32_t);
 
 
 USER_SETTINGS flash_get_eeprom_user_settings(void){
-    USER_SETTINGS user_settings = {TV_MODE_NTSC, FLASH_SECTOR_5, FONT_TJZ};
+    USER_SETTINGS user_settings = {TV_MODE_NTSC, FLASH_SECTOR_5, FONT_GLACIER /*FONT_TJZ*/};
     int16_t act_page_index = get_active_eeprom_page();
     int16_t act_entry_index = -1;
     if( act_page_index != -1 ){

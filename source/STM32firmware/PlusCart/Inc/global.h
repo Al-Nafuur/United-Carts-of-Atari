@@ -4,11 +4,11 @@
 #include <stdint.h>
 #include "stm32f4xx_hal.h"
 
-#define VERSION                   "0.15.6"
+#define VERSION                   "0.15.8"
 #define PLUSSTORE_API_HOST        "pluscart.firmaplus.de"
 
 #define STATUS_MESSAGE_LENGTH           27
-#define NUM_MENU_ITEMS_PER_PAGE      	13
+#define NUM_MENU_ITEMS_PER_PAGE      	14
 #define NUM_MENU_ITEMS			      1024
 
 #define MENU_TEXT_GO_BACK                   "(Go Back)"
