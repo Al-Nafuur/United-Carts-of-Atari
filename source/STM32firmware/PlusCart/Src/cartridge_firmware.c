@@ -793,7 +793,7 @@ int emulate_firmware_cartridge() {
 			}
 
 			SET_DATA_MODE_OUT
-			while ((addr_prev = ADDR_IN) == addr)
+			while (ADDR_IN == addr)
 				;
 			SET_DATA_MODE_IN
 		}
