@@ -9,9 +9,9 @@
 VERSION     = $0000
 BASE_ADR    = $1000
 
-NTSC        = 0
+NTSC        = 1
 PAL60       = 0
-PAL50       = 1
+PAL50       = 0
 
 ILLEGAL     = 1
 DEBUG       = 0
@@ -277,7 +277,9 @@ PatchA7_{1} = . + 1
   ENDM
 
     MAC KERNEL_A_BOTH
-        SLEEP 14
+        lda LineBackColor+{1}
+        sta COLUBK
+        SLEEP 8
         _KERNEL_A {1}_{2}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}
     ENDM
 

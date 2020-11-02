@@ -51,12 +51,13 @@ const uint8_t switch_bank[]__attribute__((section(".flash01"))) = {
 
 
 const uint8_t textline_start_even[]__attribute__((section(".flash01"))) = {
+#define PATCH_EVEN_LINE_BACKCOL 1
 
-	// SLEEP 14
+		0xa5, PATCH,			// lda PATCH  ($83+entry)		(*** PATCHED ***)
+		0x85, 0x09,				// sta COLUBK
 
-		0xea,
-		0xea,
-		0xea,
+	//		SLEEP 8
+
 		0xea,
 		0xea,
 		0xea,
@@ -358,6 +359,7 @@ void add_textline_start(bool even, uint8_t entry, bool isFolder) {
 
 	if (even) {
 		memcpy(bufferp, textline_start_even, sizeof(textline_start_even));
+		bufferp[PATCH_EVEN_LINE_BACKCOL] = 0x83 + entry;
 		bufferp += sizeof(textline_start_even);
 	} else {
 		memcpy(bufferp, textline_start_odd, sizeof(textline_start_odd));
