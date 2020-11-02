@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include "stm32f4xx_hal.h"
 
-#define VERSION                   "0.15.8"
+#define VERSION                   "0.16.0"
 #define PLUSSTORE_API_HOST        "pluscart.firmaplus.de"
 
 #define STATUS_MESSAGE_LENGTH           27
