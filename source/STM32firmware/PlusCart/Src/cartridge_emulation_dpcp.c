@@ -41,7 +41,7 @@ void emulate_DPCplus_cartridge( uint32_t image_size)
 
 	uint8_t prev_rom = 0;
 
-	uint16_t addr, addr_prev = 0, tmp_addr=0, data = 0, data_prev = 0; //, data_prev_prev = 0;
+    uint16_t addr, addr_prev = 0, addr_prev2 = 0, tmp_addr=0, data = 0, data_prev = 0;
 
     uint8_t* ccm = CCM_RAM;
 	memcpy(ccm, buffer, 0xc00); // DPC+ ARM Driver code (not really needed)
@@ -87,7 +87,11 @@ void emulate_DPCplus_cartridge( uint32_t image_size)
 
 	while (1)
 	{
-		while ((addr = ADDR_IN) != addr_prev) addr_prev = addr;
+        while (((addr = ADDR_IN) != addr_prev) || (addr != addr_prev2))
+        {
+            addr_prev2 = addr_prev;
+            addr_prev = addr;
+        }
 
 		// got a stable address
 		if (addr & 0x1000)
@@ -471,22 +475,24 @@ void emulate_DPCplus_cartridge( uint32_t image_size)
 				DATA_OUT = ((uint16_t) prev_rom);
 				SET_DATA_MODE_OUT;
 
-				if(myDataFetcherCopyType == 0)
+				if(myDataFetcherCopyType == 0){
 					updateMusicModeDataFetchers();
-
-				if (source && destination)
+					while (ADDR_IN == addr)
+						;
+				}else{
 					while (ADDR_IN == addr){
 						// move copy routine for data fetchers here (non blocking !)
 						if(myDataFetcherCopyType == 1){
 							destination[--myDataFetcherCopyPointer] = source[myDataFetcherCopyPointer];
 							if(myDataFetcherCopyPointer == 0)
 								myDataFetcherCopyType = 0;
-						}else if(myDataFetcherCopyType == 2){
+						}else{ // if(myDataFetcherCopyType == 2){
 							destination[--myDataFetcherCopyPointer] = myDataFetcherCopyValue;
 							if(myDataFetcherCopyPointer == 0)
 								myDataFetcherCopyType = 0;
 						}
 					}
+				}
 				SET_DATA_MODE_IN;
 			}
 		}
