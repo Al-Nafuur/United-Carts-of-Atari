@@ -1,7 +1,7 @@
 /**
  * File:    esp8266.c
  * Author:  Wolfgang Stubig <w.stubig@firmaplus.de>
- * Version: v0.0.3
+ * Version: v0.0.4
  *
  * structure based on ESP8266_PIC (v0.1) by Camil Staps <info@camilstaps.nl>
  * Website: http://github.com/camilstaps/ESP8266_PIC
@@ -46,6 +46,8 @@ char stm32_udid[25];
 char tmp_uart_buffer[50];
 
 bool esp8266_PlusStore_API_connect(){
+	uint8_t c;
+	while(HAL_UART_Receive(&huart1, &c, 1, 10 ) == HAL_OK);// first read old messages..
 	uint64_t resp = esp8266_send_command(API_ATCMD_1, PLUSSTORE_CONNECT_TIMEOUT);
 	if( resp == ESP8266_CONNECT || resp == ESP8266_ALREADY_CONNECTED){
 		esp8266_send_command(API_ATCMD_2, 200);
