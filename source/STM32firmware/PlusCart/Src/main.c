@@ -116,7 +116,7 @@ const EXT_TO_CART_TYPE_MAP ext_to_cart_type_map[]__attribute__((section(".flash0
 };
 
 static const char status_message[][28]__attribute__((section(".flash01"))) = {
-		"PlusCart(+)", // by W.Stubig"          ,
+		"PlusCart(+) by W.Stubig"          ,
 		"PlusCart(+) Ver. " VERSION        ,
 		"PlusCart(+)"                      ,
 		"Select your WiFi Network"         ,
