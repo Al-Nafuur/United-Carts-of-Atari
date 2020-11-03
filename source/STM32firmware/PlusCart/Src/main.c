@@ -146,7 +146,7 @@ static const char status_message[][28]__attribute__((section(".flash01"))) = {
 
 };
 
-
+//
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
