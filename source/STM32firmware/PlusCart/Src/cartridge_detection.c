@@ -32,13 +32,13 @@ int isValidPathChar(char c) {
     return ((c > 44 && c < 58) || (c > 64 && c < 91) || (c > 96 && c < 122) );
 }
 
-int searchForBytes(unsigned char *bytes, int size, unsigned char *signature, int sigsize, int minhits)
+int searchForBytes(unsigned char *bytes, unsigned int size, unsigned char *signature, unsigned int sigsize, int minhits)
 {
 	int count = 0;
-	for(int i = 0; i < size - sigsize; ++i)
+	for(unsigned int i = 0; i < size - sigsize; ++i)
 	{
 		int matches = 0;
-		for(int j = 0; j < sigsize; ++j)
+		for(unsigned int j = 0; j < sigsize; ++j)
 		{
 			if(bytes[i+j] == signature[j])
 				++matches;
@@ -57,7 +57,7 @@ int searchForBytes(unsigned char *bytes, int size, unsigned char *signature, int
 }
 
 
-int isProbablyPLS(int size, unsigned char *bytes)
+int isProbablyPLS(unsigned int size, unsigned char *bytes)
 {
 	uint16_t * nmi_p = (uint16_t * )&bytes[size - 6];
 	int i = nmi_p[0] - 0x1000 , hostHasNoDot = 1;
@@ -87,7 +87,7 @@ int isProbablyPLS(int size, unsigned char *bytes)
 	return searchForBytes(bytes, size, signature, 3, 1);
 }
 
-int isPotentialF8(int size, unsigned char *bytes){
+int isPotentialF8(unsigned int size, unsigned char *bytes){
 	unsigned char  signature[] = { 0x8D, 0xF9, 0x1F };  // STA $1FF9
 	return searchForBytes(bytes, size, signature, 3, 2);
 }
@@ -96,9 +96,9 @@ int isPotentialF8(int size, unsigned char *bytes){
 /* The following detection routines are modified from the Atari 2600 Emulator Stella
   (https://github.com/stella-emu) */
 
-int isProbablySC(int size, unsigned char *bytes)
+int isProbablySC(unsigned int size, unsigned char *bytes)
 {
-	int banks = size/4096;
+	unsigned int banks = size/4096;
 	// check 2K for SC
 	if(banks == 0 && size >= 256 )
     	banks++;
@@ -113,7 +113,7 @@ int isProbablySC(int size, unsigned char *bytes)
 	return 1;
 }
 
-int isProbablyFE(int size, unsigned char *bytes)
+int isProbablyFE(unsigned int size, unsigned char *bytes)
 {	// These signatures are attributed to the MESS project
 	unsigned char signature[4][5] = {
 		{ 0x20, 0x00, 0xD0, 0xC6, 0xC5 },  // JSR $D000; DEC $C5
@@ -128,7 +128,7 @@ int isProbablyFE(int size, unsigned char *bytes)
 	return 0;
 }
 
-int isProbably3F(int size, unsigned char *bytes)
+int isProbably3F(unsigned int size, unsigned char *bytes)
 {	// 3F cart bankswitching is triggered by storing the bank number
 	// in address 3F using 'STA $3F'
 	// We expect it will be present at least 2 times, since there are
@@ -137,7 +137,7 @@ int isProbably3F(int size, unsigned char *bytes)
 	return searchForBytes(bytes, size, signature, 2, 2);
 }
 
-int isProbably3E(int size, unsigned char *bytes)
+int isProbably3E(unsigned int size, unsigned char *bytes)
 {	// 3E cart bankswitching is triggered by storing the bank number
 	// in address 3E using 'STA $3E', commonly followed by an
 	// immediate mode LDA
@@ -145,13 +145,13 @@ int isProbably3E(int size, unsigned char *bytes)
 	return searchForBytes(bytes, size, signature, 4, 1);
 }
 
-int isProbably3EPlus(int size, unsigned char *bytes)
+int isProbably3EPlus(unsigned int size, unsigned char *bytes)
 {	// 3E+ cart is identified by key 'TJ3E' in the ROM
 	unsigned char  signature[] = { 'T', 'J', '3', 'E' };
 	return searchForBytes(bytes, size, signature, 4, 1);
 }
 
-int isProbablyE0(int size, unsigned char *bytes)
+int isProbablyE0(unsigned int size, unsigned char *bytes)
 {	// E0 cart bankswitching is triggered by accessing addresses
 	// $FE0 to $FF9 using absolute non-indexed addressing
 	// These signatures are attributed to the MESS project
@@ -171,7 +171,7 @@ int isProbablyE0(int size, unsigned char *bytes)
 	return 0;
 }
 
-int isProbably0840(int size, unsigned char *bytes)
+int isProbably0840(unsigned int size, unsigned char *bytes)
 {	// 0840 cart bankswitching is triggered by accessing addresses 0x0800
 	// or 0x0840 at least twice
 	unsigned char signature1[3][3] = {
@@ -194,7 +194,7 @@ int isProbably0840(int size, unsigned char *bytes)
 	return 0;
 }
 
-int isProbablyCV(int size, unsigned char *bytes)
+int isProbablyCV(unsigned int size, unsigned char *bytes)
 { 	// CV RAM access occurs at addresses $f3ff and $f400
 	// These signatures are attributed to the MESS project
 	unsigned char signature[2][3] = {
@@ -207,7 +207,7 @@ int isProbablyCV(int size, unsigned char *bytes)
 	return 0;
 }
 
-int isProbablyEF(int size, unsigned char *bytes)
+int isProbablyEF(unsigned int size, unsigned char *bytes)
 { 	// EF cart bankswitching switches banks by accessing addresses
 	// 0xFE0 to 0xFEF, usually with either a NOP or LDA
 	// It's likely that the code will switch to bank 0, so that's what is tested
@@ -223,7 +223,7 @@ int isProbablyEF(int size, unsigned char *bytes)
 	return 0;
 }
 
-int isProbablyE7(int size, unsigned char *bytes)
+int isProbablyE7(unsigned int size, unsigned char *bytes)
 { 	// These signatures are attributed to the MESS project
 	unsigned char signature[7][3] = {
 			{ 0xAD, 0xE2, 0xFF },  // LDA $FFE2
@@ -260,7 +260,7 @@ int isProbablyDFSC(unsigned char *tail)
 	return !memcmp(tail + 8, "DFSC", 4);
 }
 
-int isProbablyDPCplus(int size, unsigned char *bytes)
+int isProbablyDPCplus(unsigned int size, unsigned char *bytes)
 {	// DPC+ ARM code has 2 occurrences of the string DPC+
 	// Note: all Harmony/Melody custom drivers also contain the value
 	// 0x10adab1e (LOADABLE) if needed for future improvement
@@ -268,7 +268,7 @@ int isProbablyDPCplus(int size, unsigned char *bytes)
 	return searchForBytes(bytes, size, signature, 4, 2);
 }
 
-int isProbablySB(int size, unsigned char *bytes)
+int isProbablySB(unsigned int size, unsigned char *bytes)
 {
   // SB cart bankswitching switches banks by accessing address 0x0800
 	unsigned char signature[2][3] = {

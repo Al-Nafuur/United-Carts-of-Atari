@@ -22,7 +22,7 @@ enum eStatus_icons_char_num {
 
 	// Unrelated, but we want to continue the numbering...
 	// add more here
-	// BUT BEWARE -- stuffing CHARS>128 into char arrays is problematic
+	// BUT BEWARE -- stuffing CHARS>128 into (signed) char arrays is problematic
 	// housekeeping...
 	CHAR_MAX
 #define HIGHEST_ASCII_CHAR (CHAR_MAX - 1)
@@ -330,6 +330,8 @@ enum charNumbers {
 
  // GLACIER BELLE
  // OK to add variable # more chars here...
+
+ CH_PELL_QUESTION,
 
  CH_PELL_0,
  CH_PELL_1,
