@@ -42,14 +42,14 @@ extern "C" {
 
 #define EEPROM_PAGE_HEADER_SIZE      sizeof(EEPROM_EMPTY_PAGE_HEADER)
 #define EEPROM_ENTRY_HEADER_SIZE     sizeof(EEPROM_EMPTY_ENTRY_HEADER)
-#define EEPROM_PAGE_SIZE             512    // 4 byte page header + 508 byte for entries
+#define EEPROM_PAGE_SIZE             512U    // 4 byte page header + 508 byte for entries
 #define EEPROM_ENTRY_SIZE             39    // 2 byte entry header + 37 byte payload
 
 #define EEPROM_MAX_PAGE_ID           ((uint8_t)(EEPROM_SIZE / EEPROM_PAGE_SIZE ) -1)
 #define EEPROM_MAX_ENTRY_ID          ((uint8_t)((EEPROM_PAGE_SIZE - EEPROM_PAGE_HEADER_SIZE) / EEPROM_ENTRY_SIZE) - 1)
 
 // Download Area in Flash
-#define DOWNLOAD_AREA_START_ADDRESS  ADDR_FLASH_SECTOR_5
+#define DOWNLOAD_AREA_START_ADDRESS  ((uint32_t)ADDR_FLASH_SECTOR_5)
 #define TAR_HEADER_SIZE              512
 #define TAR_BLOCK_SIZE               512
 

@@ -17,7 +17,7 @@ unsigned const char eeprom_data[16384] __attribute__((__section__(".eeprom"), us
 HAL_StatusTypeDef FLASH_WaitInRAMForLastOperationWithMaxDelay(void) __attribute__((section(".data#")));
 static uint32_t get_sector(uint32_t Address);
 int16_t get_active_eeprom_page(void);
-int16_t get_active_eeprom_page_entry(uint16_t);
+int16_t get_active_eeprom_page_entry(int16_t);
 uint32_t get_filesize(uint32_t);
 
 
@@ -36,13 +36,13 @@ USER_SETTINGS flash_get_eeprom_user_settings(void){
 
 void flash_set_eeprom_user_settings(USER_SETTINGS user_settings){
     int16_t act_entry_index = -1;
-    uint16_t new_entry_index, new_page_index;
+    int16_t new_entry_index, new_page_index;
     int16_t act_page_index = get_active_eeprom_page();
     if( act_page_index != -1 ){
         act_entry_index = get_active_eeprom_page_entry(act_page_index);
     }
     new_page_index = act_page_index;
-    new_entry_index = act_entry_index + 1;
+    new_entry_index = (int16_t) (act_entry_index + 1);
 
     HAL_FLASH_Unlock();
 
@@ -100,9 +100,9 @@ uint32_t flash_download(char *filename, uint32_t filesize, uint32_t http_range_s
 	}
 
     uint8_t c;
-    uint16_t http_range_param_pos_counter, http_range_param_pos;
+    size_t http_range_param_pos_counter, http_range_param_pos;
     uint32_t count, http_range_end = http_range_start + 4095;
-	uint32_t Address = DOWNLOAD_AREA_START_ADDRESS + 128 * 1024 * ( start_sector - 5);
+	uint32_t Address = DOWNLOAD_AREA_START_ADDRESS + 128U * 1024U * (uint8_t)( start_sector - 5);
 
 	esp8266_PlusStore_API_prepare_request_header((char *)filename, true, false );
 	strcat(http_request_header, (char *)"     0-  4095\r\n\r\n");
@@ -134,19 +134,19 @@ uint32_t flash_download(char *filename, uint32_t filesize, uint32_t http_range_s
     pFlash.Lock = HAL_LOCKED;
     FLASH_WaitInRAMForLastOperationWithMaxDelay();
 
-    uint8_t parts = ( filesize + 4095 )  / 4096;
+    uint8_t parts = (uint8_t)(( filesize + 4095 )  / 4096);
     uint16_t last_part_size = (filesize % 4096)?(filesize % 4096):4096;
     while(parts != 0 ){
         http_range_param_pos_counter = http_range_param_pos;
         count = http_range_end;
         while(count != 0) {
-            http_request_header[http_range_param_pos_counter--] = ( count % 10 ) + '0';
+            http_request_header[http_range_param_pos_counter--] = (char)(( count % 10 ) + '0');
             count = count/10;
         }
         http_range_param_pos_counter = http_range_param_pos - 7;
         count = http_range_start;
         while(count != 0) {
-            http_request_header[http_range_param_pos_counter--] = ( count % 10 ) + '0';
+            http_request_header[http_range_param_pos_counter--] = (char)(( count % 10 ) + '0');
             count = count/10;
         }
 
@@ -209,7 +209,7 @@ uint32_t flash_download(char *filename, uint32_t filesize, uint32_t http_range_s
 		user_settings.first_free_flash_sector = get_sector(Address) + 1;
     	flash_set_eeprom_user_settings(user_settings);
 	}
-	return ( DOWNLOAD_AREA_START_ADDRESS + 128 * 1024 * ( start_sector - 5) );
+	return (uint32_t)( DOWNLOAD_AREA_START_ADDRESS + 128U * 1024U * ( start_sector - 5) );
 }
 
 
@@ -331,7 +331,8 @@ bool flash_has_downloaded_roms(){
 
 void flash_file_list( char *path, MENU_ENTRY **dst , int *num_p){
     uint32_t base_adress = (uint32_t)( DOWNLOAD_AREA_START_ADDRESS), length, r;
-    uint8_t pos, c, path_len = strlen(path);
+    uint8_t pos, c;
+	size_t path_len = strlen(path);
     char act_tar_file_path_name[100];
     bool is_dir, is_file;
     char *tmp_path = (char*) calloc((path_len +2) , sizeof(char));
@@ -459,7 +460,7 @@ uint32_t get_filesize(uint32_t base_adress){
     base_adress += 124;
     c =  (*(__IO uint8_t*)(base_adress));
     while ( c > '/' && c < '9'){ // octal digit 0-8
-        size = size * 8 + ( c -'0' );
+        size = size * 8 + (uint8_t)( c -'0' );
         c =  (*(__IO uint8_t*)(base_adress++));
     }
     return size;
@@ -491,7 +492,7 @@ int16_t get_active_eeprom_page(){
     return index;
 }
 
-int16_t get_active_eeprom_page_entry(uint16_t page_index){
+int16_t get_active_eeprom_page_entry(int16_t page_index){
     int16_t index = 0;
     eeprom_pointer =  &eeprom_data[(page_index * EEPROM_PAGE_SIZE) + EEPROM_PAGE_HEADER_SIZE];
     while( index <  EEPROM_MAX_ENTRY_ID && (*( uint16_t*)(eeprom_pointer)) == EEPROM_INVALID_ENTRY_HEADER ){

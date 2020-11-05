@@ -6,6 +6,8 @@
 #include "firmware_pal60_rom.h"
 #include "firmware_ntsc_rom.h"
 #include "font.h"
+#include "global.h"
+
 
 #define PATCH 0
 
@@ -18,11 +20,12 @@
 #define HEADER_BACK_COL_PAL      0x40
 
 #define t2c(fontType, l, r, s) \
-	sharedFont[ convertAsciiToCharnum(fontType, l) * 12 + s ] << 4 | \
-	sharedFont[ convertAsciiToCharnum(fontType, r) * 12 + s ]
+	(uint8_t)(sharedFont[ convertAsciiToCharnum(fontType, l) * 12 + s ] << 4 | \
+	sharedFont[ convertAsciiToCharnum(fontType, r) * 12 + s ])
 
-static char menu_header[32]__attribute__((section(".ccmram")));
-static unsigned char menu_status[7]__attribute__((section(".ccmram")));
+
+static char menu_header[CHARS_PER_LINE/* + 2*/]__attribute__((section(".ccmram")));
+static unsigned char menu_status[STATUS_MAX]__attribute__((section(".ccmram")));
 static unsigned const char *firmware_rom = firmware_ntsc_rom;
 
 const uint8_t start_bank[]__attribute__((section(".flash01"))) = {
@@ -245,21 +248,21 @@ uint8_t *my_font;
 
 uint8_t *bufferp;
 
-void inline add_end_kernel(bool is_even, uint8_t line);
-void inline add_next_scanline(bool is_a);
-void inline add_start_bank(int bank_id);
-void inline add_end_bank(int bank_id);
-void inline add_textline_start(bool even, uint8_t entry, bool isFolder);
-void inline add_kernel_a(uint8_t fontType, uint8_t scanline, uint8_t *text);
-void inline add_kernel_b(uint8_t fontType, uint8_t scanline, uint8_t *text);
-void inline add_header_bottom(uint8_t colour);
-void inline add_normal_bottom();
-void inline add_text_colour(uint8_t colour);
-void inline add_wsync();
+inline void add_end_kernel(bool is_even, uint8_t line);
+inline void add_next_scanline(bool is_a);
+inline void add_start_bank(uint8_t bank_id);
+inline void add_end_bank(uint8_t bank_id);
+inline void add_textline_start(bool even, uint8_t entry, bool isFolder);
+inline void add_kernel_a(uint8_t fontType, uint8_t scanline, uint8_t *text);
+inline void add_kernel_b(uint8_t fontType, uint8_t scanline, uint8_t *text);
+inline void add_header_bottom(uint8_t colour);
+inline void add_normal_bottom();
+inline void add_text_colour(uint8_t colour);
+inline void add_wsync();
 
-void inline add_normal_top(uint8_t colour);
-void inline add_exit_kernel();
-void inline add_restore_BG_colour(uint8_t line);
+inline void add_normal_top(uint8_t colour);
+inline void add_exit_kernel();
+inline void add_restore_BG_colour(uint8_t line);
 
 // for colours see...
 // https://www.randomterrain.com/atari-2600-memories-tia-color-charts.html
@@ -341,15 +344,15 @@ uint8_t textColour[2][12] = {
  * Functions to append to the buffer the const "templates"
  * and fill in the dynamic values
  */
-void add_start_bank(int bank_id) {
+void add_start_bank(uint8_t bank_id) {
 	bufferp = &buffer[(bank_id - 1) * 0x1000];
 	memcpy(bufferp, start_bank, sizeof(start_bank));
-	bufferp[PATCH_START_BANK] += bank_id;
+	bufferp[PATCH_START_BANK] = (uint8_t)(bufferp[PATCH_START_BANK] + bank_id);
 	bufferp += sizeof(start_bank);
 }
 
-void add_end_bank(int bank_id) {
-	uint16_t next_bank = 0x1000 * bank_id;
+void add_end_bank(uint8_t bank_id) {
+	uint16_t next_bank = (uint16_t) (0x1000U * bank_id);
 	memcpy(bufferp, switch_bank, sizeof(switch_bank));
 	bufferp = &buffer[next_bank - 0x12];
 	memcpy(bufferp, end_bank, sizeof(end_bank));
@@ -359,11 +362,11 @@ void add_textline_start(bool even, uint8_t entry, bool isFolder) {
 
 	if (even) {
 		memcpy(bufferp, textline_start_even, sizeof(textline_start_even));
-		bufferp[PATCH_EVEN_LINE_BACKCOL] = 0x83 + entry;
+		bufferp[PATCH_EVEN_LINE_BACKCOL] = (uint8_t)( 0x83 + entry);
 		bufferp += sizeof(textline_start_even);
 	} else {
 		memcpy(bufferp, textline_start_odd, sizeof(textline_start_odd));
-		bufferp[PATCH_LINE_BACKCOL] = 0x83 + entry;
+		bufferp[PATCH_LINE_BACKCOL] = (uint8_t)(0x83 + entry);
 		bufferp += sizeof(textline_start_odd);
 	}
 }
@@ -382,11 +385,11 @@ void add_kernel_a(uint8_t fontType, uint8_t scanline, uint8_t *text) {
 	bufferp[PATCH_A_1] = t2c(fontType, text[4], text[5], scanline);      // #{3}
 	bufferp[PATCH_A_2] = t2c(fontType, text[8], text[9], scanline);      // #{4}
 	bufferp[PATCH_A_3] = t2c(fontType, text[0], text[1], scanline);      // #{2}
-	bufferp[PATCH_A_4] = (t2c(fontType, text[22], text[23], scanline)) << 1; // #{7} << 1
-	bufferp[PATCH_A_5] = (t2c(fontType, text[26], text[27], scanline)) << 1; // #{8} << 1
+	bufferp[PATCH_A_4] = (uint8_t)((t2c(fontType, text[22], text[23], scanline)) << 1); // #{7} << 1
+	bufferp[PATCH_A_5] = (uint8_t)((t2c(fontType, text[26], text[27], scanline)) << 1); // #{8} << 1
 	bufferp[PATCH_A_6] = t2c(fontType, text[12], text[13], scanline);    // #{5}
 	bufferp[PATCH_A_7] = t2c(fontType, text[16], text[17], scanline);    // #{6}
-	bufferp[PATCH_A_8] = (t2c(fontType, text[30], text[31], scanline)) << 1; // #{9} << 1
+	bufferp[PATCH_A_8] = (uint8_t)((t2c(fontType, text[30], text[31], scanline)) << 1); // #{9} << 1
 
 	bufferp += sizeof(kernel_a);
 }
@@ -484,27 +487,32 @@ void add_exit_kernel() {
 	bufferp += sizeof(exit_kernel);
 }
 
-void createMenuForAtari(MENU_ENTRY *menu_entries, uint8_t page_id,
-		int num_menu_entries, bool paging_required, bool is_connected,
+void createMenuForAtari(
+		MENU_ENTRY *menu_entries,
+		uint8_t page_id,
+		int num_menu_entries,
+		bool paging_required,
+		bool is_connected,
 		uint8_t *plus_store_status) {
+
 	// create 7 banks of bytecode for the ATARI to execute.
 
-	uint8_t menu_string[32];
-	uint8_t bank = 1, sc, entry, odd_even, str_len;
-	uint8_t max_page = (num_menu_entries - 1) / NUM_MENU_ITEMS_PER_PAGE;
-	uint8_t items_on_last_page =
-			(num_menu_entries % NUM_MENU_ITEMS_PER_PAGE) ?
-					(num_menu_entries % NUM_MENU_ITEMS_PER_PAGE) :
-					NUM_MENU_ITEMS_PER_PAGE;
-	uint8_t items_on_act_page =
-			(page_id < max_page) ? NUM_MENU_ITEMS_PER_PAGE : items_on_last_page;
-	bufferp = &buffer[0];
-	memset(buffer, 0xff, 28 * 1024);
-	unsigned int offset = NUM_MENU_ITEMS_PER_PAGE * page_id;
+	uint8_t menu_string[CHARS_PER_LINE];
+	uint8_t bank = 1, sc, entry, odd_even;
+	size_t str_len;
+	uint8_t max_page = (uint8_t)((num_menu_entries - 1) / NUM_MENU_ITEMS_PER_PAGE);
+	uint8_t items_on_last_page = (uint8_t)((num_menu_entries % NUM_MENU_ITEMS_PER_PAGE) ?
+					(num_menu_entries % NUM_MENU_ITEMS_PER_PAGE) : NUM_MENU_ITEMS_PER_PAGE);
+	uint8_t items_on_act_page = (uint8_t)((page_id < max_page) ? NUM_MENU_ITEMS_PER_PAGE : items_on_last_page);
 
-	set_menu_status_byte(CurPage, (char) page_id);
-	set_menu_status_byte(MaxPage, (char) max_page);
-	set_menu_status_byte(ItemsOnActPage, (char) items_on_act_page);
+	bufferp = buffer;
+	memset(buffer, 0xff, 28 * 1024);
+
+	unsigned int offset = (unsigned int)(NUM_MENU_ITEMS_PER_PAGE * page_id);
+
+	set_menu_status_byte(STATUS_CurPage, page_id);
+	set_menu_status_byte(STATUS_MaxPage, max_page);
+	set_menu_status_byte(STATUS_ItemsOnActPage, items_on_act_page);
 
 	// Display paging information
 
@@ -512,14 +520,14 @@ void createMenuForAtari(MENU_ENTRY *menu_entries, uint8_t page_id,
 		uint8_t i = STATUS_MESSAGE_LENGTH - 1;
 		max_page++;
 		while (max_page != 0) {
-			menu_header[i--] = (max_page % 10) + '0';
+			menu_header[i--] = (char)((max_page % 10) + '0');
 			max_page = max_page / 10;
 		}
 		menu_header[i--] = PATH_SEPERATOR;
 
 		page_id++;
 		while (page_id != 0) {
-			menu_header[i--] = (page_id % 10) + '0';
+			menu_header[i--] = (char)((page_id % 10) + '0');
 			page_id = page_id / 10;
 		}
 		if (i % 2 == 0)
@@ -529,19 +537,20 @@ void createMenuForAtari(MENU_ENTRY *menu_entries, uint8_t page_id,
 	}
 
 	if (is_connected == true) {
-		menu_header[STATUS_MESSAGE_LENGTH + 1] = CHAR_L_Wifi;
-		menu_header[STATUS_MESSAGE_LENGTH + 2] = CHAR_R_Wifi;
+		menu_header[CHARS_PER_LINE - 1 - 3] = CHAR_L_Wifi;
+		menu_header[CHARS_PER_LINE - 1 - 2] = CHAR_R_Wifi;
 	} else {
-		menu_header[STATUS_MESSAGE_LENGTH + 1] = CHAR_L_NoWifi; //CHAR_L_NoWifi;
-		menu_header[STATUS_MESSAGE_LENGTH + 2] = CHAR_R_NoWifi; //CHAR_R_NoWifi;
+		menu_header[CHARS_PER_LINE - 1 - 3] = CHAR_L_NoWifi; //CHAR_L_NoWifi;
+		menu_header[CHARS_PER_LINE - 1 - 2] = CHAR_R_NoWifi; //CHAR_R_NoWifi;
 	}
 	if (plus_store_status[0] == '1') {
-		menu_header[STATUS_MESSAGE_LENGTH + 3] = CHAR_L_Account;
-		menu_header[STATUS_MESSAGE_LENGTH + 4] = CHAR_R_Account;
+		menu_header[CHARS_PER_LINE - 1 - 1] = CHAR_L_Account;
+		menu_header[CHARS_PER_LINE - 1 - 0] = CHAR_R_Account;
 	} else {
-		menu_header[STATUS_MESSAGE_LENGTH + 3] = CHAR_L_NoAccount;
-		menu_header[STATUS_MESSAGE_LENGTH + 4] = CHAR_R_NoAccount;
+		menu_header[CHARS_PER_LINE - 1 - 1] = CHAR_L_NoAccount;
+		menu_header[CHARS_PER_LINE - 1 - 0] = CHAR_R_NoAccount;
 	}
+
 
 	uint8_t colourSet = user_settings.tv_mode == TV_MODE_NTSC ? 0 : 1;
 
@@ -549,103 +558,50 @@ void createMenuForAtari(MENU_ENTRY *menu_entries, uint8_t page_id,
 
 	add_start_bank(bank);
 
-	/*
-	 *
-	 *
-	 *
-
-
-	 KERNEL_EVEN 0, HEADER_COL, HTXT_COL, P,l,u,s,C,a,r,t,OpenRound,Plus,CloseRound,1,2,3,4,5,6,7,8,9,A,B,Blank,1, 3,Slash,2,7,Wifi,Wifi, Account,Account
-	 BOTTOM_SELECTION
-
-	 sta     WSYNC
-	 sta     WSYNC
-	 sta     COLUBK
-	 sta     WSYNC
-	 sta     WSYNC
-	 sta     WSYNC
-
-	 TEXT_COLOUR %00011100
-
-	 sta     WSYNC
-
-	 KERNEL_EVEN 1, BACK_COL, TXT_COL, N,o,v,e,m,b,e,r,Blank,M,o,v,e,m,y,e,r,Blank,Blank,i,o,n,Blank,s,h,o,u,l,d,Blank,Blank,Blank,Blank
-	 BTM_NORMAL
-
-	 TEXT_COLOUR %00101100
-	 TOP_NORMAL
-	 KERNEL_EVEN 2, BACK_COL, TXT_COL, I,N,T,Blank,I,M,T,Blank,Blank,Blank,A,N,N,O,T,A,T,I,O,N,Blank,e,v,i,n,g,Blank,t,h,e,Blank,Blank
-	 BTM_NORMAL
-
-	 TEXT_COLOUR %00111100
-	 TOP_NORMAL
-	 KERNEL_EVEN 3, BACK_COL, TXT_COL, A,N,G,R,Y,Blank,N,O,T,Blank,A,X,Y,O,T,A,T,I,O,M,Blank,Blank,o,n,Blank,t,h,e,Blank,Blank,Blank,Blank
-	 BTM_NORMAL
-
-	 TEXT_COLOUR %01001100
-	 TOP_NORMAL
-	 KERNEL_EVEN 4, BACK_COL, TXT_COL,  A,M,G,R,Y,Blank,M,O,T,Blank,r,e,t,u,r,n,i,n,g,Blank,h,i,m,Blank,s,a,f,e,l,y,Blank,Blank
-
-	 END_BANK 1
-
-
-
-
-	 *
-	 */
 	for (odd_even = 0; odd_even < 2; odd_even++) {
 
-		//memcpy(bufferp, normal_bottom, sizeof(normal_bottom));
-		//bufferp += sizeof(normal_bottom);
-
-		for (entry = 0; entry < (NUM_MENU_ITEMS_PER_PAGE + 1); entry++) {
+		for (entry = 0; entry <= NUM_MENU_ITEMS_PER_PAGE; entry++) {
 			bool is_kernel_a = bank < 4, isFolder = false;
-			int list_entry = entry + offset - 1;
+			unsigned int list_entry = entry + offset;
 
-			if (entry == 0) {
+			menu_entries[list_entry].font = user_settings.font_style;
+
+			if (entry == 0) {		// header line
 
 				add_text_colour(0x0A);
 				add_wsync();
 
-				// Title bar
+				memcpy(menu_string, menu_header, CHARS_PER_LINE);
 
-				memcpy(menu_string, menu_header, 32);
+				// If you want a different font for header line, set it here
+				// menu_entries[list_entry].font = user_settings.font_style; // <-- OR, font # hardwire
 
-				// TITLE BAR - set to user font -- OR hardwire to specific font if required
-				menu_entries[offset - 1].font = user_settings.font_style; // <-- OR, font # hardwire
 				isFolder = true;
 
 			} else {
 
+				list_entry--;
 
-
+				memset(menu_string, ' ', CHARS_PER_LINE);
 
 				if (list_entry < num_menu_entries) {
 					str_len = strlen(menu_entries[list_entry].entryname);
-					memcpy(menu_string, menu_entries[list_entry].entryname,
-							str_len);
-					memset(&menu_string[str_len], ' ', (32 - str_len));
-					isFolder = (menu_entries[list_entry].type
-							!= Offline_Cart_File
+					memcpy(menu_string, menu_entries[list_entry].entryname, str_len);
+					isFolder = (menu_entries[list_entry].type != Offline_Cart_File
 							&& menu_entries[list_entry].type != Cart_File);
-				} else {
-					memset(menu_string, ' ', 32);
 				}
 			}
 
-			for (uint8_t i = 0; i < 32; i++) {
-				if (menu_string[i] < 32 || menu_string[i] > HIGHEST_ASCII_CHAR)
-					menu_string[i] = 32;
-			}
+			for (uint8_t i = 0; i < CHARS_PER_LINE; i++)
+				if (menu_string[i] < ' ' || menu_string[i] >= CHAR_MAX)
+					menu_string[i] = ' ';
 
 			add_textline_start(is_kernel_a, entry, isFolder);
 			for (sc = 0; sc < CHAR_HEIGHT; sc++) {
 				if (is_kernel_a) {
-					add_kernel_a(menu_entries[list_entry].font, sc,
-							menu_string);
+					add_kernel_a(menu_entries[list_entry].font, sc, menu_string);
 				} else {
-					add_kernel_b(menu_entries[list_entry].font, sc,
-							menu_string);
+					add_kernel_b(menu_entries[list_entry].font, sc, menu_string);
 				}
 				if (sc < CHAR_HEIGHT - 1)
 					add_next_scanline(is_kernel_a);
@@ -688,29 +644,17 @@ void createMenuForAtari(MENU_ENTRY *menu_entries, uint8_t page_id,
 }
 
 void set_menu_status_msg(const char *message) {
-
-	/*    memset(menu_header, ' ', STATUS_MESSAGE_LENGTH );
-	 strncpy(menu_header, message, sizeof(message));
-	 */
-
-	uint8_t msg_len = strlen(message);
-	memset(menu_header, ' ', 32);
-	menu_header[0] = '\0';
-	strncat(menu_header, message, STATUS_MESSAGE_LENGTH);
-	if (msg_len < STATUS_MESSAGE_LENGTH)
-		menu_header[msg_len] = 32;
-
+	size_t msg_len = strlen(message);
+	memset(menu_header, ' ', CHARS_PER_LINE);
+	strncpy(menu_header, message, msg_len > STATUS_MESSAGE_LENGTH ? STATUS_MESSAGE_LENGTH : msg_len);
 }
 
-void set_menu_status_byte(uint8_t byte_id, char status_byte) {
+void set_menu_status_byte(enum eStatus_bytes_id byte_id, uint8_t status_byte) {
 	menu_status[byte_id] = status_byte;
 }
 
 void set_tv_mode(int tv_mode) {
 	switch (tv_mode) {
-	case TV_MODE_NTSC:
-		firmware_rom = firmware_ntsc_rom;
-		break;
 
 	case TV_MODE_PAL:
 		firmware_rom = firmware_pal_rom;
@@ -718,6 +662,11 @@ void set_tv_mode(int tv_mode) {
 
 	case TV_MODE_PAL60:
 		firmware_rom = firmware_pal60_rom;
+		break;
+
+	default:
+	case TV_MODE_NTSC:
+		firmware_rom = firmware_ntsc_rom;
 		break;
 	}
 }
@@ -804,7 +753,7 @@ int emulate_firmware_cartridge() {
 }
 
 bool reboot_into_cartridge() {
-	set_menu_status_byte(StatusByteReboot, 1);
+	set_menu_status_byte(STATUS_StatusByteReboot, 1);
 
 	return emulate_firmware_cartridge() == CART_CMD_START_CART;
 }

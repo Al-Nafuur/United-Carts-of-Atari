@@ -405,7 +405,7 @@ const uint16_t xlateAsciiToCharNumber[][HIGHEST_ASCII_CHAR - LOWEST_ASCII_CHAR +
 		CH_LESS, //60 <
 		CH_EQUAL, //61 =
 		CH_MORE, //62 >
-		CH_QUESTION, //63 ?
+		CH_PELL_QUESTION, //63 ?
 		CH_AT, //64 @
 
 		CH_PELL_A, //65 A
@@ -789,6 +789,8 @@ const uint8_t sharedFont[] = {
 	    , 0b0000, 0b0000, 0b0111, 0b0111, 0b0001, 0b0010, 0b0010, 0b0100, 0b0111, 0b0111, 0b0111, 0b0000 //z
 
 // Glacier Belle
+
+		, 0b0110, 0b0111, 0b0001, 0b0001, 0b0011, 0b0010, 0b0010, 0b0000, 0b0010, 0b0010, 0b0000, 0b0000 //Question
 
 	    , 0b0010, 0b0111, 0b0101, 0b0101, 0b0101, 0b0101, 0b0101, 0b0101, 0b0111, 0b0010, 0b0000, 0b0000 //0
 	    , 0b0010, 0b0110, 0b0110, 0b0010, 0b0010, 0b0010, 0b0010, 0b0010, 0b0010, 0b0010, 0b0000, 0b0000 //1

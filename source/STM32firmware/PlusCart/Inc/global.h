@@ -7,9 +7,10 @@
 #define VERSION                   "0.15.8"
 #define PLUSSTORE_API_HOST        "pluscart.firmaplus.de"
 
-#define STATUS_MESSAGE_LENGTH           27
+#define CHARS_PER_LINE					32
+#define STATUS_MESSAGE_LENGTH           (CHARS_PER_LINE - 5)
 #define NUM_MENU_ITEMS_PER_PAGE      	14
-#define NUM_MENU_ITEMS			      1024
+#define NUM_MENU_ITEMS			      	1024
 
 #define MENU_TEXT_GO_BACK                   "(Go Back)"
 #define MENU_TEXT_DELETE_CHAR               "Delete Character"
@@ -56,11 +57,15 @@ extern uint8_t buffer[];
 extern unsigned int cart_size_bytes;
 
 enum eStatus_bytes_id {
-	StatusByteReboot,
-	CurPage,
-	MaxPage,
-	ItemsOnActPage,
-	PageType
+	STATUS_StatusByteReboot,
+	STATUS_CurPage,
+	STATUS_MaxPage,
+	STATUS_ItemsOnActPage,
+	STATUS_PageType,
+	STATUS_Unused1,
+	STATUS_Unused2,
+
+	STATUS_MAX
 };
 
 enum eStatus_bytes_PageTypes {
@@ -118,7 +123,7 @@ enum cart_base_type{
 
 typedef struct {
 	enum MENU_ENTRY_Type type;
-	char entryname[33];
+	char entryname[CHARS_PER_LINE+1];
 	uint32_t filesize;
 	uint32_t flash_base_address;
 	uint8_t font;
