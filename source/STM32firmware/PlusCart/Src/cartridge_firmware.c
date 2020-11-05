@@ -598,11 +598,11 @@ void createMenuForAtari(
 
 			add_textline_start(is_kernel_a, entry, isFolder);
 			for (sc = 0; sc < CHAR_HEIGHT; sc++) {
-				if (is_kernel_a) {
-					add_kernel_a(menu_entries[list_entry].font, sc, menu_string);
-				} else {
+
+				is_kernel_a ?
+					add_kernel_a(menu_entries[list_entry].font, sc, menu_string) :
 					add_kernel_b(menu_entries[list_entry].font, sc, menu_string);
-				}
+
 				if (sc < CHAR_HEIGHT - 1)
 					add_next_scanline(is_kernel_a);
 
