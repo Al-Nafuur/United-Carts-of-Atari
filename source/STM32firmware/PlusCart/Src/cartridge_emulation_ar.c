@@ -237,6 +237,8 @@ void emulate_ar_cartridge(const char* cartridge_path, unsigned int image_size, u
             }else if(addr == SWCHA){
         		while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
         		joy_status = !(data_prev & 0x80);
+            }else{
+        		while (ADDR_IN == addr);
             }
             continue;
 		}
