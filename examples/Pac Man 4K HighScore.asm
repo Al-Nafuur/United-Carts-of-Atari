@@ -1,4 +1,4 @@
-;   LIST OFF                         ; don't print the header file equates or
+   LIST OFF                         ; don't print the header file equates or
                                     ; comments in the list file
 ; Pacman4K
 ; Copyright 2007 Dennis Debro
@@ -134,7 +134,7 @@
    LIST ON
 
    include macro.h
-   include "tia_constants.h"
+   include tia_constants.h
    include vcs.h
 
 ;
@@ -160,7 +160,7 @@ PAL60                   = 2
 TRUE                    = 1
 FALSE                   = 0
 
-PLUSROM                 = 1
+PLUSROM                 = 1         ; allows high score saving with a PlusCart
 
 ;
 ; publisher values
@@ -617,15 +617,15 @@ MONSTER_EATEN_MASK      = %00000111
 ATTACK_COUNTER_MASK     = %11100000
 ATTACK_TIMER            = %00011111
 
+
    IF PLUSROM
-WriteToBuffer     equ $1ff0
-WriteSendBuffer   equ $1ff1
-ReceiveBuffer     equ $1ff2
-ReceiveBufferSize equ $1ff3
+WriteToBuffer           = $1FF0
+WriteSendBuffer         = $1FF1
+ReceiveBuffer           = $1FF2
+ReceiveBufferSize       = $1FF3
 
-HIGHSCORE_ID      equ 21      ; Pac-Man 4K game ID in Highscore DB
+HIGHSCORE_ID            = 21        ; Pac-Man 4K game ID in Highscore DB
    ENDIF
-
 
 ;======================================================================================
 ; M A C R O S
@@ -830,6 +830,30 @@ playerState          ds 1           ; dsxfffll
                                     ; s = start game music
                                     ; f = fruit timer
                                     ; l = lives
+
+  IF PLUSROM
+; Ram locations where changed for PlusRom so that a loop
+; could be used to write values to the PlusCart. GameState
+; is now after Score. The MSB and LSB bytes of the score
+; have also been swapped.
+
+score                ds 3           ; 2.5 bytes used for score (i.e. 1 nybble free)
+gameState            ds 1           ; Srnxxsss
+                                    ; S = new level pause
+                                    ; r = return home
+                                    ; n = new level start
+                                    ; s = selected level
+gameBoardState       ds 1           ; dDccfggg
+                                    ; d = game board done...flash game board
+                                    ; D = demo mode
+                                    ; c = Cruise Elroy state
+                                    ; f = fruit shown
+                                    ; g = monsters eaten - can't go over 4
+random               ds 1
+gameLevel            ds 1           ; current game level (wraps at 256)
+
+  ELSE
+
 score                ds 3           ; 2.5 bytes used for score (i.e. 1 nybble free)
 gameBoardState       ds 1           ; dDccfggg
                                     ; d = game board done...flash game board
@@ -844,6 +868,8 @@ gameState            ds 1           ; Srnxxsss
                                     ; r = return home
                                     ; n = new level start
                                     ; s = selected level
+  ENDIF
+
 motionDelayIndex     ds 1
 extraPlayerSoundIndex ds 1          ; 1up sound index
 maxDistance          ds 1           ; temporarily used to determining monster direction
@@ -1410,6 +1436,12 @@ RemoveObjects
    bpl .removeObjectsOffScreen
    rts
 
+
+  IF PLUSROM
+PlusROM_API
+    .byte "a", 0, "h.firmaplus.de", 0
+  ELSE
+
 ReverseDirToJoystickValueTable
    .byte ~MY_MOVE_DOWN & P0_JOYSTICK_MASK
    .byte ~MY_MOVE_LEFT & P0_JOYSTICK_MASK
@@ -1424,6 +1456,7 @@ DirToJoystickValueTable
    .byte MY_MOVE_RIGHT
    .byte MY_MOVE_DOWN
    .byte MY_MOVE_LEFT
+  ENDIF
 
    BOUNDRY (H_KERNEL - 4)
    CHECKBOUNDARY (H_KERNEL - 4)
@@ -1569,6 +1602,20 @@ _1600Points
    .byte $00 ;|........|
    .byte $00 ;|........|
    .byte $00 ;|........|
+
+  IF PLUSROM
+DirToJoystickValueTable                 ; table moved for code alignment in PlusRom
+   .byte MY_MOVE_UP
+   .byte MY_MOVE_RIGHT
+   .byte MY_MOVE_DOWN
+   .byte MY_MOVE_LEFT
+
+MonsterHighScoreTable
+   .byte FIRST_MONSTER_VALUE >> 8       ; table moved for code alignment in PlusRom
+   .byte SECOND_MONSTER_VALUE >> 8
+   .byte THIRD_MONSTER_VALUE >> 8
+   .byte FOURTH_MONSTER_VALUE >> 8
+  ENDIF
 
 ;----------------------------------------------------------------------------GameKernel
 ;
@@ -1815,6 +1862,18 @@ Start
                                     ; save 1 byte :-)
    cld                              ; clear BCD bit
    ldy INTIM                        ; for random number seed
+
+  IF PLUSROM
+
+.clear:                          ; Omegamatrix's clear loop. Saves 1 byte.
+    ldx    #$0A                  ; ASL opcode = $0A
+    inx
+    txs
+    pha
+    bne    .clear+1              ; jump between operator and operand to do ASL
+                                 ; A=0, X=0, SP=$FF, C is clear, all TIA and RIOT ram clear
+
+  ELSE
 ;
 ; The next routine comes courtesy of Andrew Davie :-) The routine clears all variables,
 ; TIA registers, and initializes the stack pointer to #$FF in 8 bytes. It does this in
@@ -1828,6 +1887,8 @@ Start
    pha                              ; pushes 0 to stack pointer and moves stack pointer
    bne .clear                       ; continue until x reaches 0 (255 times)
 
+  ENDIF
+
 ;--------------------------------------------------------------------GameInitialization
 ;
 ; Initialize the game variables on cart start up. These variables must be set for the
@@ -1837,11 +1898,13 @@ GameInitialization
    sty random                       ; set the random number seed
    jmp .setToDemoMode               ; set game to DEMO_MODE
 
+  IF !PLUSROM
 MonsterHighScoreTable
-   .byte FIRST_MONSTER_VALUE >> 8
+   .byte FIRST_MONSTER_VALUE >> 8          ; original table location, moved in PlusRom
    .byte SECOND_MONSTER_VALUE >> 8
    .byte THIRD_MONSTER_VALUE >> 8
    .byte FOURTH_MONSTER_VALUE >> 8
+  ENDIF
 
 EnergizerRAMLocations
    .byte NE_ENERGIZER_RAM_PTR, NW_ENERGIZER_RAM_PTR
@@ -2342,12 +2405,26 @@ CheckConsoleSwitches
    ldx #0
    lda SWCHB                        ; load accumulator with console switch value
    lsr                              ; move RESET value to carry
+
+  IF PLUSROM
+; added a jump to reach code out of a branch range
+   bcc .gotoNewGame                 ; RESET button pressed
+   lsr                              ; move SELECT value to carry
+   bcc .selectSwitchDown            ; branch if SELECT button pressed
+.selectNotPressed
+   stx selectDebounce               ; clear select debounce value
+   bcs .endConsoleSwitchCheck       ; unconditional branch
+
+.gotoNewGame:
+   jmp .startNewGame
+  ELSE
    bcc .startNewGame                ; RESET button pressed
    lsr                              ; move SELECT value to carry
    bcc .selectSwitchDown            ; branch if SELECT button pressed
 .selectNotPressed
    stx selectDebounce               ; clear select debounce value
    bcs .endConsoleSwitchCheck       ; unconditional branch
+  ENDIF
 
 .selectSwitchDown
    bit selectDebounce
@@ -2396,8 +2473,35 @@ CheckForPacmanDeathSequence
    lda playerState                  ; get current game state
    and #LIVES_MASK                  ; keep number of lives
    bne .restartLevel                ; restart level if player has lives left
+
+
   IF PLUSROM
-   jsr SendPlusROMScore
+                                    ; player currently has no lives
+   bit gameBoardState               ; test if we are in DEMO_MODE
+   bvs .stillAlive                  ; branch if in demo mode,
+                                    ; otherwise we have just lost our final life
+
+SendPlusROMScore:
+                                    ; 20 bytes of code, this is the normal write order
+;    lda gameState                  ; game variation
+;    sta WriteToBuffer
+;    lda score                      ; score MSB
+;    sta WriteToBuffer
+;    lda score+1
+;    sta WriteToBuffer
+;    lda score+2                    ; score LSB
+;    sta WriteToBuffer
+
+   ldx #3                           ; 10 bytes of code with ram re-arrangement to keep normal write order
+.doHighScore:
+   lda score,X
+   sta WriteToBuffer
+   dex
+   bpl .doHighScore
+
+   lda #HIGHSCORE_ID                ; game id in Highscore DB
+   sta WriteSendBuffer
+.stillAlive:
   ENDIF
 
 ;-------------------------------------------------------------------------SetToDemoMode
@@ -2407,11 +2511,23 @@ SetToDemoMode
 .setToDemoMode
    stx gameLevel                    ; set game level back to CHERRY_LEVEL (i.e. x = 0)
    jsr NewLevel
+
+  IF PLUSROM
+; shuffled instruction order to save 2 bytes elsewhere in code
+   lda #DEMO_MODE
+   sta gameBoardState               ; place game in DEMO_MODE
+   lda playerState                  ; get current player state
+   and #<~(LIVES_MASK | START_GAME_MUSIC); clear number of lives and turn off start up
+.storePlayerStateJmpToSetObjectKernelValues
+   sta playerState                  ; music for game start up
+  ELSE
    lda playerState                  ; get current player state
    and #<~(LIVES_MASK | START_GAME_MUSIC); clear number of lives and turn off start up
    sta playerState                  ; music for game start up
    lda #DEMO_MODE
    sta gameBoardState               ; place game in DEMO_MODE
+  ENDIF
+
 .jmpToSetObjectKernelValues
    jmp BCDToDigits
 
@@ -2441,16 +2557,26 @@ DeterminePacmanNewDirection
    sta levelPauseTimer              ; set pause timer to wait for one frame
    lda playerState                  ; get current player state
    ora #START_GAME_MUSIC
+  IF PLUSROM
+; save 2 bytes by jumping to sta playerState
+   bne .storePlayerStateJmpToSetObjectKernelValues  ; unconditional branch
+  ELSE
    sta playerState                  ; set to begin start-up tune
    bne .jmpToSetObjectKernelValues  ; unconditional branch
+  ENDIF
 
 .determinePacmanNewDirection
    ldx eatingMonsterSoundIndex      ; get eating monster sound index
    bne .skipTurnPacmanSoundOff
    stx AUDV0                        ; turn off Pac-man sound if not eating monster
 .skipTurnPacmanSoundOff
+  IF PLUSROM
+; moved LDX #ID_PACMAN to use available space elsewhere in rom
+   jsr LoadIdDetermineAllowedMotion
+  ELSE
    ldx #ID_PACMAN
    jsr DetermineAllowedMotion       ; determine if Pac-man at intersection
+  ENDIF
    sec                              ; set carry so Pac-man slows for DEMO_MODE
    bit gameBoardState               ; check current game board status
    bvs .doneDeterminePacmanNewDirectionForDemo; branch if in DEMO_MODE
@@ -2849,7 +2975,12 @@ CheckToEnableFruit
    lda fruitTimer
    bne .reduceFruitTimer            ; reduce fruit timer if fruit present
    ldx dotsRemaining                ; get the number of dots remaining
+  IF PLUSROM
+; accounting for ram re-arrangement of score MSB and LSB
+   lda score                        ; get score value
+  ELSE
    lda score + 2                    ; get score value
+  ENDIF
    lsr                              ; shift FIRST_FRUIT_SHOWN to D7 and
    lsr                              ; shift SECOND_FRUIT_SHOWN to carry
    ror
@@ -2865,8 +2996,14 @@ CheckToEnableFruit
    bne .turnOffFruit                ; branch if second number of dots not reached
    lda #SECOND_FRUIT_SHOWN          ; set status to show second fruit has been shown
 .setFruitShownState
+  IF PLUSROM
+; accounting for ram re-arrangement of score MSB and LSB
+   ora score                        ; set the state to show which fruit was shown
+   sta score
+  ELSE
    ora score + 2                    ; set the state to show which fruit was shown
    sta score + 2
+  ENDIF
    lda #FRUIT_TIMER
    sta fruitTimer                   ; init the fruit timer for ~15 seconds
    lda gameBoardState               ; get current game board state
@@ -2946,6 +3083,32 @@ SetObjectKernelValues
 ; shown.
 ;
 BCDToDigits
+  IF PLUSROM
+; accounting for ram re-arrangement of score MSB and LSB
+   ldy #0                           ; MSB is now score+0, LSB is score+2
+   ldx #10 + 2
+.bcdToDigitsLoop
+   lda score,y                      ; get score digit
+   and #$0F                         ; mask upper nybbles
+   asl                              ; multiply value by 8 (i.e. height of font)
+   asl
+   asl
+   sta graphicPointers - 2,x        ; set digit LSB value
+   lda #>NumberFonts                ; get MSB of number fonts
+   sta graphicPointers - 1,x        ; set digit MSB value
+   dex
+   dex
+;    beq .suppressZeros             ; branch to suppress zeros when done                   (this branch is actually never taken! 2 bytes free)
+   sta graphicPointers - 1,x        ; set digit MSB value
+   lda score,y                      ; get score digit
+   asr #$F0                         ; keep upper nybbles and divide value by 2
+   sta graphicPointers - 2,x        ; set digit LSB value
+   iny                              ; counting up instead of down for new arrangement
+   dex
+   dex
+   bne .bcdToDigitsLoop             ; changed loop dependency to be on X rather then Y
+
+  ELSE
    ldy #2
    ldx #10 + 2
 .bcdToDigitsLoop
@@ -2968,6 +3131,7 @@ BCDToDigits
    dex
    dey
    bpl .bcdToDigitsLoop             ; unconditional branch
+  ENDIF
 
 .suppressZeros
    ldy #<Blank
@@ -3647,21 +3811,6 @@ SetYRegisterToDiv8
 ; start anywhere below $xxA1 (i.e. H_KERNEL - 4) as long as they don't cross a page
 ; boundary.
 ;
-
-  IF PLUSROM
-SendPlusROMScore:
-   lda score
-   sta WriteToBuffer
-   lda score+1
-   sta WriteToBuffer
-   lda score+2
-   sta WriteToBuffer
-   lda #HIGHSCORE_ID          	    ; game id in Highscore DB
-   sta WriteSendBuffer              ; send request to backend..
-   rts
-  ENDIF
-
-
    BOUNDRY (H_KERNEL - 4)
    CHECKBOUNDARY (H_KERNEL - 4)
 
@@ -3821,19 +3970,19 @@ EnergizerTimeTable
    .byte (0 * FPS) / 2              ; 7th Key      0 sec
 
 FruitOffsetTable
-   .byte <(Cherries - FruitSprites + H_OBJECTS)
-   .byte <(Strawberry - FruitSprites + H_OBJECTS)
-   .byte <(Peach - FruitSprites + H_OBJECTS)
-   .byte <(Peach - FruitSprites + H_OBJECTS)
-   .byte <(Apple - FruitSprites + H_OBJECTS)
-   .byte <(Apple - FruitSprites + H_OBJECTS)
-   .byte <(Grapes - FruitSprites + H_OBJECTS)
-   .byte <(Grapes - FruitSprites + H_OBJECTS)
-   .byte <(Flagship - FruitSprites + H_OBJECTS)
-   .byte <(Flagship - FruitSprites + H_OBJECTS)
-   .byte <(Mush - FruitSprites + H_OBJECTS)
-   .byte <(Mush - FruitSprites + H_OBJECTS)
-   .byte <(Key - FruitSprites + H_OBJECTS)
+   .byte <Cherries - <FruitSprites + H_OBJECTS
+   .byte <Strawberry - <FruitSprites + H_OBJECTS
+   .byte <Peach - <FruitSprites + H_OBJECTS
+   .byte <Peach - <FruitSprites + H_OBJECTS
+   .byte <Apple - <FruitSprites + H_OBJECTS
+   .byte <Apple - <FruitSprites + H_OBJECTS
+   .byte <Grapes - <FruitSprites + H_OBJECTS
+   .byte <Grapes - <FruitSprites + H_OBJECTS
+   .byte <Flagship - <FruitSprites + H_OBJECTS
+   .byte <Flagship - <FruitSprites + H_OBJECTS
+   .byte <Mush - <FruitSprites + H_OBJECTS
+   .byte <Mush - <FruitSprites + H_OBJECTS
+   .byte <Key - <FruitSprites + H_OBJECTS
 
 ;--------------------------------------------------------------------------StartNewGame
 ;
@@ -3854,9 +4003,16 @@ StartNewGame
 NewLevel
    ldy #0                           ; set y to 0 so dot array is re-initialized
    ldx #<(dotsRemaining - pacmanLSBValue) + 1
+  IF PLUSROM
+; accounting for ram re-arrangement of score MSB and LSB
+   lda score                        ; get score value
+   and #<~FRUIT_SHOWN_MASK          ; remove the FRUIT_SHOWN values
+   sta score
+  ELSE
    lda score + 2                    ; get score value
    and #<~FRUIT_SHOWN_MASK          ; remove the FRUIT_SHOWN values
    sta score + 2
+  ENDIF
    NOP_W                            ; skip over next two bytes
 ;--------------------------------------------------------------------------RestartLevel
 ;
@@ -3998,6 +4154,12 @@ MonsterPointsLSB
 ; My first attempt was to use a table to look for the object section. This took less
 ; ROM but could potentially run for 108 cycles.
 ;
+  IF PLUSROM
+; ldx instruction moved here to use available bytes
+LoadIdDetermineAllowedMotion
+  ldx #ID_PACMAN
+  ENDIF
+
 DetermineAllowedMotion
    ldy objectVertPos,x              ; get the object's vertical position
    lda #(DOT_SECTIONS / 2) - 1      ; set to maximum section
@@ -4439,6 +4601,40 @@ MonsterDelayTable
 ;
 ; Enter this routine with accumulator set to point value.
 ;
+  IF PLUSROM
+; accounting for ram re-arrangement of score MSB and LSB
+IncrementTensPosition
+   ldy #0
+IncrementScore
+   bit gameBoardState               ; check current game board status
+   bvs .doneIncrementScore          ; don't increment score if in DEMO_MODE
+   sed                              ; set to decimal mode
+   clc                              ; clear carry for addition
+   ldx #-3
+.incrementScore
+   adc score+3,x                      ; increment hundreds position
+   sta score+3,x
+   tya                              ; move thousands value to accumulator
+   ldy #0                           ; set thousands value to 0
+   inx
+   bne .incrementScore
+   cld                              ; clear decimal mode
+   lda score + 2                    ; get score for the thousands position
+   lsr                              ; shift D0 to carry
+   bcc .doneIncrementScore          ; no extra life if not reached 10,000 points
+   ror score                        ; shift EXTRA_LIFE_REWARDED flag to carry
+   bcs .doneCheckForExtraLife       ; branch if extra life already rewarded
+   lda #15
+   sta extraPlayerSoundIndex        ; set 1up sound index for bonus "ding" sound
+   inc playerState                  ; increment number of lives
+   sec                              ; set carry to set EXTRA_LIFE_REWARDED flag
+.doneCheckForExtraLife
+   rol score                        ; restore score value with EXTRA_LIFE_REWARDED flag
+.doneIncrementScore
+   rts
+
+  ELSE
+
 IncrementTensPosition
    ldy #0
 IncrementScore
@@ -4468,6 +4664,7 @@ IncrementScore
    rol score + 2                    ; restore score value with EXTRA_LIFE_REWARDED flag
 .doneIncrementScore
    rts
+  ENDIF
 
 FruitColorsTableLSB
    .byte <CherriesColor, <StrawberryColor, <PeachColor, <PeachColor
@@ -4787,17 +4984,44 @@ FlagshipColor
    .byte YELLOW
 
    ENDIF
-   IF PLUSROM
-PlusROM_API
-   .byte 0, "h.stubig.de", 0
-   .org ROMTOP + 4096 - 6, 0      ; 4K ROM
 
-   .word (PlusROM_API-$E000)
-   ELSE
+
+  IF PLUSROM
+
+   .org ROMTOP + 4096 -16, 0    ; 4K ROM
+
+   NOP                          ; PlusRom reserved address $1FF0-$1FF3
+   NOP
+   NOP
+   NOP
+
+ReverseDirToJoystickValueTable
+   .byte ~MY_MOVE_DOWN & P0_JOYSTICK_MASK        ; table moved for PlusRom
+   .byte ~MY_MOVE_LEFT & P0_JOYSTICK_MASK
+   .byte ~MY_MOVE_UP & P0_JOYSTICK_MASK
+   .byte ~MY_MOVE_RIGHT & P0_JOYSTICK_MASK
+
+MonsterBlueAnimationTable                        ; table moved for PlusRom
+   .byte <MonstersBlue_01 - H_KERNEL, <MonstersBlue_02 - H_KERNEL
+
+
+   echo "***", (FREE_BYTES)d, "BYTES OF ROM FREE"
+
+   .org ROMTOP + 4096 - 6, 0        ; 4K ROM
+   .word (PlusROM_API-$E000)        ; PlusRom API pointer
+
+   .word Start                      ; RESET vector
+   .word ReverseMonsterDirection    ; BRK vector
+
+
+  ELSE
+
    BOUNDRY 252                      ; push to RESET vector (this was done instead of
                                     ; using an .ORG to easily keep track of free ROM)
-   ENDIF
+
    echo "***", (FREE_BYTES)d, "BYTES OF ROM FREE"
 
    .word Start                      ; RESET vector
    .word ReverseMonsterDirection    ; BRK vector
+
+  ENDIF
