@@ -26,7 +26,7 @@ int isValidHostChar(char c) {
  * sub-delims  = "!" / "$" / "&" / "'" / "(" / ")"
  *             / "*" / "+" / "," / ";" / "="
  *
- * but we dont't allow Search-String chars too
+ * but we don't allow Search-String chars too
  */
 int isValidPathChar(char c) {
     return ((c > 44 && c < 58) || (c > 64 && c < 91) || (c > 96 && c < 122) );
