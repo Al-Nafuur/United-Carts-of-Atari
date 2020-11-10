@@ -244,10 +244,10 @@ char *keyboardLowercase[] = {
 };
 
 char *keyboardSymbols[] = {
-	" " MENU_TEXT_SPACE "  (  )  {  }  [  ]",
-	" !  \"  '  #  $  %  &  ;  :",
-	" ?  @  ^  `  |  \\  /  ~  .  ,",
-	" +  -  *  /  <  >  = _",
+	" " MENU_TEXT_SPACE "   ( )  { }  [ ]  < >",
+	"  !  ?  .  ,  :  ;  \"  '  `",
+	"   @  ^  |  \\  ~  #  $  %  &",
+	"    +  -  *  /  =  _",
 	0
 };
 
@@ -460,18 +460,19 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			if(d->type == Menu_Action){
 
 				uint8_t new_font_style = 0;
-				while ( strcmp(&curPath[sizeof(MENU_TEXT_SETUP) + 2 + sizeof(MENU_TEXT_FONT_SETUP)],
-						&menuFontNames[new_font_style][2]) != 0)
+				while ( new_font_style < sizeof(menuFontNames)/sizeof(char *) - 1 &&
+						strcmp( &curPath[sizeof(MENU_TEXT_SETUP) + 2 + sizeof(MENU_TEXT_FONT_SETUP)],
+								&menuFontNames[new_font_style][2]))
 					new_font_style++;
-
-				//set_my_font(new_font_style);
 
 				if(user_settings.font_style != new_font_style){
 					user_settings.font_style = new_font_style;
 					flash_set_eeprom_user_settings(user_settings);
 				}
-	        	curPath[0] = '\0';
-			}else{
+	        	curPath[0] = 0;
+			}
+
+			else{
 				make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
 
 				uint8_t fontCount = sizeof menuFontNames / sizeof *menuFontNames;

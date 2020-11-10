@@ -564,7 +564,7 @@ void createMenuForAtari(
 			bool is_kernel_a = bank < 4, isFolder = false;
 			unsigned int list_entry = entry + offset;
 
-			menu_entries[list_entry].font = user_settings.font_style;
+			//menu_entries[list_entry].font = user_settings.font_style;
 
 			if (entry == 0) {		// header line
 
