@@ -143,6 +143,7 @@ static const char status_message[][28]__attribute__((section(".flash01"))) = {
 		"DPC+ is not supported"            ,
 		"Emulation exited"				   ,
 		"Enter Search Details"             ,
+		"ROM Download Failed"              ,
 
 };
 
@@ -780,14 +781,18 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 		bytes_read = flash_file_request( buffer, d->flash_base_address, 0, bytes_to_read );
 	}
 
+	if( bytes_read != bytes_to_read ){
+		cart_type.base_type = base_type_Load_Failed;
+		goto close;
+	}
 	if(d->filesize >  (BUFFER_SIZE * 1024)){
 		if(d->type == Cart_File ){
 			bytes_read_tail = (uint8_t)esp8266_PlusStore_API_file_request( tail, curPath, (d->filesize - 16), 16 );
 		}else{
 			bytes_read_tail = (uint8_t)flash_file_request( tail, d->flash_base_address, (d->filesize - 16), 16 );
 		}
-		if( bytes_read_tail != 16 || bytes_read != bytes_to_read){
-			cart_type.base_type = base_type_None;
+		if( bytes_read_tail != 16 ){
+			cart_type.base_type = base_type_Load_Failed;
 			goto close;
 		}
 	}else{
@@ -1123,6 +1128,8 @@ int main(void)
             HAL_Delay(200);
             if (cart_type.base_type == base_type_ACE){
             	main_status = romtype_ACE_unsupported;
+            }else if (cart_type.base_type == base_type_Load_Failed){
+            	main_status = rom_download_failed;
             }else if (cart_type.base_type != base_type_None){
                 emulate_cartridge(cart_type, d);
                 set_menu_status_byte(STATUS_StatusByteReboot, 0);
