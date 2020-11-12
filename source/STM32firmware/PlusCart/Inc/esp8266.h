@@ -53,7 +53,7 @@ extern "C" {
 #define PLUSROM_API_CONNECT_TIMEOUT        PLUSSTORE_CONNECT_TIMEOUT
 
 
-#define MAX_RANGE_SIZE           4096
+#define MAX_RANGE_SIZE           32768
 #define RANGE_BOUNDARY_SIZE        19
 #define RANGE_BOUNDARY_TEMPLATE  '_','_','_','_','_','_','_','_','_','_','_','_','_'
 

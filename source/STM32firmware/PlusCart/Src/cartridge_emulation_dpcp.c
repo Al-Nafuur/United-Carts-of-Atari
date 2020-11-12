@@ -41,7 +41,7 @@ void emulate_DPCplus_cartridge( uint32_t image_size)
 
 	uint8_t prev_rom = 0;
 
-	uint16_t addr, addr_prev = 0, tmp_addr=0, data = 0, data_prev = 0;
+    uint16_t addr, addr_prev = 0, addr_prev2 = 0, tmp_addr=0, data = 0, data_prev = 0;
 
     uint8_t* ccm = CCM_RAM;
 	memcpy(ccm, buffer, 0xc00); // DPC+ ARM Driver code (not really needed)
@@ -60,7 +60,7 @@ void emulate_DPCplus_cartridge( uint32_t image_size)
 
 
     // Datafetcher copy stuff for CALLFUNCTION PARAMETER
-    uint8_t *source, *destination;
+    uint8_t *source = NULL, *destination = NULL;
     uint8_t myDataFetcherCopyPointer = 0, myDataFetcherCopyType = 0, myDataFetcherCopyValue = 0;
 
 
@@ -87,7 +87,11 @@ void emulate_DPCplus_cartridge( uint32_t image_size)
 
 	while (1)
 	{
-		while ((addr = ADDR_IN) != addr_prev) addr_prev = addr;
+        while (((addr = ADDR_IN) != addr_prev) || (addr != addr_prev2))
+        {
+            addr_prev2 = addr_prev;
+            addr_prev = addr;
+        }
 
 		// got a stable address
 		if (addr & 0x1000)
@@ -214,38 +218,55 @@ void emulate_DPCplus_cartridge( uint32_t image_size)
 				index = addr & 0x07;
 				function = ((addr - 0x1028) >> 3) & 0x0f;
 
-				while (ADDR_IN == addr) { data_prev = data & 0xff; data = DATA_IN; }
+				//while (ADDR_IN == addr) { data_prev = data & 0xff; data = DATA_IN; }
+
+				// Give peripheral time to respond
+				//for (int i = 0; i < 15; i++){ addr = ADDR_IN; }
+				//data_prev = DATA_IN & 0xff;
+
+				// third way new fast test for stable data bus?
+				//while (((data = DATA_IN) != data_prev) || (data != data_prev_prev)){
+				//	data_prev_prev = data_prev;
+				//	data_prev = data;
+				//}
+				//data_prev &= 0xff;
 
 				switch (function)
 				{
 			      // DFxFRACLOW - fractional data pointer low byte
 			      case 0x00:
+			    	  while (ADDR_IN == addr) { data_prev = data & 0xff; data = DATA_IN; }
 			        myFractionalCounters[index] = (myFractionalCounters[index] & myFractionalLowMask) | (data_prev << 8);
 			        break;
 
 			      // DFxFRACHI - fractional data pointer high byte
 			      case 0x01:
+			    	  while (ADDR_IN == addr) { data_prev = data & 0xff; data = DATA_IN; }
 			        myFractionalCounters[index] = (((uint32_t)(data_prev & 0x0F)) << 16) | (myFractionalCounters[index] & 0x00ffff);
 			        break;
 
 			      //DFxFRACINC - Fractional Increment amount
 			      case 0x02:
+			    	  while (ADDR_IN == addr) { data_prev = data & 0xff; data = DATA_IN; }
 			        myFractionalIncrements[index] = (uint8_t) data_prev;
 			        myFractionalCounters[index] = myFractionalCounters[index] & 0x0FFF00;
 			        break;
 
 			      // DFxTOP - set top of window (for reads of DFxDATAW)
 			      case 0x03:
+			    	  while (ADDR_IN == addr) { data_prev = data & 0xff; data = DATA_IN; }
 			        myTops[index] = (uint8_t)data_prev;
 			        break;
 
 			      // DFxBOT - set bottom of window (for reads of DFxDATAW)
 			      case 0x04:
+			    	  while (ADDR_IN == addr) { data_prev = data & 0xff; data = DATA_IN; }
 			        myBottoms[index] = (uint8_t)data_prev;
 			        break;
 
 			      // DFxLOW - data pointer low byte (trap $1057   )
 			      case 0x05:
+			    	  while (ADDR_IN == addr) { data_prev = data & 0xff; data = DATA_IN; }
 			        myCounters[index] = (myCounters[index] & 0x0F00) | data_prev ;
 			        break;
 
@@ -254,16 +275,20 @@ void emulate_DPCplus_cartridge( uint32_t image_size)
 			        switch (index)
 			        {
 			          case 0x00:  // FASTFETCH - turns on LDA #<DFxDATA mode if value is 0
+			        	  while (ADDR_IN == addr) { data_prev = data & 0xff; data = DATA_IN; }
 			            myFastFetch = ( data_prev == 0);
 			            break;
 
 			          case 0x01:  // PARAMETER - set parameter used by CALLFUNCTION (not all functions use the parameter)
-			            if(myParameterPointer < 8)
-			              myParameter[myParameterPointer++] = (uint8_t)data_prev;
+			            if(myParameterPointer < 8){
+			            	while (ADDR_IN == addr) { data_prev = data & 0xff; data = DATA_IN; }
+			            	myParameter[myParameterPointer++] = (uint8_t)data_prev;
+			            }
 			            break;
 
 			          case 0x02:  // CALLFUNCTION
 			        	// callFunction(value);
+			        	  while (ADDR_IN == addr) { data_prev = data & 0xff; data = DATA_IN; }
 			        	  switch (data_prev)
 			        	  {
 			        	    case 0: // Parameter Pointer reset
@@ -274,7 +299,7 @@ void emulate_DPCplus_cartridge( uint32_t image_size)
 			        	    	myDataFetcherCopyType = data_prev;
 
 //			        	    	source = &myProgramImage[ (*((uint16_t*)&myParameter[0])) ];
-			        	    	source = &myProgramImage[ ((myParameter[1] << 8) | myParameter[0]) ];
+			        	    	source = &myProgramImage[ ((((uint16_t)myParameter[1]) << 8) | myParameter[0]) ];
 
 			        	    	destination = &myDisplayImage[myCounters[myParameter[2] & 0x7]];
 //			        	    	for(int i = 0; i < myParameter[3]; ++i)
@@ -307,7 +332,7 @@ void emulate_DPCplus_cartridge( uint32_t image_size)
 				        	    DATA_OUT = 0xEA;				// (NOP)
 				        	    SET_DATA_MODE_OUT;
 				        	    // check Parameter flag and copy and reset myParameterPointer and Flag.
-				        	    // but maybe multiple copie tasks have to be done..
+				        	    // but maybe multiple copy tasks have to be done..
 /*				        	    while(myCopyRequestCounter > 0){
  	 	 	 	 	 	 	 	 	 if(myCopyRequestType[myCopyRequestCounter] == 1){
 							  	  	  	  source = &myProgramImage[myCopyRequestParameter_01[myCopyRequestCounter] ];
@@ -355,12 +380,15 @@ void emulate_DPCplus_cartridge( uint32_t image_size)
 			            break;
 
 			          case 0x05:  // WAVEFORM0
+			        	  while (ADDR_IN == addr) { data_prev = data & 0xff; data = DATA_IN; }
 				        myMusicWaveforms[0] = (data_prev & 0x007f) << 5;
 				        break;
 			          case 0x06:  // WAVEFORM1
+			        	  while (ADDR_IN == addr) { data_prev = data & 0xff; data = DATA_IN; }
 				        myMusicWaveforms[1] = (data_prev & 0x007f) << 5;
 				        break;
 			          case 0x07:  // WAVEFORM2
+			        	  while (ADDR_IN == addr) { data_prev = data & 0xff; data = DATA_IN; }
 				        myMusicWaveforms[2] = (data_prev & 0x007f) << 5;
 				        break;
 			          default:
@@ -371,11 +399,13 @@ void emulate_DPCplus_cartridge( uint32_t image_size)
 			      // DFxPUSH - Push value into data bank
 			      case 0x07:
 			        myCounters[index] = (myCounters[index] - 0x1) & 0x0fff;
+			        while (ADDR_IN == addr) { data_prev = data & 0xff; data = DATA_IN; }
 			        myDisplayImage[myCounters[index]] = (uint8_t)data_prev;
 			        break;
 
 			      // DFxHI - data pointer high byte
 			      case 0x08:
+			    	  while (ADDR_IN == addr) { data_prev = data & 0xff; data = DATA_IN; }
 			        myCounters[index] = ((data_prev & 0x0F) << 8) | (myCounters[index] & 0x00ff);
 			        break;
 
@@ -387,24 +417,31 @@ void emulate_DPCplus_cartridge( uint32_t image_size)
 			            myRandomNumber = 0x2B435044; // "DPC+"
 			            break;
 			          case 0x01:  // RWRITE0 - update byte 0 of random number
+			        	  while (ADDR_IN == addr) { data_prev = data & 0xff; data = DATA_IN; }
 			            myRandomNumber = (myRandomNumber & 0xFFFFFF00) | data_prev;
 			            break;
 			          case 0x02:  // RWRITE1 - update byte 1 of random number
+			        	  while (ADDR_IN == addr) { data_prev = data & 0xff; data = DATA_IN; }
 			            myRandomNumber = (myRandomNumber & 0xFFFF00FF) | (data_prev<<8);
 			            break;
 			          case 0x03:  // RWRITE2 - update byte 2 of random number
+			        	  while (ADDR_IN == addr) { data_prev = data & 0xff; data = DATA_IN; }
 			            myRandomNumber = (myRandomNumber & 0xFF00FFFF) | (((uint32_t)data_prev)<<16);
 			            break;
 			          case 0x04:  // RWRITE3 - update byte 3 of random number
+			        	  while (ADDR_IN == addr) { data_prev = data & 0xff; data = DATA_IN; }
 			            myRandomNumber = (myRandomNumber & 0x00FFFFFF) | (((uint32_t)data_prev)<<24);
 			            break;
 			          case 0x05:  // NOTE0
+			        	  while (ADDR_IN == addr) { data_prev = data & 0xff; data = DATA_IN; }
 				        myMusicFrequencies[0] = (*((uint32_t*)&myFrequencyImage[data_prev<<2]));
 				        break;
 			          case 0x06:  // NOTE1
+			        	  while (ADDR_IN == addr) { data_prev = data & 0xff; data = DATA_IN; }
 				        myMusicFrequencies[1] = (*((uint32_t*)&myFrequencyImage[data_prev<<2]));
 				        break;
 			          case 0x07:  // NOTE2
+			        	  while (ADDR_IN == addr) { data_prev = data & 0xff; data = DATA_IN; }
 				        myMusicFrequencies[2] = (*((uint32_t*)&myFrequencyImage[data_prev<<2]));
 				        break;
 			          default:
@@ -416,6 +453,7 @@ void emulate_DPCplus_cartridge( uint32_t image_size)
 			      // DFxWRITE - write into data bank
 			      case 0x0a:
 			      {
+			    	  while (ADDR_IN == addr) { data_prev = data & 0xff; data = DATA_IN; }
 			        myDisplayImage[myCounters[index]] = (uint8_t)data_prev;
 			        myCounters[index] = (myCounters[index] + 0x1) & 0x0fff;
 			        break;
@@ -425,6 +463,7 @@ void emulate_DPCplus_cartridge( uint32_t image_size)
 			        break;
 
 				}
+				//while (ADDR_IN == addr);
 			}
 			else
 			{	// check bank-switch
@@ -436,19 +475,22 @@ void emulate_DPCplus_cartridge( uint32_t image_size)
 				DATA_OUT = ((uint16_t) prev_rom);
 				SET_DATA_MODE_OUT;
 
-				if(myDataFetcherCopyType == 0)
+				if(myDataFetcherCopyType == 0){
 					updateMusicModeDataFetchers();
-
-				while (ADDR_IN == addr){
-					// move copy routine for data fetchers here (non blocking !)
-					if(myDataFetcherCopyType == 1){
-						destination[--myDataFetcherCopyPointer] = source[myDataFetcherCopyPointer];
-						if(myDataFetcherCopyPointer == 0)
-							myDataFetcherCopyType = 0;
-					}else if(myDataFetcherCopyType == 2){
-	        	    	destination[--myDataFetcherCopyPointer] = myDataFetcherCopyValue;
-						if(myDataFetcherCopyPointer == 0)
-							myDataFetcherCopyType = 0;
+					while (ADDR_IN == addr)
+						;
+				}else{
+					while (ADDR_IN == addr){
+						// move copy routine for data fetchers here (non blocking !)
+						if(myDataFetcherCopyType == 1){
+							destination[--myDataFetcherCopyPointer] = source[myDataFetcherCopyPointer];
+							if(myDataFetcherCopyPointer == 0)
+								myDataFetcherCopyType = 0;
+						}else{ // if(myDataFetcherCopyType == 2){
+							destination[--myDataFetcherCopyPointer] = myDataFetcherCopyValue;
+							if(myDataFetcherCopyPointer == 0)
+								myDataFetcherCopyType = 0;
+						}
 					}
 				}
 				SET_DATA_MODE_IN;

@@ -41,11 +41,36 @@ bool setup_cartridge_image(const char* filename, uint32_t image_size, uint8_t* b
         case(base_type_BFSC):
             if (image_size != 256*1024) return false;
         break;
+        // these base types will never appear here, it is just to stop
+        // the compiler from nagging!
+        case(base_type_None):
+        case(base_type_2K):
+        case(base_type_4K):
+        case(base_type_4KSC):
+        case(base_type_F8):
+        case(base_type_F6):
+        case(base_type_F4):
+        case(base_type_FE):
+        case(base_type_3F):
+        case(base_type_3E):
+        case(base_type_E0):
+        case(base_type_0840):
+        case(base_type_CV):
+        case(base_type_EF):
+        case(base_type_F0):
+        case(base_type_FA):
+        case(base_type_E7):
+        case(base_type_DPC):
+        case(base_type_AR):
+        case(base_type_PP):
+        case(base_type_3EPlus):
+        case(base_type_DPCplus):
+        case(base_type_ACE):
         default:
         	return false;
     }
 
-    uint8_t banks = image_size / 4096;
+    uint8_t banks = (uint8_t)(image_size / 4096);
 
     for (uint8_t i = 0; i < RAM_BANKS && i < banks; i++) layout->banks[i] = buffer + i * 4096;
 

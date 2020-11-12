@@ -4,40 +4,51 @@
 #include <stdint.h>
 #include "stm32f4xx_hal.h"
 
-#define VERSION                   "0.15.0"
+#define VERSION                   "0.16.0"
 #define PLUSSTORE_API_HOST        "pluscart.firmaplus.de"
 
-#define STATUS_MESSAGE_LENGTH           27
-#define NUM_MENU_ITEMS_PER_PAGE      	12
-#define NUM_MENU_ITEMS			      1024
+#define CHARS_PER_LINE					32
+#define STATUS_MESSAGE_LENGTH           (CHARS_PER_LINE - 5)
+#define NUM_MENU_ITEMS_PER_PAGE      	14
+#define NUM_MENU_ITEMS			      	1024
 
+#define MENU_TEXT_GO_BACK                   "(Go Back)"
+#define MENU_TEXT_DELETE_CHAR               "Delete Character"
 #define MENU_TEXT_OFFLINE_ROMS              "Offline ROMs"
-#define MENU_TEXT_DETECT_OFFLINE_ROMS       "Detect offline ROMs"
-#define MENU_TEXT_DELETE_OFFLINE_ROMS       "Erase offline ROMs"
+#define MENU_TEXT_DETECT_OFFLINE_ROMS       "Detect Offline ROMs"
+#define MENU_TEXT_DELETE_OFFLINE_ROMS       "Erase Offline ROMs"
 #define MENU_TEXT_SETUP 	                "Setup"
 #define MENU_TEXT_WIFI_SETUP 	            "WiFi Setup"
 #define MENU_TEXT_WPS_CONNECT               "WiFi WPS Connect"
-#define MENU_TEXT_WIFI_MANGER               "start WiFi Manager Portal"
-#define MENU_TEXT_WIFI_RECONNECT            "WiFi retry"
+#define MENU_TEXT_WIFI_MANGER               "Start WiFi Manager Portal"
+#define MENU_TEXT_WIFI_RECONNECT            "WiFi Retry"
 #define MENU_TEXT_TV_MODE_SETUP             "Set TV Mode"
-#define MENU_TEXT_TV_MODE_PAL               "PAL"
-#define MENU_TEXT_TV_MODE_PAL60             "PAL 60Hz"
-#define MENU_TEXT_TV_MODE_NTSC              "NTSC"
-#define MENU_TEXT_FONT_SETUP                "Set font style"
-#define MENU_TEXT_FONT_TJZ                  "Small Caps Font"
-#define MENU_TEXT_FONT_AD                   "Trichotomic 12 Font"
+#define MENU_TEXT_TV_MODE_PAL               "  PAL"
+#define MENU_TEXT_TV_MODE_PAL60             "  PAL 60 Hz"
+#define MENU_TEXT_TV_MODE_NTSC              "  NTSC"
+#define MENU_TEXT_FONT_SETUP                "Set Font Style"
+#define MENU_TEXT_FONT_TJZ                  "  Small Caps"
+#define MENU_TEXT_FONT_TRICHOTOMIC12        "  Trichotomic-12"
+#define MENU_TEXT_FONT_CAPTAIN_MORGAN_SPICE	"  Captain Morgan Spice"
+#define MENU_TEXT_FONT_GLACIER_BELLE        "  Glacier Belle"
 #define MENU_TEXT_PRIVATE_KEY               "Private Key"
-#define MENU_TEXT_FIRMWARE_UPDATE           "** Update firmware **"
-#define MENU_TEXT_OFFLINE_ROM_UPDATE        "Download offline ROMs"
-#define MENU_TEXT_PLUS_CONNECT              "PlusStore connect"
-#define MENU_TEXT_PLUS_REMOVE               "PlusStore disconnect"
+#define MENU_TEXT_FIRMWARE_UPDATE           "** Update Firmware **"
+#define MENU_TEXT_OFFLINE_ROM_UPDATE        "Download Offline ROMs"
+#define MENU_TEXT_PLUS_CONNECT              "PlusStore Connect"
+#define MENU_TEXT_PLUS_REMOVE               "PlusStore Disconnect"
 #define MENU_TEXT_ESP8266_RESTORE           "ESP8266 Factory Reset"
 #define MENU_TEXT_SEARCH_ROM                "Search ROM"
+#define MENU_TEXT_SPACE						"Space"
+#define MENU_TEXT_LOWERCASE					"Lowercase"
+#define MENU_TEXT_UPPERCASE					"Uppercase"
+#define MENU_TEXT_SYMBOLS					"Symbols"
 
 #define URLENCODE_MENU_TEXT_PLUS_CONNECT            "PlusStore%20connect"
 #define URLENCODE_MENU_TEXT_SETUP 	                "Setup"
 
 #define AUTOSTART_FILENAME_PREFIX           "Autostart."
+
+#define PATH_SEPERATOR '/' /*CHAR_SELECTION*/
 
 extern UART_HandleTypeDef huart1;
 extern char http_request_header[];
@@ -46,11 +57,15 @@ extern uint8_t buffer[];
 extern unsigned int cart_size_bytes;
 
 enum eStatus_bytes_id {
-	StatusByteReboot,
-	CurPage,
-	MaxPage,
-	ItemsOnActPage,
-	PageType
+	STATUS_StatusByteReboot,
+	STATUS_CurPage,
+	STATUS_MaxPage,
+	STATUS_ItemsOnActPage,
+	STATUS_PageType,
+	STATUS_Unused1,
+	STATUS_Unused2,
+
+	STATUS_MAX
 };
 
 enum eStatus_bytes_PageTypes {
@@ -66,14 +81,17 @@ enum MENU_ENTRY_Type {
 	Cart_File,
 	Input_Field,
 	Keyboard_Char,
+	Keyboard_Row,
 	Menu_Action,
 	Delete_Keyboard_Char,
 	Offline_Cart_File,
 	Offline_Sub_Menu,
-	Setup_Menu
+	Setup_Menu,
+	Leave_SubKeyboard_Menu,
 };
 
 enum cart_base_type{
+	base_type_Load_Failed = -1,
 	base_type_None,
 	base_type_2K,
 	base_type_4K,
@@ -106,9 +124,10 @@ enum cart_base_type{
 
 typedef struct {
 	enum MENU_ENTRY_Type type;
-	char entryname[33];
+	char entryname[CHARS_PER_LINE+1];
 	uint32_t filesize;
 	uint32_t flash_base_address;
+	uint8_t font;
 } MENU_ENTRY;
 
 typedef struct {

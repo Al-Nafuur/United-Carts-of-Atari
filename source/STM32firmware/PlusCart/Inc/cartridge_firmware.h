@@ -21,18 +21,31 @@
 #define TV_MODE_PAL     2
 #define TV_MODE_PAL60   3
 
-#define FONT_TJZ    0
-#define FONT_AD     1
+	enum FONT_TYPE {
+		FONT_TJZ,
+		FONT_AD,
+		FONT_MORGAN,
+		FONT_GLACIER
+	};
+
+
+
+
+void set_tv_mode(int tv_mode);
+
+void set_my_font(int new_font);
+
+int emulate_firmware_cartridge();
 
 
 void set_menu_status_msg(const char* message);
 
-void createMenuForAtari( MENU_ENTRY * menu_entries, uint8_t page_id, int num_menu_entries, bool paging_required, bool is_connected, uint8_t * plus_store_status);
+void createMenuForAtari(MENU_ENTRY * menu_entries, uint8_t page_id, int num_menu_entries, bool paging_required, bool is_connected, uint8_t * plus_store_status);
 
-void set_menu_status_byte(uint8_t byte_id, char status_byte);
+void set_menu_status_byte(enum eStatus_bytes_id byte_id, uint8_t status_byte);
 
 void set_tv_mode(int tv_mode);
-void set_my_font(int new_font);
+//void set_my_font(int new_font);
 
 int emulate_firmware_cartridge();
 
