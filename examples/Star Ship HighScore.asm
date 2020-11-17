@@ -19,8 +19,9 @@
 ; U S E R - C O N S T A N T S
 ;===============================================================================
 
-PLUSROM                 = 1
-
+PLUSROM          = 1
+PAL60		 = 0
+NTSC             = 1
 
    IF PLUSROM
 WriteToBuffer     = $1ff0
@@ -1460,16 +1461,24 @@ colorschemes2
        .byte $0C ; |    XX  | $F7DE
        .byte $00 ; |        | $F7DF
 
+  IF PAL60
+       .byte $48
+       .byte $28
+       .byte $D6
+       .byte $86
+       .byte $66
+       .byte $96
+  ELSE
        .byte $38 ; |  XXX   | $F7E0
        .byte $E8 ; |XXX X   | $F7E1
        .byte $86 ; |X    XX | $F7E2
        .byte $56 ; | X X XX | $F7E3
        .byte $46 ; | X   XX | $F7E4
        .byte $A6 ; |X X  XX | $F7E5
+  ENDIF  
        .byte $0E ; |    XXX | $F7E6
 LF7E7: .byte $00 ; |        | $F7E7
        .byte $03 ; |      XX| $F7E8
-
 
 
 gamesettingtab: 
