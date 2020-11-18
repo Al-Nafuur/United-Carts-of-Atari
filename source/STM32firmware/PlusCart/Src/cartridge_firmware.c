@@ -14,7 +14,7 @@
 // These are the colours between the top title bar and the rest of the text lines...
 
 #define BACK_COL_NTSC     0x92
-#define BACK_COL_PAL      0xD4
+#define BACK_COL_PAL      0xD2
 
 #define HEADER_BACK_COL_NTSC     0x20
 #define HEADER_BACK_COL_PAL      0x40
@@ -175,7 +175,8 @@ const uint8_t kernel_b[]__attribute__((section(".flash01"))) = {
 
 const uint8_t header_bottom[]__attribute__((section(".flash01"))) = {
 #define PATCH_HEADER_BOTTOM_BACKGROUND_COLOUR 1
-#define PATCH_HEADER_BOTTOM_TEXT_COLOUR 17
+#define PATCH_HEADER_BOTTOM_BACKGROUND_COLOUR2 15
+#define PATCH_HEADER_BOTTOM_TEXT_COLOUR 21
 
 		0xa9, PATCH,			// lda #PATCHED BACK_COL	(*** PATCHED ***)
 		0x85, 0x02,				// sta WSYNC
@@ -185,6 +186,10 @@ const uint8_t header_bottom[]__attribute__((section(".flash01"))) = {
 		0x85, 0x02,				// sta WSYNC
 		0x85, 0x02,				// sta WSYNC
 		0x85, 0x02,				// sta WSYNC
+
+		0xa5, PATCH,			// lda LineBackColor+1
+		0x85, 0x09,				// sta COLUBK
+
 		0x85, 0x02,				// sta WSYNC
 
 		0xa9, PATCH,			// lda #PATCHED TEXT_COL	(*** PATCHED ***)
@@ -195,7 +200,11 @@ const uint8_t header_bottom[]__attribute__((section(".flash01"))) = {
 		};
 
 const uint8_t normal_bottom[]__attribute__((section(".flash01"))) = {
-	};
+#define PATCH_NORMAL_BOTTOM_LINE 1
+		0xa5, PATCH,			// lda LineBackColor+{1}
+		0x85, 0x09,				// sta COLUBK
+
+};
 
 const uint8_t wsync[]__attribute__((section(".flash01"))) = { 0x85, 0x02// sta WSYNC
 		};
@@ -228,11 +237,11 @@ const uint8_t exit_kernel[]__attribute__((section(".flash01"))) = {
 		0x4c, 0x00, 0x10		// jmp $1000
 		};
 
-const uint8_t end_kernel_even[]__attribute__((section(".flash01"))) = {
+//const uint8_t end_kernel_even[]__attribute__((section(".flash01"))) = {
 
-0x86, 0x1b,				// stx GRP0
-		0x86, 0x1c,				// stx GRP1
-		};
+//		0x86, 0x1b,				// stx GRP0
+//		0x86, 0x1c,				// stx GRP1
+//		};
 
 const uint8_t restore_BG_colour[]__attribute__((section(".flash01"))) = {
 #define PATCH_RESTORE_BG 1
@@ -240,15 +249,17 @@ const uint8_t restore_BG_colour[]__attribute__((section(".flash01"))) = {
 		0x85, 0x09,				// sta COLUBK
 		};
 
-const uint8_t end_kernel_odd[]__attribute__((section(".flash01"))) = { 0xa2,
-		0x00				// ldx #0
+const uint8_t end_kernel[]__attribute__((section(".flash01"))) = {
+		0xa2, 0x00,				// ldx #0
+		0x86, 0x1b,				// stx GRP0
+		0x86, 0x1c,				// stx GRP1
 		};
 
 uint8_t *my_font;
 
 uint8_t *bufferp;
 
-inline void add_end_kernel(bool is_even, uint8_t line);
+inline void add_end_kernel();
 inline void add_next_scanline(bool is_a);
 inline void add_start_bank(uint8_t bank_id);
 inline void add_end_bank(uint8_t bank_id);
@@ -256,7 +267,7 @@ inline void add_textline_start(bool even, uint8_t entry, bool isFolder);
 inline void add_kernel_a(uint8_t fontType, uint8_t scanline, uint8_t *text);
 inline void add_kernel_b(uint8_t fontType, uint8_t scanline, uint8_t *text);
 inline void add_header_bottom(uint8_t colour);
-inline void add_normal_bottom();
+inline void add_normal_bottom(uint8_t line);
 inline void add_text_colour(uint8_t colour);
 inline void add_wsync();
 
@@ -291,13 +302,13 @@ uint8_t textColour[2][12] = {
 
 		// see MENU_ENTRY_Type
 
-				0xC8,//Leave_Menu,
+				0x0a, //C8,//Leave_Menu,
 				// --> ..
 				// --> (Go Back)
 				// .txt file
 
-				0x2A,//Sub_Menu,
-				0x48, //Cart_File,
+				0x2a, //2A,//Sub_Menu,
+				0x0a, //48, //Cart_File,
 				0x0A, //Input_Field,
 				0x0A, //Keyboard_Char,
 				0x0A, // keyboard row
@@ -306,7 +317,7 @@ uint8_t textColour[2][12] = {
 				0x0A, //Offline_Cart_File,
 				0x0A, //Offline_Sub_Menu,
 
-				0X8C, //Setup_Menu
+				0X0a, //8C, //Setup_Menu
 					  // --> "Setup"
 					  // --> "Set TV Mode"
 					  // --> "Set Font Style"
@@ -315,15 +326,15 @@ uint8_t textColour[2][12] = {
 
 				//0x2A	// header line
 
-				0x46, // Leave SubKeyboard Menu
+				0x0a, //46, // Leave SubKeyboard Menu
 		},
 
 		{	// PAL...
 
 //	0, //Root_Menu = -1,
-				0x5A,//Leave_Menu,
-				0x4A, //Sub_Menu,
-				0x88, //Cart_File,
+				0x0A,//Leave_Menu,
+				0x2A, //4A, //Sub_Menu,
+				0x0a, //68, //Cart_File,
 				0x0A, //Input_Field,
 				0x0A, //Keyboard_Char,
 				0x0A, // keyboard row
@@ -331,11 +342,11 @@ uint8_t textColour[2][12] = {
 				0x0A, //Delete_Keyboard_Char,
 				0x0A, //Offline_Cart_File,
 				0x0A, //Offline_Sub_Menu,
-				0xBC, //Setup_Menu
+				0x0a, //BC, //Setup_Menu
 
 				//0x0A	// header line
 
-				0x46, // Leave SubKeyboard Menu
+				0x0A, // Leave SubKeyboard Menu
 		},
 
 };
@@ -413,16 +424,10 @@ void add_kernel_b(uint8_t fontType, uint8_t scanline, uint8_t *text) {
 	bufferp += sizeof(kernel_b);
 }
 
-void add_end_kernel(bool is_even, uint8_t line) {
+void add_end_kernel() {
 
-	//add_restore_BG_colour(line);
-
-	if (!is_even) {
-		memcpy(bufferp, end_kernel_odd, sizeof(end_kernel_odd));
-		bufferp += sizeof(end_kernel_odd);
-	}
-	memcpy(bufferp, end_kernel_even, sizeof(end_kernel_even));
-	bufferp += sizeof(end_kernel_even);
+	memcpy(bufferp, end_kernel, sizeof(end_kernel));
+	bufferp += sizeof(end_kernel);
 }
 
 void add_restore_BG_colour(uint8_t line) {
@@ -450,14 +455,15 @@ void add_next_scanline(bool is_a) {
 
 void add_header_bottom(uint8_t colour) {
 	memcpy(bufferp, header_bottom, sizeof(header_bottom));
-	bufferp[PATCH_HEADER_BOTTOM_BACKGROUND_COLOUR] =
-			user_settings.tv_mode == TV_MODE_NTSC ? BACK_COL_NTSC : BACK_COL_PAL;
+	bufferp[PATCH_HEADER_BOTTOM_BACKGROUND_COLOUR] = user_settings.tv_mode == TV_MODE_NTSC ? BACK_COL_NTSC : BACK_COL_PAL;
+	bufferp[PATCH_HEADER_BOTTOM_BACKGROUND_COLOUR2] = 0x84;
 	bufferp[PATCH_HEADER_BOTTOM_TEXT_COLOUR] = colour;
 	bufferp += sizeof(header_bottom);
 }
 
-void add_normal_bottom() {
+void add_normal_bottom(uint8_t line) {
 	memcpy(bufferp, normal_bottom, sizeof(normal_bottom));
+	bufferp[PATCH_NORMAL_BOTTOM_LINE] = (uint8_t) (0x83 + line + 1);
 	bufferp += sizeof(normal_bottom);
 }
 
@@ -608,17 +614,19 @@ void createMenuForAtari(
 
 				is_kernel_a = !is_kernel_a;
 			}
-			add_end_kernel(is_kernel_a, entry);
+
+
+			add_end_kernel();
 
 			if (entry == 0) {
 				add_header_bottom(textColour[colourSet][(int) (menu_entries[list_entry + 1].type)]);
 
 			} else {
 
-
 				if (entry == 4 || entry == 9 || entry == NUM_MENU_ITEMS_PER_PAGE) {
 					if (entry > 4) {
-						add_normal_bottom(entry);
+						if (entry < NUM_MENU_ITEMS_PER_PAGE)
+							add_normal_bottom(entry);
 						if (entry == NUM_MENU_ITEMS_PER_PAGE) {
 							add_exit_kernel();
 						}
