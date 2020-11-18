@@ -108,6 +108,7 @@ enum e_status_message {
 	romtype_DPCplus_unsupported,
 	exit_emulation,
 	insert_search,
+	rom_download_failed,
 
 };
 
