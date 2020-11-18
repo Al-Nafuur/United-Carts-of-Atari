@@ -1,5 +1,5 @@
     processor 6502
-    include vcs.h
+    include "vcs.h"
 
 
 ;===============================================================================
@@ -580,6 +580,9 @@ FirstStart
 
   	                lda $1FF4                       ; enable comm Area
 
+
+                    jsr DetectSystemType
+
                     jsr PrepareWaitCartRoutine
                     ldx #FirstBootCommand
                     jsr START_WAITCART
@@ -797,6 +800,31 @@ EndGameInit
                     rts
 
 
+;--------------------------------------------------------------------------------------------------
+
+DetectSystemType
+ZP_DetectNTSC_PAL = $80 + RESERVED_ZP
+
+                    ldy #ZP_REQUIRED_FOR_DETECT_ROUTINE-1
+.add2                lda DetectNTSC_PAL,y
+                    sta ZP_DetectNTSC_PAL,y
+                    dey
+                    bpl .add2
+
+                    jmp ZP_DetectNTSC_PAL
+
+DetectNTSC_PAL
+                    ldx #0
+                    ldy #0
+detector            dey
+                    bne detector
+                    dex
+                    bne detector
+                    rts
+
+ZP_REQUIRED_FOR_DETECT_ROUTINE = * - DetectNTSC_PAL
+
+;--------------------------------------------------------------------------------------------------
 
 
 ; ALIGN 256
