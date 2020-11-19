@@ -4,12 +4,12 @@
 #include <stdint.h>
 #include "stm32f4xx_hal.h"
 
-#define VERSION                   "0.16.1 DEV"
+#define VERSION                   "0.16.2 DEV"
 #define PLUSSTORE_API_HOST        "pluscart.firmaplus.de"
 
 #define CHARS_PER_LINE					32
 #define STATUS_MESSAGE_LENGTH           (CHARS_PER_LINE - 5)
-#define NUM_MENU_ITEMS_PER_PAGE      	14
+
 #define NUM_MENU_ITEMS			      	1024
 
 #define MENU_TEXT_GO_BACK                   "(Go Back)"
@@ -31,6 +31,12 @@
 #define MENU_TEXT_FONT_TRICHOTOMIC12        "  Trichotomic-12"
 #define MENU_TEXT_FONT_CAPTAIN_MORGAN_SPICE	"  Captain Morgan Spice"
 #define MENU_TEXT_FONT_GLACIER_BELLE        "  Glacier Belle"
+
+#define MENU_TEXT_SPACING_SETUP				"Set Line Spacing"
+#define MENU_TEXT_SPACING_DENSE             "  Dense"
+#define MENU_TEXT_SPACING_MEDIUM            "  Medium"
+#define MENU_TEXT_SPACING_SPARSE      		"  Sparse"
+
 #define MENU_TEXT_PRIVATE_KEY               "Private Key"
 #define MENU_TEXT_FIRMWARE_UPDATE           "** Update Firmware **"
 #define MENU_TEXT_OFFLINE_ROM_UPDATE        "Download Offline ROMs"
@@ -134,9 +140,11 @@ typedef struct {
 	uint8_t tv_mode;
 	uint8_t first_free_flash_sector;
 	uint8_t font_style;
+	uint8_t line_spacing;
 } USER_SETTINGS;
 
 
 extern USER_SETTINGS user_settings;
+extern uint8_t numMenuItemsPerPage[];
 
 #endif // GLOBAL_H

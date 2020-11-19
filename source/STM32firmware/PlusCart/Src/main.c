@@ -147,6 +147,13 @@ static const char status_message[][28]__attribute__((section(".flash01"))) = {
 
 };
 
+uint8_t numMenuItemsPerPage[] = {
+		// ref: SPACING enum
+		14,									// dense
+		12,									// medium
+		10									// sparse
+};
+
 //
 /* USER CODE END PD */
 
@@ -266,6 +273,7 @@ char **keyboards[] = {
 	0
 };
 
+
 enum keyboardType lastKb = KEYBOARD_UPPERCASE;
 
 
@@ -309,8 +317,9 @@ MENU_ENTRY* generateSetupMenu(MENU_ENTRY *dst) {
 	make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
 	make_menu_entry(&dst, MENU_TEXT_TV_MODE_SETUP, Setup_Menu);
 	make_menu_entry(&dst, MENU_TEXT_FONT_SETUP, Setup_Menu);
+	make_menu_entry(&dst, MENU_TEXT_SPACING_SETUP, Setup_Menu);
 	make_menu_entry(&dst, MENU_TEXT_WIFI_SETUP, Setup_Menu);
-	make_menu_entry(&dst, MENU_TEXT_WPS_CONNECT, Menu_Action);
+		make_menu_entry(&dst, MENU_TEXT_WPS_CONNECT, Menu_Action);
 	make_menu_entry(&dst, MENU_TEXT_WIFI_MANGER, Menu_Action);
 	//make_menu_entry(&dst, MENU_TEXT_PRIVATE_KEY, Input_Field);
 	make_menu_entry(&dst, MENU_TEXT_ESP8266_RESTORE, Menu_Action);
@@ -380,6 +389,11 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			MENU_TEXT_TV_MODE_PAL60,	// -->3
 	};
 
+	char *spacingModes[] = {
+			MENU_TEXT_SPACING_DENSE,		// referenced by SPACING enum
+			MENU_TEXT_SPACING_MEDIUM,
+			MENU_TEXT_SPACING_SPARSE,
+	};
 
 	MENU_ENTRY *dst = (MENU_ENTRY *)&menu_entries[0];
 	if(strncmp(MENU_TEXT_SETUP, curPath, sizeof(MENU_TEXT_SETUP) - 1) == 0 ){
@@ -389,6 +403,35 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			dst = generateSetupMenu(dst);
         	menuStatusMessage = version;
 			loadStore = true;
+		}
+
+		// Text line spacing
+		else if( !strncmp(&curPath[sizeof(MENU_TEXT_SETUP)], MENU_TEXT_SPACING_SETUP, sizeof(MENU_TEXT_SPACING_SETUP) - 1)){
+			if(d->type == Menu_Action){
+
+				uint8_t new_spacing = 0;  // dense
+				while ( strcmp(&curPath[sizeof(MENU_TEXT_SETUP) + 2 + sizeof(MENU_TEXT_SPACING_SETUP)],
+						&spacingModes[new_spacing][2]) != 0)
+					new_spacing++;
+
+				if(user_settings.line_spacing != new_spacing){
+					user_settings.line_spacing = new_spacing;
+					flash_set_eeprom_user_settings(user_settings);
+				}
+	        	curPath[0] = '\0';
+			}else{
+
+				make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
+
+
+				for (uint8_t spacing = 0; spacing < sizeof spacingModes / sizeof *spacingModes; spacing++) {
+					char spacingLine[33];
+					strcpy(spacingLine, spacingModes[spacing]);
+					if (user_settings.line_spacing == spacing)
+						spacingLine[0] = CHAR_SELECTION;
+					make_menu_entry(&dst, spacingLine, Menu_Action);
+				}
+			}
 		}
 
 		// WiFi Setup
@@ -1116,7 +1159,7 @@ int main(void)
     } else if(ret == CART_CMD_PAGE_UP ) {
     	act_page++;
     } else {
-    	ret += act_page * NUM_MENU_ITEMS_PER_PAGE;
+    	ret += act_page * numMenuItemsPerPage[user_settings.line_spacing];
       d = &menu_entries[ret];
       if (d->type == Cart_File || d->type == Offline_Cart_File){
     	// selection is a rom file
@@ -1216,7 +1259,7 @@ int main(void)
     	if(main_status != none){
         	set_menu_status_msg(status_message[main_status]);
     	}
-    	if(act_page > (num_menu_entries / NUM_MENU_ITEMS_PER_PAGE) ){
+    	if(act_page > (num_menu_entries / numMenuItemsPerPage[user_settings.line_spacing]) ){
     		act_page = 0;
     	}
     	set_menu_status_byte(STATUS_PageType, (uint8_t) Directory);

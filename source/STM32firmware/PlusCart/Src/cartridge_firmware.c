@@ -189,8 +189,11 @@ const uint8_t header_bottom[]__attribute__((section(".flash01"))) = {
 
 		0xa5, PATCH,			// lda LineBackColor+1
 		0x85, 0x09,				// sta COLUBK
+};
 
-		0x85, 0x02,				// sta WSYNC
+
+const uint8_t header_bottom2[]__attribute__((section(".flash01"))) = {
+#define PATCH_HEADER_BOTTOM2_TEXT_COLOUR 1
 
 		0xa9, PATCH,			// lda #PATCHED TEXT_COL	(*** PATCHED ***)
 		0x85, 0x06,				// sta COLUP0
@@ -202,9 +205,12 @@ const uint8_t header_bottom[]__attribute__((section(".flash01"))) = {
 const uint8_t normal_bottom[]__attribute__((section(".flash01"))) = {
 #define PATCH_NORMAL_BOTTOM_LINE 1
 		0xa5, PATCH,			// lda LineBackColor+{1}
-		0x85, 0x09,				// sta COLUBK
-
 };
+
+const uint8_t normal_bottom2[]__attribute__((section(".flash01"))) = {
+		0x85, 0x09,				// sta COLUBK
+};
+
 
 const uint8_t wsync[]__attribute__((section(".flash01"))) = { 0x85, 0x02// sta WSYNC
 		};
@@ -224,7 +230,6 @@ const uint8_t normal_top[]__attribute__((section(".flash01"))) = {
 		0xa9, PATCH,			// lda #{1}			(*** PATCHED ***)
 		0x85, 0x06,				// sta COLUP0
 		0x85, 0x07,				// sta COLUP1
-		0x85, 0x02,				// sta WSYNC
 	};
 
 const uint8_t exit_kernel[]__attribute__((section(".flash01"))) = {
@@ -457,20 +462,61 @@ void add_header_bottom(uint8_t colour) {
 	memcpy(bufferp, header_bottom, sizeof(header_bottom));
 	bufferp[PATCH_HEADER_BOTTOM_BACKGROUND_COLOUR] = user_settings.tv_mode == TV_MODE_NTSC ? BACK_COL_NTSC : BACK_COL_PAL;
 	bufferp[PATCH_HEADER_BOTTOM_BACKGROUND_COLOUR2] = 0x84;
-	bufferp[PATCH_HEADER_BOTTOM_TEXT_COLOUR] = colour;
 	bufferp += sizeof(header_bottom);
+
+	for (uint8_t line = 0; line < user_settings.line_spacing; line++)
+		add_wsync();
+
+	if (user_settings.font_style == 0)
+		add_wsync();
+
+
+	memcpy(bufferp, header_bottom2, sizeof(header_bottom2));
+	bufferp[PATCH_HEADER_BOTTOM2_TEXT_COLOUR] = colour;
+	bufferp += sizeof(header_bottom2);
 }
 
 void add_normal_bottom(uint8_t line) {
+
 	memcpy(bufferp, normal_bottom, sizeof(normal_bottom));
 	bufferp[PATCH_NORMAL_BOTTOM_LINE] = (uint8_t) (0x83 + line + 1);
 	bufferp += sizeof(normal_bottom);
+
+	if (user_settings.font_style != 0) {
+		for (uint8_t line = 0; line < user_settings.line_spacing; line++)
+			add_wsync();
+	}
+
+	if (user_settings.font_style == 0) {
+
+		for (uint8_t line = 0; line < user_settings.line_spacing; line++)
+			add_wsync();
+
+		if ( user_settings.line_spacing > 0) {
+			add_wsync();
+		}
+	}
+
+	memcpy(bufferp, normal_bottom2, sizeof(normal_bottom2));
+	bufferp += sizeof(normal_bottom2);
 }
 
 void add_normal_top(uint8_t colour) {
 	memcpy(bufferp, normal_top, sizeof(normal_top));
 	bufferp[PATCH_NORMAL_TOP_TEXT_COLOUR] = colour;
 	bufferp += sizeof(normal_top);
+
+	if (user_settings.font_style != 0) {
+		for (uint8_t line = 0; line < user_settings.line_spacing + 1; line++)
+			add_wsync();
+	}
+
+    if (user_settings.font_style == 0 && user_settings.line_spacing == 0)
+    	add_wsync();
+
+    if (user_settings.font_style == 0 && user_settings.line_spacing != 0)
+    	for (uint8_t line = 0; line < user_settings.line_spacing; line++)
+			add_wsync();
 }
 
 void add_text_colour(uint8_t colour) {
@@ -486,12 +532,13 @@ void add_wsync() {
 
 void add_exit_kernel() {
 
-	// Set HEADER font colour
-	add_text_colour(0x0C);			//white in PAL/NTSC
+	for (uint8_t line = 0; line < user_settings.line_spacing; line++)
+		add_wsync();
 
 	memcpy(bufferp, exit_kernel, sizeof(exit_kernel));
 	bufferp += sizeof(exit_kernel);
 }
+
 
 void createMenuForAtari(
 		MENU_ENTRY *menu_entries,
@@ -501,20 +548,21 @@ void createMenuForAtari(
 		bool is_connected,
 		uint8_t *plus_store_status) {
 
+
 	// create 7 banks of bytecode for the ATARI to execute.
 
 	uint8_t menu_string[CHARS_PER_LINE];
 	uint8_t bank = 1, sc, entry, odd_even;
 	size_t str_len;
-	uint8_t max_page = (uint8_t)((num_menu_entries - 1) / NUM_MENU_ITEMS_PER_PAGE);
-	uint8_t items_on_last_page = (uint8_t)((num_menu_entries % NUM_MENU_ITEMS_PER_PAGE) ?
-					(num_menu_entries % NUM_MENU_ITEMS_PER_PAGE) : NUM_MENU_ITEMS_PER_PAGE);
-	uint8_t items_on_act_page = (uint8_t)((page_id < max_page) ? NUM_MENU_ITEMS_PER_PAGE : items_on_last_page);
+	uint8_t max_page = (uint8_t)((num_menu_entries - 1) / numMenuItemsPerPage[user_settings.line_spacing]);
+	uint8_t items_on_last_page = (uint8_t)((num_menu_entries % numMenuItemsPerPage[user_settings.line_spacing]) ?
+					(num_menu_entries % numMenuItemsPerPage[user_settings.line_spacing]) : numMenuItemsPerPage[user_settings.line_spacing]);
+	uint8_t items_on_act_page = (uint8_t)((page_id < max_page) ? numMenuItemsPerPage[user_settings.line_spacing] : items_on_last_page);
 
 	bufferp = buffer;
 	memset(buffer, 0xff, 28 * 1024);
 
-	unsigned int offset = (unsigned int)(NUM_MENU_ITEMS_PER_PAGE * page_id);
+	unsigned int offset = (unsigned int)(numMenuItemsPerPage[user_settings.line_spacing] * page_id);
 
 	set_menu_status_byte(STATUS_CurPage, page_id);
 	set_menu_status_byte(STATUS_MaxPage, max_page);
@@ -560,13 +608,14 @@ void createMenuForAtari(
 
 	uint8_t colourSet = user_settings.tv_mode == TV_MODE_NTSC ? 0 : 1;
 
+
 	// Start of menu page generation
 
 	add_start_bank(bank);
 
 	for (odd_even = 0; odd_even < 2; odd_even++) {
 
-		for (entry = 0; entry <= NUM_MENU_ITEMS_PER_PAGE; entry++) {
+		for (entry = 0; entry <= numMenuItemsPerPage[user_settings.line_spacing]; entry++) {
 			bool is_kernel_a = bank < 4, isFolder = false;
 			unsigned int list_entry = entry + offset;
 
@@ -623,11 +672,11 @@ void createMenuForAtari(
 
 			} else {
 
-				if (entry == 4 || entry == 9 || entry == NUM_MENU_ITEMS_PER_PAGE) {
+				if (entry == 4 || entry == 9 || entry == numMenuItemsPerPage[user_settings.line_spacing]) {
 					if (entry > 4) {
-						if (entry < NUM_MENU_ITEMS_PER_PAGE)
+						if (entry < numMenuItemsPerPage[user_settings.line_spacing])
 							add_normal_bottom(entry);
-						if (entry == NUM_MENU_ITEMS_PER_PAGE) {
+						if (entry == numMenuItemsPerPage[user_settings.line_spacing]) {
 							add_exit_kernel();
 						}
 					}
@@ -642,7 +691,7 @@ void createMenuForAtari(
 				} else
 					add_normal_bottom(entry);
 
-				if (entry != NUM_MENU_ITEMS_PER_PAGE)
+				if (entry != numMenuItemsPerPage[user_settings.line_spacing])
 					add_normal_top(textColour[colourSet][(int)(menu_entries[list_entry+1].type)]);
 
 			}

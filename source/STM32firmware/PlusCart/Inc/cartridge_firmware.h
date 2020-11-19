@@ -28,8 +28,11 @@
 		FONT_GLACIER
 	};
 
-
-
+	enum SPACING {
+		SPACING_DENSE,
+		SPACING_MEDIUM,
+		SPACING_SPARSE,
+	};
 
 void set_tv_mode(int tv_mode);
 

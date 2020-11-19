@@ -22,14 +22,15 @@ uint32_t get_filesize(uint32_t);
 
 
 USER_SETTINGS flash_get_eeprom_user_settings(void){
-    USER_SETTINGS user_settings = {TV_MODE_NTSC, FLASH_SECTOR_5, FONT_TJZ};
+    USER_SETTINGS user_settings = {TV_MODE_NTSC, FLASH_SECTOR_5, FONT_TJZ, 0};
     int16_t act_page_index = get_active_eeprom_page();
     int16_t act_entry_index = -1;
     if( act_page_index != -1 ){
         act_entry_index = get_active_eeprom_page_entry(act_page_index);
     }
     if (act_entry_index != -1){
-    	user_settings = (*(USER_SETTINGS *)(&eeprom_data[(act_page_index * EEPROM_PAGE_SIZE) + EEPROM_PAGE_HEADER_SIZE + (act_entry_index * EEPROM_ENTRY_SIZE) + EEPROM_ENTRY_HEADER_SIZE]));
+    	user_settings = (*(USER_SETTINGS *)(&eeprom_data[(act_page_index * EEPROM_PAGE_SIZE) + EEPROM_PAGE_HEADER_SIZE
+														 + (act_entry_index * EEPROM_ENTRY_SIZE) + EEPROM_ENTRY_HEADER_SIZE]));
     }
     return user_settings;
 }

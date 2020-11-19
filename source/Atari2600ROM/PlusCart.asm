@@ -37,7 +37,6 @@ COLOR       = 3         ; color scheme
 
 
 
-
 ;///////////////////////////////////////////////////////////////////////////////
 ;@BOO
 ; This enables/disables the check for $D8 without changing wait routine length
@@ -101,13 +100,32 @@ FONT = FONT_{1}
     ;USEFONT Trichotomic_12  ; << change as needed
 
 ;... or...
-FONT = 3
+FONT = 0
 
 ;===============================================================================
 ; C O N S T A N T S
 ;===============================================================================
 
+LINE_SPACING = 2
+
+    IF LINE_SPACING < 0 || LINE_SPACING > 2
+        ECHO "BAD LINE SPACING VALUE", [LINE_SPACING]d, "(MUST BE 0,1 OR 2)"
+        ERR
+    ENDIF
+
+
+    IF LINE_SPACING = 0
 NUM_MENU_ENTRIES   = 14
+    ENDIF
+
+    IF LINE_SPACING = 1
+NUM_MENU_ENTRIES   = 12
+    ENDIF
+    
+    IF LINE_SPACING = 2
+NUM_MENU_ENTRIES   = 10
+    ENDIF
+    
 
   IF NTSC_COL
 
@@ -424,7 +442,26 @@ PatchB7_{1} = . + 1
     ENDM
 
     MAC NORMAL_BOTTOM ; {line}
+
         lda LineBackColor+{1}
+
+    IF FONT != 0
+        REPEAT LINE_SPACING
+            sta WSYNC
+        REPEND
+    ENDIF
+
+    IF FONT=0
+        REPEAT LINE_SPACING
+            sta WSYNC
+        REPEND
+
+        IF LINE_SPACING > 0
+            sta WSYNC
+        ENDIF
+    ENDIF    
+
+
         sta COLUBK
     ENDM
 
@@ -437,7 +474,22 @@ PatchB7_{1} = . + 1
         sta COLUP0
         sta COLUP1
 
+    IF FONT != 0
+        REPEAT LINE_SPACING+1
+            sta WSYNC
+        REPEND
+    ENDIF
+
+    IF FONT=0 && LINE_SPACING = 0
         sta WSYNC
+    ENDIF    
+
+    IF FONT=0 && LINE_SPACING != 0
+        REPEAT LINE_SPACING
+            sta WSYNC
+        REPEND
+    ENDIF    
+
     ENDM
 
 ;---------------------------------------------------------------------------------------------------
@@ -461,14 +513,15 @@ PatchB7_{1} = . + 1
         lda LineBackColor+1
         sta COLUBK
 
-        sta WSYNC
+    REPEAT LINE_SPACING
+            sta WSYNC
+    REPEND
 
         lda #%00011010
         sta COLUP0
         sta COLUP1
 
         sta WSYNC
-
 
     ENDM
 
@@ -1242,6 +1295,8 @@ SetActiveItem       SUBROUTINE
     TEXT_COLOUR HTXT_COL
 
     sta     WSYNC
+
+
     
     KERNEL_EVEN 0, HEADER_COL, HTXT_COL, P,l,u,s,C,a,r,t,OpenRound,Plus,CloseRound,1,2,3,4,5,6,7,8,9,A,B,Blank,1, 3,Slash,2,7,Wifi,Wifi, Account,Account
     HEADER_BOTTOM
@@ -1304,22 +1359,36 @@ SetActiveItem       SUBROUTINE
 
     NORMAL_TOP 10, %10101010
     KERNEL_EVEN 10, BACK_COL, TXT_COL, u,v,w,x,y,z,Blank,Blank,Blank,U,V,W,X,Y,Z,Blank,Blank,Blank,7,Blank,Blank,4,Blank,Blank,Blank,Colon,SemiColon,Less,Equal,Greater,Question,Blank
-    NORMAL_BOTTOM 11
 
+    IF NUM_MENU_ENTRIES > 10
+    NORMAL_BOTTOM 11
     NORMAL_TOP 11, %10111010
     KERNEL_EVEN 11, BACK_COL, TXT_COL, Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,6,5,Blank,Blank,Blank,Blank,OpenSquare,CloseSquare,Accent,UnderScore,Grave,Blank,Blank
-    NORMAL_BOTTOM 12
+    ENDIF
 
+    IF NUM_MENU_ENTRIES > 11
+    NORMAL_BOTTOM 12
     NORMAL_TOP 12, %11001010
     KERNEL_EVEN 12, BACK_COL, TXT_COL, T,h,e,Blank,f,o,l,l,o,w,i,n,g,Blank,a,r,e,Blank,B,O,N,U,S,Blank,l,i,n,e,s,Exclamation,Blank,Blank
-    NORMAL_BOTTOM 13
+    ENDIF
 
+    IF NUM_MENU_ENTRIES > 12
+    NORMAL_BOTTOM 13
     NORMAL_TOP 13, %11011010
     KERNEL_EVEN 13, BACK_COL, TXT_COL, O,u,r,s,Blank,i,s,Blank,n,o,t,Blank,t,o,Blank,r,e,a,s,o,n,Blank,w,h,y,SemiColon,Blank,Blank,Blank,Blank,Blank,Blank
-    NORMAL_BOTTOM 14
+    ENDIF
 
+    IF NUM_MENU_ENTRIES > 13
+    NORMAL_BOTTOM 14
     NORMAL_TOP 14, %11101010
     KERNEL_EVEN 14, BACK_COL, TXT_COL, Period,Period,Period,o,u,r,s,Blank,i,s,Blank,b,u,t,Blank,t,o,Blank,d,o,Blank,o,r,Blank,d,i,e,Period,Blank,Blank,Blank,Blank
+    ENDIF
+
+    REPEAT LINE_SPACING
+        sta WSYNC
+    REPEND
+    lda #0
+    sta COLUBK
 
     jmp ExitKernel
 
@@ -1395,22 +1464,36 @@ SetActiveItem       SUBROUTINE
 
     NORMAL_TOP 10, %10101010
     KERNEL_ODD 10, BACK_COL, TXT_COL, u,v,w,x,y,z,Blank,Blank,Blank,U,V,W,X,Y,Z,Blank,Blank,Blank,7,Blank,Blank,4,Blank,Blank,Blank,Colon,SemiColon,Less,Equal,Greater,Question,Blank
-    NORMAL_BOTTOM 11
 
+    IF NUM_MENU_ENTRIES > 10
+    NORMAL_BOTTOM 11
     NORMAL_TOP 11, %10111010
     KERNEL_ODD 11, BACK_COL, TXT_COL, Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,6,5,Blank,Blank,Blank,Blank,OpenSquare,CloseSquare,Accent,UnderScore,Grave,Blank,Blank
-    NORMAL_BOTTOM 12
+    ENDIF
 
+    IF NUM_MENU_ENTRIES > 11
+    NORMAL_BOTTOM 12
     NORMAL_TOP 12, %11001010
     KERNEL_ODD 12, BACK_COL, TXT_COL, T,h,e,Blank,f,o,l,l,o,w,i,n,g,Blank,a,r,e,Blank,B,O,N,U,S,Blank,l,i,n,e,s,Exclamation,Blank,Blank
-    NORMAL_BOTTOM 13
+    ENDIF
 
+    IF NUM_MENU_ENTRIES > 12
+    NORMAL_BOTTOM 13
     NORMAL_TOP 13, %11011010
     KERNEL_ODD 13, BACK_COL, TXT_COL, O,u,r,s,Blank,i,s,Blank,n,o,t,Blank,t,o,Blank,r,e,a,s,o,n,Blank,w,h,y,SemiColon,Blank,Blank,Blank,Blank,Blank,Blank
-    NORMAL_BOTTOM 14
+    ENDIF
 
+    IF NUM_MENU_ENTRIES > 13
+    NORMAL_BOTTOM 14
     NORMAL_TOP 14, %11101010
     KERNEL_ODD 14, BACK_COL, TXT_COL, Period,Period,Period,o,u,r,s,Blank,i,s,Blank,b,u,t,Blank,t,o,Blank,d,o,Blank,o,r,Blank,d,i,e,Period,Blank,Blank,Blank,Blank
+    ENDIF
+
+    REPEAT LINE_SPACING
+        sta WSYNC
+    REPEND
+    lda #0
+    sta COLUBK
 
     jmp ExitKernel
     END_BANK 6
