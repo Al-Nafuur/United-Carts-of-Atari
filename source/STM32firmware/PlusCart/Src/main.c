@@ -144,6 +144,9 @@ static const char status_message[][28]__attribute__((section(".flash01"))) = {
 		"Emulation exited"				   ,
 		"Enter Search Details"             ,
 		"ROM Download Failed"              ,
+		"Select Line Spacing"              ,
+		"Select TV Mode"                   ,
+		"Select Font Style"                ,
 
 };
 
@@ -423,6 +426,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 
 				make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
 
+				set_menu_status_msg(status_message[select_spacing]);
 
 				for (uint8_t spacing = 0; spacing < sizeof spacingModes / sizeof *spacingModes; spacing++) {
 					char spacingLine[33];
@@ -488,6 +492,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 
 				make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
 
+				set_menu_status_msg(status_message[select_tv_mode]);
 
 				for (int tv = 1; tv < sizeof tvModes / sizeof *tvModes; tv++) {
 					char tvLine[33];
@@ -518,6 +523,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 
 			else{
 				make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
+				set_menu_status_msg(status_message[select_font]);
 
 				uint8_t fontCount = sizeof menuFontNames / sizeof *menuFontNames;
 				char fontLine[fontCount][33];
