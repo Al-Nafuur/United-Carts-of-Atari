@@ -150,7 +150,7 @@ static const char status_message[][28]__attribute__((section(".flash01"))) = {
 
 };
 
-uint8_t numMenuItemsPerPage[] = {
+const uint8_t numMenuItemsPerPage[] = {
 		// ref: SPACING enum
 		14,									// dense
 		12,									// medium
@@ -217,7 +217,7 @@ char *get_filename_ext(char *filename) {
 	return (dot + 1);
 }
 
-void make_menu_entry( MENU_ENTRY **dst, char *name, int type){
+void make_menu_entry( MENU_ENTRY **dst, const char *name, int type){
 	(*dst)->type = type;
 	strcpy((*dst)->entryname, name);
 	(*dst)->filesize = 0U;
@@ -238,7 +238,7 @@ void make_menu_entry_font( MENU_ENTRY **dst, char *name, int type, uint8_t font)
 
 
 
-char *keyboardUppercase[] = {
+const char *keyboardUppercase[] = {
 	" 1  2  3  4  5  6  7  8  9  0",
 	"  Q  W  E  R  T  Y  U  I  O  P",
 	"   A  S  D  F  G  H  J  K  L",
@@ -246,7 +246,7 @@ char *keyboardUppercase[] = {
 	0
 };
 
-char *keyboardLowercase[] = {
+const char *keyboardLowercase[] = {
 	" 1  2  3  4  5  6  7  8  9  0",
 	"  q  w  e  r  t  y  u  i  o  p",
 	"   a  s  d  f  g  h  j  k  l",
@@ -254,7 +254,7 @@ char *keyboardLowercase[] = {
 	0
 };
 
-char *keyboardSymbols[] = {
+const char *keyboardSymbols[] = {
 	" " MENU_TEXT_SPACE "   ( )  { }  [ ]  < >",
 	"  !  ?  .  ,  :  ;  \"  '  `",
 	"   @  ^  |  \\  ~  #  $  %  &",
@@ -269,7 +269,7 @@ enum keyboardType {
 	KEYBOARD_NONE,
 };
 
-char **keyboards[] = {
+static const char **keyboards[] = {
 	keyboardUppercase,
 	keyboardLowercase,
 	keyboardSymbols,
@@ -301,7 +301,7 @@ void make_keyboard(MENU_ENTRY **dst, enum keyboardType selector){
 
 	make_menu_entry(dst, MENU_TEXT_GO_BACK, Leave_Menu);
 
-	for (char **kbRow = keyboards[selector]; *kbRow; kbRow++)
+	for (const char **kbRow = keyboards[selector]; *kbRow; kbRow++)
 		make_menu_entry(dst, *kbRow, Setup_Menu);
 
 	if (selector != KEYBOARD_LOWERCASE)
@@ -341,8 +341,8 @@ enum e_status_message generateKeyboard(
 		enum e_status_message new_status) {
 
 	// Scan for any keyboard rows, and if found then generate menu for row
-	for (char ***kb = keyboards; *kb; kb++)
-		for (char **row = *kb; *row; row++)
+	for (const char ***kb = keyboards; *kb; kb++)
+		for (const char **row = *kb; *row; row++)
 			if (!strcmp(*row, d->entryname)) {
 				make_keyboardFromLine(dst, d->entryname);
 				truncate_curPath();
@@ -398,13 +398,16 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			MENU_TEXT_SPACING_SPARSE,
 	};
 
+
+	set_menu_status_msg(curPath);
+
 	MENU_ENTRY *dst = (MENU_ENTRY *)&menu_entries[0];
 	if(strncmp(MENU_TEXT_SETUP, curPath, sizeof(MENU_TEXT_SETUP) - 1) == 0 ){
 		//char *  curPathPos = (char *) &curPath[sizeof(MENU_TEXT_SETUP)];
 
 		if(strlen(curPath) == sizeof(MENU_TEXT_SETUP) - 1 ){
 			dst = generateSetupMenu(dst);
-        	menuStatusMessage = version;
+        	//menuStatusMessage = version;  interferes with generic flow/usage of menu names -- TODO: switch to Setup/ABOUT menu option
 			loadStore = true;
 		}
 
@@ -426,7 +429,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 
 				make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
 
-				set_menu_status_msg(status_message[select_spacing]);
+//				set_menu_status_msg(status_message[select_spacing]);
 
 				for (uint8_t spacing = 0; spacing < sizeof spacingModes / sizeof *spacingModes; spacing++) {
 					char spacingLine[33];
@@ -492,7 +495,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 
 				make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
 
-				set_menu_status_msg(status_message[select_tv_mode]);
+//				set_menu_status_msg(status_message[select_tv_mode]);
 
 				for (int tv = 1; tv < sizeof tvModes / sizeof *tvModes; tv++) {
 					char tvLine[33];
@@ -523,7 +526,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 
 			else{
 				make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
-				set_menu_status_msg(status_message[select_font]);
+//				set_menu_status_msg(status_message[select_font]);
 
 				uint8_t fontCount = sizeof menuFontNames / sizeof *menuFontNames;
 				char fontLine[fontCount][33];

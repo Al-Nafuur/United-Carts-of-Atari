@@ -34,7 +34,7 @@
 
 #define MENU_TEXT_SPACING_SETUP				"Set Line Spacing"
 #define MENU_TEXT_SPACING_DENSE             "  Dense"
-#define MENU_TEXT_SPACING_MEDIUM            "  Medium"
+#define MENU_TEXT_SPACING_MEDIUM            "  Regular"
 #define MENU_TEXT_SPACING_SPARSE      		"  Sparse"
 
 #define MENU_TEXT_PRIVATE_KEY               "Private Key"
@@ -145,6 +145,6 @@ typedef struct {
 
 
 extern USER_SETTINGS user_settings;
-extern uint8_t numMenuItemsPerPage[];
+extern const uint8_t numMenuItemsPerPage[];
 
 #endif // GLOBAL_H

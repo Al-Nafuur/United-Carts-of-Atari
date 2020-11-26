@@ -109,9 +109,6 @@ enum e_status_message {
 	exit_emulation,
 	insert_search,
 	rom_download_failed,
-	select_spacing,
-	select_tv_mode,
-	select_font,
 
 };
 

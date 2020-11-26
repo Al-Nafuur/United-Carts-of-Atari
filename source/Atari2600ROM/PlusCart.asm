@@ -106,7 +106,7 @@ FONT = 0
 ; C O N S T A N T S
 ;===============================================================================
 
-LINE_SPACING = 2
+LINE_SPACING = 0
 
     IF LINE_SPACING < 0 || LINE_SPACING > 2
         ECHO "BAD LINE SPACING VALUE", [LINE_SPACING]d, "(MUST BE 0,1 OR 2)"
@@ -114,18 +114,7 @@ LINE_SPACING = 2
     ENDIF
 
 
-    IF LINE_SPACING = 0
-NUM_MENU_ENTRIES   = 14
-    ENDIF
-
-    IF LINE_SPACING = 1
-NUM_MENU_ENTRIES   = 12
-    ENDIF
-    
-    IF LINE_SPACING = 2
-NUM_MENU_ENTRIES   = 10
-    ENDIF
-    
+NUM_MENU_ENTRIES   = 14         ; maximum supported
 
   IF NTSC_COL
 
@@ -201,6 +190,7 @@ SEL_COL     = $44
 
 CommandByte         ds 1   ; $0 to $f item selected, $10 next page, $20 prev page, $30 ready for reboot.
 CurItem		        ds 1
+lineCounter         ds 1
 
 RESERVED_ZP = * - $80
 
@@ -431,6 +421,12 @@ PatchB7_{1} = . + 1
         lda #{1}
         sta COLUP0
         sta COLUP1
+
+        lda #1
+        sta lineCounter
+        sta WSYNC
+
+
     ENDM
 
 ;---------------------------------------------------------------------------------------------------
@@ -443,6 +439,7 @@ PatchB7_{1} = . + 1
 
     MAC NORMAL_BOTTOM ; {line}
 
+        inc lineCounter
         lda LineBackColor+{1}
 
     IF FONT != 0
@@ -734,9 +731,7 @@ _x0X	; down/select pressed
                     beq _pageDown
 
                     inc CurItem
-                    lda #10
-                    sta StickDelayCount
-                    jmp _x4               ; todo use BRA
+                    bne .debounce ;unconditional
 	
 	
 _x1	; check up
@@ -748,9 +743,10 @@ _x1	; check up
                     beq _pageUp
 
                     dec CurItem
-                    lda #10
+
+.debounce           lda #10
                     sta StickDelayCount
-                    bne _x4 ;jmp _x4               ; todo use BRA
+                    bne _x4
 
 
 _x2
@@ -766,13 +762,15 @@ _x2
                     ldx CurPage
                     beq _x3
                     lda #PrevPageCommand
-                    bne ExitMenu                ; unconditional
+                    bne ExitMenu                    ; unconditional
 
 
 _pageUp             ldx CurPage
                     beq _x3
-                    lda #NUM_MENU_ENTRIES-1    ; set CurItem to last entry
-                    sta CurItem
+
+                    ldx lineCounter ;ItemsOnActPage              ; set CurItem to last entry
+                    dex
+                    stx CurItem
 
 _pageUp2            ldx CurPage
                     beq _x3
@@ -1293,10 +1291,6 @@ SetActiveItem       SUBROUTINE
     START_BANK 1
 
     TEXT_COLOUR HTXT_COL
-
-    sta     WSYNC
-
-
     
     KERNEL_EVEN 0, HEADER_COL, HTXT_COL, P,l,u,s,C,a,r,t,OpenRound,Plus,CloseRound,1,2,3,4,5,6,7,8,9,A,B,Blank,1, 3,Slash,2,7,Wifi,Wifi, Account,Account
     HEADER_BOTTOM
@@ -1400,10 +1394,7 @@ SetActiveItem       SUBROUTINE
 ;-------------------------------------------------------------------------------
 
     START_BANK 4
-
     TEXT_COLOUR HTXT_COL
-
-    sta     WSYNC
     
     KERNEL_ODD 0, HEADER_COL, HTXT_COL, P,l,u,s,C,a,r,t,OpenRound,Plus,CloseRound,1,2,3,4,5,6,7,8,9,A,B,Blank,1, 3,Slash,2,7,Wifi,Wifi, Account,Account
     HEADER_BOTTOM

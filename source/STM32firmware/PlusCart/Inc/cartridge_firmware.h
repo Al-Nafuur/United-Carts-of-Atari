@@ -22,7 +22,7 @@
 #define TV_MODE_PAL60   3
 
 	enum FONT_TYPE {
-		FONT_TJZ,
+		FONT_TJZ,			// <-- default
 		FONT_AD,
 		FONT_MORGAN,
 		FONT_GLACIER
@@ -30,7 +30,7 @@
 
 	enum SPACING {
 		SPACING_DENSE,
-		SPACING_MEDIUM,
+		SPACING_REGULAR,	// <-- default
 		SPACING_SPARSE,
 	};
 

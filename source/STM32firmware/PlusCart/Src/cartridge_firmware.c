@@ -8,6 +8,8 @@
 #include "font.h"
 #include "global.h"
 
+#define lineCounter 0x82
+#define lineBackColour 0x84
 
 #define PATCH 0
 
@@ -16,8 +18,8 @@
 #define BACK_COL_NTSC     0x92
 #define BACK_COL_PAL      0xD2
 
-#define HEADER_BACK_COL_NTSC     0x20
-#define HEADER_BACK_COL_PAL      0x40
+//#define HEADER_BACK_COL_NTSC     0x20
+//#define HEADER_BACK_COL_PAL      0x40
 
 #define t2c(fontType, l, r, s) \
 	(uint8_t)(sharedFont[ convertAsciiToCharnum(fontType, l) * 12 + s ] << 4 | \
@@ -176,7 +178,6 @@ const uint8_t kernel_b[]__attribute__((section(".flash01"))) = {
 const uint8_t header_bottom[]__attribute__((section(".flash01"))) = {
 #define PATCH_HEADER_BOTTOM_BACKGROUND_COLOUR 1
 #define PATCH_HEADER_BOTTOM_BACKGROUND_COLOUR2 15
-#define PATCH_HEADER_BOTTOM_TEXT_COLOUR 21
 
 		0xa9, PATCH,			// lda #PATCHED BACK_COL	(*** PATCHED ***)
 		0x85, 0x02,				// sta WSYNC
@@ -203,7 +204,9 @@ const uint8_t header_bottom2[]__attribute__((section(".flash01"))) = {
 		};
 
 const uint8_t normal_bottom[]__attribute__((section(".flash01"))) = {
-#define PATCH_NORMAL_BOTTOM_LINE 1
+#define PATCH_NORMAL_BOTTOM_LINE 3
+
+		0xe6, lineCounter,
 		0xa5, PATCH,			// lda LineBackColor+{1}
 };
 
@@ -221,7 +224,13 @@ const uint8_t text_colour[]__attribute__((section(".flash01"))) = {
 
 		0xa9, 0x00,				// lda #??			 (*** PATCHED ***)
 		0x85, 0x06,				// sta COLUP0
-		0x85, 0x07				// sta COLUP1
+		0x85, 0x07,				// sta COLUP1
+
+		0xa9, 0x01,
+		0x85, lineCounter,		// sta lineCounter
+
+		0x85, 0x02				// sta WSYNC
+
 		};
 
 const uint8_t normal_top[]__attribute__((section(".flash01"))) = {
@@ -230,6 +239,9 @@ const uint8_t normal_top[]__attribute__((section(".flash01"))) = {
 		0xa9, PATCH,			// lda #{1}			(*** PATCHED ***)
 		0x85, 0x06,				// sta COLUP0
 		0x85, 0x07,				// sta COLUP1
+
+
+
 	};
 
 const uint8_t exit_kernel[]__attribute__((section(".flash01"))) = {
@@ -278,7 +290,6 @@ inline void add_wsync();
 
 inline void add_normal_top(uint8_t colour);
 inline void add_exit_kernel();
-inline void add_restore_BG_colour(uint8_t line);
 
 // for colours see...
 // https://www.randomterrain.com/atari-2600-memories-tia-color-charts.html
@@ -301,7 +312,7 @@ inline void add_restore_BG_colour(uint8_t line);
 // E			YELLOW		WHITE
 // F			ORANGE		WHITE
 
-uint8_t textColour[2][12] = {
+const uint8_t textColour[2][12] = {
 
 {	// NTSC...
 
@@ -378,11 +389,11 @@ void add_textline_start(bool even, uint8_t entry, bool isFolder) {
 
 	if (even) {
 		memcpy(bufferp, textline_start_even, sizeof(textline_start_even));
-		bufferp[PATCH_EVEN_LINE_BACKCOL] = (uint8_t)( 0x83 + entry);
+		bufferp[PATCH_EVEN_LINE_BACKCOL] = (uint8_t)( lineBackColour + entry);
 		bufferp += sizeof(textline_start_even);
 	} else {
 		memcpy(bufferp, textline_start_odd, sizeof(textline_start_odd));
-		bufferp[PATCH_LINE_BACKCOL] = (uint8_t)(0x83 + entry);
+		bufferp[PATCH_LINE_BACKCOL] = (uint8_t)(lineBackColour + entry);
 		bufferp += sizeof(textline_start_odd);
 	}
 }
@@ -430,22 +441,8 @@ void add_kernel_b(uint8_t fontType, uint8_t scanline, uint8_t *text) {
 }
 
 void add_end_kernel() {
-
 	memcpy(bufferp, end_kernel, sizeof(end_kernel));
 	bufferp += sizeof(end_kernel);
-}
-
-void add_restore_BG_colour(uint8_t line) {
-	memcpy(bufferp, restore_BG_colour, sizeof(restore_BG_colour)); // hacked/hardwired colour until can use the array...
-
-	bufferp[PATCH_RESTORE_BG] =
-			user_settings.tv_mode == TV_MODE_NTSC ?
-			BACK_COL_NTSC :
-													BACK_COL_PAL;
-//    if (line > 0)
-//    	bufferp[PATCH_RESTORE_BG] += 2;
-
-	bufferp += sizeof(restore_BG_colour);
 }
 
 void add_next_scanline(bool is_a) {
@@ -461,7 +458,7 @@ void add_next_scanline(bool is_a) {
 void add_header_bottom(uint8_t colour) {
 	memcpy(bufferp, header_bottom, sizeof(header_bottom));
 	bufferp[PATCH_HEADER_BOTTOM_BACKGROUND_COLOUR] = user_settings.tv_mode == TV_MODE_NTSC ? BACK_COL_NTSC : BACK_COL_PAL;
-	bufferp[PATCH_HEADER_BOTTOM_BACKGROUND_COLOUR2] = 0x84;
+	bufferp[PATCH_HEADER_BOTTOM_BACKGROUND_COLOUR2] = lineBackColour + 1;
 	bufferp += sizeof(header_bottom);
 
 	for (uint8_t line = 0; line < user_settings.line_spacing; line++)
@@ -479,7 +476,7 @@ void add_header_bottom(uint8_t colour) {
 void add_normal_bottom(uint8_t line) {
 
 	memcpy(bufferp, normal_bottom, sizeof(normal_bottom));
-	bufferp[PATCH_NORMAL_BOTTOM_LINE] = (uint8_t) (0x83 + line + 1);
+	bufferp[PATCH_NORMAL_BOTTOM_LINE] = (uint8_t) (lineBackColour + line + 1);
 	bufferp += sizeof(normal_bottom);
 
 	if (user_settings.font_style != 0) {
@@ -624,7 +621,7 @@ void createMenuForAtari(
 			if (entry == 0) {		// header line
 
 				add_text_colour(0x0A);
-				add_wsync();
+				//add_wsync();
 
 				memcpy(menu_string, menu_header, CHARS_PER_LINE);
 
