@@ -333,7 +333,7 @@ const uint8_t textColour[2][12] = {
 				0x0A, //Offline_Cart_File,
 				0x0A, //Offline_Sub_Menu,
 
-				0X0a, //8C, //Setup_Menu
+				0xCA, //8C, //Setup_Menu
 					  // --> "Setup"
 					  // --> "Set TV Mode"
 					  // --> "Set Font Style"
@@ -614,14 +614,11 @@ void createMenuForAtari(
 
 		for (entry = 0; entry <= numMenuItemsPerPage[user_settings.line_spacing]; entry++) {
 			bool is_kernel_a = bank < 4, isFolder = false;
-			unsigned int list_entry = entry + offset;
-
-			//menu_entries[list_entry].font = user_settings.font_style;
+			unsigned int list_entry = entry + offset - 1;
 
 			if (entry == 0) {		// header line
 
 				add_text_colour(0x0A);
-				//add_wsync();
 
 				memcpy(menu_string, menu_header, CHARS_PER_LINE);
 
@@ -632,15 +629,12 @@ void createMenuForAtari(
 
 			} else {
 
-				list_entry--;
-
 				memset(menu_string, ' ', CHARS_PER_LINE);
 
 				if (list_entry < num_menu_entries) {
 					str_len = strlen(menu_entries[list_entry].entryname);
 					memcpy(menu_string, menu_entries[list_entry].entryname, str_len);
-					isFolder = (menu_entries[list_entry].type != Offline_Cart_File
-							&& menu_entries[list_entry].type != Cart_File);
+					isFolder = (menu_entries[list_entry].type != Offline_Cart_File && menu_entries[list_entry].type != Cart_File);
 				}
 			}
 
@@ -689,7 +683,7 @@ void createMenuForAtari(
 					add_normal_bottom(entry);
 
 				if (entry != numMenuItemsPerPage[user_settings.line_spacing])
-					add_normal_top(textColour[colourSet][(int)(menu_entries[list_entry+1].type)]);
+					add_normal_top(textColour[colourSet][(int)(menu_entries[list_entry].type)]);
 
 			}
 		}
