@@ -1066,7 +1066,13 @@ void system_secondary_init(void){
 		num_menu_entries = 0;
 		curPath[0] = '\0';
 	}
-	//set_my_font(user_settings.font_style);
+	//	check user_settings properties that haven't been in user_setting since v1
+	if( ! (user_settings.line_spacing > SPACING_UNKNOWN && user_settings.line_spacing < SPACING_MAX ) )
+		user_settings.line_spacing = SPACING_DEFAULT;
+
+	if( ! (user_settings.font_style > FONT_UNKNOWN && user_settings.font_style < FONT_MAX ) )
+		user_settings.font_style = FONT_DEFAULT;
+
 	set_menu_status_byte(STATUS_StatusByteReboot, 0);
 	generate_udid_string();
 
