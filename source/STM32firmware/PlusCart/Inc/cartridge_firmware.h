@@ -17,29 +17,42 @@
 #define CART_CMD_PAGE_UP	0x20     // next page request (page++)
 #define CART_CMD_START_CART	0x30     // Menu ready for reboot into selected ROM
 
-#define TV_MODE_NTSC	1
-#define TV_MODE_PAL     2
-#define TV_MODE_PAL60   3
+enum TV_MODE {
+	TV_MODE_UNKNOWN,
 
-	enum FONT_TYPE {
-		FONT_TJZ,			// <-- default
-		FONT_AD,
-		FONT_MORGAN,
-		FONT_GLACIER
-	};
+	TV_MODE_NTSC,		TV_MODE_DEFAULT = 1,
+	TV_MODE_PAL,
+	TV_MODE_PAL60,
 
-	enum SPACING {
-		SPACING_DENSE,
-		SPACING_REGULAR,	// <-- default
-		SPACING_SPARSE,
-	};
+	TV_MODE_MAX
+
+};
+
+enum FONT_TYPE {
+	FONT_UNKNOWN = -1,
+
+	FONT_TJZ,			FONT_DEFAULT = 0,
+	FONT_AD,
+	FONT_MORGAN,
+	FONT_GLACIER,
+
+	FONT_MAX
+
+};
+
+enum SPACING {
+	SPACING_UNKNOWN = -1,
+
+	SPACING_DENSE,
+	SPACING_REGULAR,	SPACING_DEFAULT = 1,
+	SPACING_SPARSE,
+
+	SPACING_MAX
+};
 
 void set_tv_mode(int tv_mode);
 
-void set_my_font(int new_font);
-
 int emulate_firmware_cartridge();
-
 
 void set_menu_status_msg(const char* message);
 
