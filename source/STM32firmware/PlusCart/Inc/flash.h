@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 #include <stdint.h>
+#include "stm32f4xx_hal.h"
 #include "global.h"
 
 
@@ -49,6 +50,7 @@ extern "C" {
 #define EEPROM_MAX_ENTRY_ID          ((uint8_t)((EEPROM_PAGE_SIZE - EEPROM_PAGE_HEADER_SIZE) / EEPROM_ENTRY_SIZE) - 1)
 
 // Download Area in Flash
+#define FIRST_FREE_SECTOR            FLASH_SECTOR_5
 #define DOWNLOAD_AREA_START_ADDRESS  ((uint32_t)ADDR_FLASH_SECTOR_5)
 #define TAR_HEADER_SIZE              512
 #define TAR_BLOCK_SIZE               512

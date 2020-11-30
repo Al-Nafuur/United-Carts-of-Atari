@@ -2,7 +2,6 @@
 #include <stdlib.h>
 
 #include "esp8266.h"
-#include "stm32f4xx_hal.h"
 #include "flash.h"
 #include "cartridge_firmware.h"
 
@@ -22,7 +21,7 @@ uint32_t get_filesize(uint32_t);
 
 
 USER_SETTINGS flash_get_eeprom_user_settings(void){
-    USER_SETTINGS user_settings = {TV_MODE_NTSC, FLASH_SECTOR_5, FONT_TJZ, SPACING_REGULAR};
+    USER_SETTINGS user_settings = {TV_MODE_DEFAULT, FIRST_FREE_SECTOR, FONT_DEFAULT, SPACING_DEFAULT};
     int16_t act_page_index = get_active_eeprom_page();
     int16_t act_entry_index = -1;
     if( act_page_index != -1 ){
