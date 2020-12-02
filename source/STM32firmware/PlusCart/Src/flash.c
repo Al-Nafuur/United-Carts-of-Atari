@@ -14,7 +14,7 @@ unsigned const char eeprom_data[16384] __attribute__((__section__(".eeprom"), us
 
 /* Private function prototypes -----------------------------------------------*/
 HAL_StatusTypeDef FLASH_WaitInRAMForLastOperationWithMaxDelay(void) __attribute__((section(".data#")));
-static uint32_t get_sector(uint32_t Address);
+static uint8_t get_sector(uint32_t Address);
 int16_t get_active_eeprom_page(void);
 int16_t get_active_eeprom_page_entry(int16_t);
 uint32_t get_filesize(uint32_t);
@@ -101,11 +101,11 @@ uint32_t flash_download(char *filename, uint32_t filesize, uint32_t http_range_s
 
     uint8_t c;
     size_t http_range_param_pos_counter, http_range_param_pos;
-    uint32_t count, http_range_end = http_range_start + 4095;
+    uint32_t count, http_range_end = http_range_start + MAX_RANGE_SIZE - 1;
 	uint32_t Address = DOWNLOAD_AREA_START_ADDRESS + 128U * 1024U * (uint8_t)( start_sector - 5);
 
 	esp8266_PlusStore_API_prepare_request_header((char *)filename, true, false );
-	strcat(http_request_header, (char *)"     0-  4095\r\n\r\n");
+	strcat(http_request_header, (char *)"     0- 32767\r\n\r\n");
 	http_range_param_pos = strlen((char *)http_request_header) - 5;
 
 
@@ -134,8 +134,8 @@ uint32_t flash_download(char *filename, uint32_t filesize, uint32_t http_range_s
     pFlash.Lock = HAL_LOCKED;
     FLASH_WaitInRAMForLastOperationWithMaxDelay();
 
-    uint8_t parts = (uint8_t)(( filesize + 4095 )  / 4096);
-    uint16_t last_part_size = (filesize % 4096)?(filesize % 4096):4096;
+    uint8_t parts = (uint8_t)(( filesize + MAX_RANGE_SIZE - 1 )  / MAX_RANGE_SIZE);
+    uint16_t last_part_size = (filesize % MAX_RANGE_SIZE)?(filesize % MAX_RANGE_SIZE):MAX_RANGE_SIZE;
     while(parts != 0 ){
         http_range_param_pos_counter = http_range_param_pos;
         count = http_range_end;
@@ -157,7 +157,7 @@ uint32_t flash_download(char *filename, uint32_t filesize, uint32_t http_range_s
 
         // Now for the HTTP Body
         count = 0;
-        while(count < 4096 && (parts != 1 || count < last_part_size )){
+        while(count < MAX_RANGE_SIZE && (parts != 1 || count < last_part_size )){
             if(( huart1.Instance->SR & UART_FLAG_RXNE) == UART_FLAG_RXNE){ // ! (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_TXE) ) ){
                 c = (uint8_t)huart1.Instance->DR; // & (uint8_t)0xFF);
 
@@ -190,8 +190,8 @@ uint32_t flash_download(char *filename, uint32_t filesize, uint32_t http_range_s
             }
         }
 
-        http_range_start += 4096;
-        http_range_end += (--parts==1)?last_part_size:4096;
+        http_range_start += MAX_RANGE_SIZE;
+        http_range_end += (--parts==1)?last_part_size:MAX_RANGE_SIZE;
 
         count = 0;
         while(count++ < 25000000){
@@ -466,14 +466,14 @@ uint32_t get_filesize(uint32_t base_adress){
     return size;
 }
 
-static uint32_t get_sector(uint32_t Address)
+static uint8_t get_sector(uint32_t Address)
 {
-  uint32_t sector = 0;
+  uint8_t sector = 0;
 
   if((Address >= ADDR_FLASH_SECTOR_0) && (Address < ADDR_FLASH_SECTOR_4)){
-    sector = (Address - ADDR_FLASH_SECTOR_0) / 0x4000;
+    sector = (uint8_t)((Address - ADDR_FLASH_SECTOR_0) / 0x4000);
   }else if((Address >= ADDR_FLASH_SECTOR_5) && (Address < ADDR_FLASH_SECTOR_12)){
-    sector = ((Address - ADDR_FLASH_SECTOR_5) / 0x20000 ) + 5;
+    sector = (uint8_t)((Address - ADDR_FLASH_SECTOR_5) / 0x20000 ) + 5;
   }else{
     sector = FLASH_SECTOR_4;
   }
