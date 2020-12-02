@@ -623,7 +623,7 @@ void createMenuForAtari(
 				memcpy(menu_string, menu_header, CHARS_PER_LINE);
 
 				// If you want a different font for header line, set it here
-				// menu_entries[list_entry].font = user_settings.font_style; // <-- OR, font # hardwire
+				menu_entries[list_entry].font = user_settings.font_style; // <-- OR, font # hardwire
 
 				isFolder = true;
 
