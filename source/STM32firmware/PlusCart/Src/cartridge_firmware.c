@@ -616,7 +616,9 @@ void createMenuForAtari(
 
 		for (entry = 0; entry <= numMenuItemsPerPage[user_settings.line_spacing]; entry++) {
 			bool is_kernel_a = bank < 4, isFolder = false;
-			unsigned int list_entry = entry + offset - 1;
+			unsigned int list_entry = entry + offset;
+
+			//menu_entries[list_entry].font = user_settings.font_style;
 
 			if (entry == 0) {		// header line
 
@@ -625,18 +627,21 @@ void createMenuForAtari(
 				memcpy(menu_string, menu_header, CHARS_PER_LINE);
 
 				// If you want a different font for header line, set it here
-				menu_entries[list_entry].font = user_settings.font_style; // <-- OR, font # hardwire
+				// menu_entries[list_entry].font = user_settings.font_style; // <-- OR, font # hardwire
 
 				isFolder = true;
 
 			} else {
+
+				list_entry--;
 
 				memset(menu_string, ' ', CHARS_PER_LINE);
 
 				if (list_entry < num_menu_entries) {
 					str_len = strlen(menu_entries[list_entry].entryname);
 					memcpy(menu_string, menu_entries[list_entry].entryname, str_len);
-					isFolder = (menu_entries[list_entry].type != Offline_Cart_File && menu_entries[list_entry].type != Cart_File);
+					isFolder = (menu_entries[list_entry].type != Offline_Cart_File
+							&& menu_entries[list_entry].type != Cart_File);
 				}
 			}
 
@@ -685,7 +690,7 @@ void createMenuForAtari(
 					add_normal_bottom(entry);
 
 				if (entry != numMenuItemsPerPage[user_settings.line_spacing])
-					add_normal_top(textColour[colourSet][(int)(menu_entries[list_entry].type)]);
+					add_normal_top(textColour[colourSet][(int)(menu_entries[list_entry+1].type)]);
 
 			}
 		}
