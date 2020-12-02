@@ -358,7 +358,9 @@ const uint8_t textColour[2][12] = {
 				0x0A, //Delete_Keyboard_Char,
 				0x0A, //Offline_Cart_File,
 				0x0A, //Offline_Sub_Menu,
-				0x0a, //BC, //Setup_Menu
+
+
+				0x3a, //BC, //Setup_Menu
 
 				//0x0A	// header line
 
