@@ -17,14 +17,16 @@ extern "C" {
 #endif
 
 /** API connect/request **/
-#define  API_ATCMD_1  "AT+CIPSTART=\"TCP\",\"" PLUSSTORE_API_HOST "\",80\r\n"
-#define  API_ATCMD_1a  "AT+CIPSTART=%c,\"TCP\",\"" PLUSSTORE_API_HOST "\",80\r\n"
-#define  API_ATCMD_2  "AT+CIPSEND\r\n"
-#define  API_ATCMD_3  "GET /api.php?p="
-#define  API_ATCMD_4  " HTTP/1.0\r\nHost: " PLUSSTORE_API_HOST "\r\nPlusStore-ID: v" VERSION " "
-#define  API_ATCMD_5  "\r\nConnection: keep-alive\r\n"
-#define  API_ATCMD_6a "Range: bytes="
-#define  API_ATCMD_6b "\r\n"
+#define  API_ATCMD_1	"AT+CIPSTART=\"TCP\",\"" PLUSSTORE_API_HOST "\",80\r\n"
+#define  API_ATCMD_1a	"AT+CIPSTART=%c,\"TCP\",\"" PLUSSTORE_API_HOST "\",80\r\n"
+#define  API_ATCMD_2	"AT+CIPSEND\r\n"
+#define  API_ATCMD_3	"GET /api.php?p="
+#define  API_ATCMD_4	" HTTP/1.0\r\nHost: " PLUSSTORE_API_HOST \
+						"\r\nPlusStore-ID: v" VERSION " "
+#define  API_ATCMD_4a	"\r\nClient-Conf: "
+#define  API_ATCMD_5	"\r\nConnection: keep-alive\r\n"
+#define  API_ATCMD_6a	"Range: bytes="
+#define  API_ATCMD_6b	"\r\n"
 
 /* Hash Values of ESP8266 Response messages */
 #define ESP8266_NO_RESPONSE                       5381UL // initial hash value
@@ -52,13 +54,7 @@ extern "C" {
 #define PLUSSTORE_RESPONSE_START_TIMEOUT  25000
 #define PLUSROM_API_CONNECT_TIMEOUT        PLUSSTORE_CONNECT_TIMEOUT
 
-
 #define MAX_RANGE_SIZE           32768
-#define RANGE_BOUNDARY_SIZE        19
-#define RANGE_BOUNDARY_TEMPLATE  '_','_','_','_','_','_','_','_','_','_','_','_','_'
-
-#define TRUE    1
-#define FALSE   0
 
 typedef struct {
 	uint32_t start;
@@ -88,7 +84,7 @@ bool esp8266_wifi_list(MENU_ENTRY **, int *);
 bool esp8266_wifi_connect(char *, char *);
 bool esp8266_wps_connect(void) __attribute__((section(".flash01")));
 
-uint32_t esp8266_PlusStore_API_range_request( char *, uint32_t, http_range *, uint8_t *) __attribute__((section(".flash01")));
+uint32_t esp8266_PlusStore_API_range_request( char *, http_range, uint8_t *) __attribute__((section(".flash01")));
 uint32_t esp8266_PlusStore_API_file_request( uint8_t *, char *, uint32_t, uint32_t ) __attribute__((section(".flash01")));
 
 // Is connected to AP (AT+CWJAP?)
