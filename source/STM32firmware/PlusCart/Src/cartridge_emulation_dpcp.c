@@ -162,6 +162,9 @@ void emulate_DPCplus_cartridge( uint32_t image_size)
 										  (uint32_t)myDisplayImage[(uint32_t)myMusicWaveforms[2] + (myMusicCounters[2] >> 27)] );
 								break;
 							}
+
+							default:
+								break;
 						}
 						break;
 					}
@@ -178,7 +181,7 @@ void emulate_DPCplus_cartridge( uint32_t image_size)
 					{
 						//  flag = (myCounters[index] & 0xFF) < myBottoms[index] ? 0xFF : 0;
 						//  flag = (((myTops[index]-(myCounters[index] & 0x00ff)) & 0xFF) > ((myTops[index]-myBottoms[index]) & 0xFF)) ? 0xFF : 0;
-						data = myDisplayImage[myCounters[index]] & ( (((myTops[index]-(myCounters[index] & 0x00ff)) & 0xFF) > ((myTops[index]-myBottoms[index]) & 0xFF)) ? 0xFF : 0);
+						data = (uint16_t)(myDisplayImage[myCounters[index]] & ( (((myTops[index]-(myCounters[index] & 0x00ff)) & 0xFF) > ((myTops[index]-myBottoms[index]) & 0xFF)) ? 0xFF : 0));
 						myCounters[index] = (myCounters[index] + 0x1) & 0x0fff;
 						break;
 					}
@@ -236,7 +239,7 @@ void emulate_DPCplus_cartridge( uint32_t image_size)
 			      // DFxFRACLOW - fractional data pointer low byte
 			      case 0x00:
 			    	  while (ADDR_IN == addr) { data_prev = data & 0xff; data = DATA_IN; }
-			        myFractionalCounters[index] = (myFractionalCounters[index] & myFractionalLowMask) | (data_prev << 8);
+			        myFractionalCounters[index] = (uint32_t)((myFractionalCounters[index] & myFractionalLowMask) | (uint32_t) (data_prev << 8));
 			        break;
 
 			      // DFxFRACHI - fractional data pointer high byte
@@ -267,7 +270,7 @@ void emulate_DPCplus_cartridge( uint32_t image_size)
 			      // DFxLOW - data pointer low byte (trap $1057   )
 			      case 0x05:
 			    	  while (ADDR_IN == addr) { data_prev = data & 0xff; data = DATA_IN; }
-			        myCounters[index] = (myCounters[index] & 0x0F00) | data_prev ;
+			        myCounters[index] = (uint16_t)((myCounters[index] & 0x0F00) | data_prev);
 			        break;
 
 			      // Control registers
@@ -296,7 +299,7 @@ void emulate_DPCplus_cartridge( uint32_t image_size)
 			        	      break;
 			        	    case 1: // Copy ROM to fetcher
 			        	    	myDataFetcherCopyPointer = myParameter[3];
-			        	    	myDataFetcherCopyType = data_prev;
+			        	    	myDataFetcherCopyType = (uint8_t) data_prev;
 
 //			        	    	source = &myProgramImage[ (*((uint16_t*)&myParameter[0])) ];
 			        	    	source = &myProgramImage[ ((((uint16_t)myParameter[1]) << 8) | myParameter[0]) ];
@@ -314,7 +317,7 @@ void emulate_DPCplus_cartridge( uint32_t image_size)
 			        	      break;
 			        	    case 2: // Copy value to fetcher
 			        	    	myDataFetcherCopyPointer = myParameter[3];
-			        	    	myDataFetcherCopyType = data_prev;
+			        	    	myDataFetcherCopyType = (uint8_t) data_prev;
 			        	    	destination = &myDisplayImage[myCounters[myParameter[2]]];
 			        	    	myDataFetcherCopyValue =  myParameter[0];
 //			        	    	for(int i = 0; i < myParameter[3]; ++i)
@@ -406,7 +409,7 @@ void emulate_DPCplus_cartridge( uint32_t image_size)
 			      // DFxHI - data pointer high byte
 			      case 0x08:
 			    	  while (ADDR_IN == addr) { data_prev = data & 0xff; data = DATA_IN; }
-			        myCounters[index] = ((data_prev & 0x0F) << 8) | (myCounters[index] & 0x00ff);
+			        myCounters[index] = (uint16_t)(((data_prev & 0x0F) << 8) | (myCounters[index] & 0x00ff));
 			        break;
 
 			      case 0x09:
@@ -422,7 +425,7 @@ void emulate_DPCplus_cartridge( uint32_t image_size)
 			            break;
 			          case 0x02:  // RWRITE1 - update byte 1 of random number
 			        	  while (ADDR_IN == addr) { data_prev = data & 0xff; data = DATA_IN; }
-			            myRandomNumber = (myRandomNumber & 0xFFFF00FF) | (data_prev<<8);
+			            myRandomNumber = (myRandomNumber & 0xFFFF00FF) | (uint32_t)(data_prev<<8);
 			            break;
 			          case 0x03:  // RWRITE2 - update byte 2 of random number
 			        	  while (ADDR_IN == addr) { data_prev = data & 0xff; data = DATA_IN; }
@@ -483,7 +486,12 @@ void emulate_DPCplus_cartridge( uint32_t image_size)
 					while (ADDR_IN == addr){
 						// move copy routine for data fetchers here (non blocking !)
 						if(myDataFetcherCopyType == 1){
-							destination[--myDataFetcherCopyPointer] = source[myDataFetcherCopyPointer];
+							// TODO: WARNING::: THE FOLLOWING CODE HAS UNDEFINED BEHAVIOUR -- PLEASE FIX!!!
+							// TODO: PUT THE POINTER DECREMENT BEFOR (OR AFTER) THE COPY!!!!
+							//TODO: undefined if "--" is executed before or after the source access (!!!)
+							// replace with a pre or pos-decrement, depending on what is intended
+							--myDataFetcherCopyPointer;
+							destination[myDataFetcherCopyPointer] = source[myDataFetcherCopyPointer];
 							if(myDataFetcherCopyPointer == 0)
 								myDataFetcherCopyType = 0;
 						}else{ // if(myDataFetcherCopyType == 2){

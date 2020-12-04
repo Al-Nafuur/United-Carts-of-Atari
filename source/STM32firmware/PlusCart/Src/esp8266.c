@@ -104,7 +104,7 @@ void esp8266_PlusStore_API_end_transmission(){
 
 uint32_t esp8266_PlusStore_API_range_request(char *path, http_range range, uint8_t *ext_buffer){
 	uint32_t response_size = 0;
-	uint16_t expected_size =  ( range.stop + 1 - range.start );
+	uint16_t expected_size =  (uint16_t) ( range.stop + 1 - range.start );
 	uint8_t c;
 
 	esp8266_PlusStore_API_prepare_request_header(path, true, false);
@@ -152,7 +152,7 @@ int esp8266_PlusROM_API_connect(unsigned int size){
 	uint16_t * nmi_p = (uint16_t * )&buffer[size - 6];
 	int i = nmi_p[0] - 0x1000;
 
-	int offset = strlen((char *)&buffer[i]) + 1 + i;
+	int offset = (int)strlen((char *)&buffer[i]) + 1 + i;
 
     esp8266_send_command("AT+CIPCLOSE\r\n", 5000);
 
@@ -171,7 +171,7 @@ int esp8266_PlusROM_API_connect(unsigned int size){
     strcat(http_request_header, (char *)"\r\nConnection: keep-alive\r\nContent-Type: application/octet-stream\r\nPlusStore-ID: v" VERSION " ");
     strcat(http_request_header, (char *)stm32_udid);
     strcat(http_request_header, (char *)"\r\nContent-Length:    \r\n\r\n");
-    offset = strlen(http_request_header);
+    offset = (int)strlen(http_request_header);
 
     esp8266_send_command(API_ATCMD_2, 5000);
     return offset;
@@ -464,7 +464,7 @@ uint8_t process_http_headline(){
             char cur_path[128] = URLENCODE_MENU_TEXT_SETUP "/" URLENCODE_MENU_TEXT_PLUS_CONNECT "/";
             uint8_t c;
             url_param p_array[3] = {{"s="}};
-            char send_link_id = linkId + 1;
+            char send_link_id = (char)(linkId + 1);
 
             if(send_link_id > '3')
             	send_link_id = '0';
@@ -544,7 +544,7 @@ void send_requested_page_to_client(char id, const char* page, unsigned int len, 
             len_of_package_to_TX = 2048;
         }
         else{
-            len_of_package_to_TX = len;
+            len_of_package_to_TX = (uint16_t) len;
             len = 0;
         }
 
@@ -586,7 +586,7 @@ int ishex(char x){
 }
 
 void uri_decode( char *s ){
-	int len = strlen(s);
+	int len = (int) strlen(s);
 	int c;
 	int s_counter = 0, d_counter = 0;
 
@@ -597,7 +597,7 @@ void uri_decode( char *s ){
 		}else if (c == '%' && ( !ishex(s[++s_counter]) || !ishex(s[++s_counter]) || !sscanf(&s[s_counter - 1], "%2x", &c))){
 			return;
 		}
-		s[d_counter++] = c;
+		s[d_counter++] = (char) c;
 	}
 	s[d_counter] = '\0';
 }
@@ -796,7 +796,7 @@ void generate_udid_string(){
 		i = (j * 8) + 7;
 		while (content_len != 0 && i > -1) {
 			c = content_len % 16;
-			stm32_udid[i--] = (c > 9)? (c-10) + 'a' : c + '0';
+			stm32_udid[i--] = (char)((c > 9)? (c-10) + 'a' : c + '0');
 			content_len = content_len/16;
 		}
 	}

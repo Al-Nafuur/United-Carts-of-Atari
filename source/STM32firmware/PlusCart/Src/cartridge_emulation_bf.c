@@ -39,7 +39,7 @@ void emulate_bfsc_cartridge(const char* filename, uint32_t image_size, uint8_t* 
                 while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
     			data = data_prev;
 
-                ram[address] = data;
+                ram[address] = (uint8_t) data;
             } else {
                 if (address >= 0x0f80 && address <= 0x0fbf) bank = layout->banks[address - 0x0f80];
 

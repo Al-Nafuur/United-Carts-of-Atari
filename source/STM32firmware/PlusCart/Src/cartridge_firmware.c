@@ -765,7 +765,7 @@ int emulate_firmware_cartridge() {
 					else if (addr == CART_CMD_HOTSPOT) {// atari 2600 has send an command
 						while (ADDR_IN == addr) {
 							data_prev = data;
-							data = DATA_IN;
+							data = DATA_IN_BYTE;
 						}
 						addr = data_prev;
 						break;

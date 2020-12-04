@@ -28,8 +28,11 @@ USER_SETTINGS flash_get_eeprom_user_settings(void){
         act_entry_index = get_active_eeprom_page_entry(act_page_index);
     }
     if (act_entry_index != -1){
-    	user_settings = (*(USER_SETTINGS *)(&eeprom_data[(act_page_index * EEPROM_PAGE_SIZE) + EEPROM_PAGE_HEADER_SIZE
-														 + (act_entry_index * EEPROM_ENTRY_SIZE) + EEPROM_ENTRY_HEADER_SIZE]));
+
+    	uint32_t dataIndex = (uint32_t) (act_page_index * EEPROM_PAGE_SIZE) + EEPROM_PAGE_HEADER_SIZE;
+    	dataIndex += (uint32_t)(act_entry_index * EEPROM_ENTRY_SIZE) + EEPROM_ENTRY_HEADER_SIZE;
+
+    	user_settings = (*(USER_SETTINGS *)(&eeprom_data[dataIndex]));
     }
     return user_settings;
 }
@@ -48,9 +51,11 @@ void flash_set_eeprom_user_settings(USER_SETTINGS user_settings){
 
     if(act_entry_index != -1){ // && act_page_index != -1 is always true if act_entry_index != -1 is true
         // make last entry invalid!
-        HAL_FLASH_Program(FLASH_TYPEPROGRAM_BYTE,
-                          EEPROM_START_ADDRESS + ( act_page_index * EEPROM_PAGE_SIZE ) + EEPROM_PAGE_HEADER_SIZE + ( act_entry_index * EEPROM_ENTRY_SIZE ),
-                          ((uint8_t)0x55) );
+
+    	uint32_t dataIndex = (uint32_t) (act_page_index * EEPROM_PAGE_SIZE) + EEPROM_PAGE_HEADER_SIZE;
+    	dataIndex += (uint32_t)(act_entry_index * EEPROM_ENTRY_SIZE);
+
+       	HAL_FLASH_Program(FLASH_TYPEPROGRAM_BYTE, EEPROM_START_ADDRESS + dataIndex, ((uint8_t)0x55) );
     }
 
     // Page full ?
@@ -61,7 +66,9 @@ void flash_set_eeprom_user_settings(USER_SETTINGS user_settings){
                FLASH_Erase_Sector(EEPROM_SECTOR_ID, (uint8_t) FLASH_VOLTAGE_RANGE_3);
                new_page_index = 0;
            }else{ // invalidate act page
-        	   HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, EEPROM_START_ADDRESS + (act_page_index * EEPROM_PAGE_SIZE ), ((uint32_t)EEPROM_INVALID_PAGE_HEADER) );
+
+			   uint32_t dataIndex = (uint32_t) (act_page_index * EEPROM_PAGE_SIZE);
+			   HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, EEPROM_START_ADDRESS + dataIndex, ((uint32_t)EEPROM_INVALID_PAGE_HEADER) );
            }
     }
 
@@ -69,10 +76,15 @@ void flash_set_eeprom_user_settings(USER_SETTINGS user_settings){
     if( new_entry_index == 0 ){ // new_page_index != act_page_index  &&  new_page_index != -1
            new_page_index++;
            // make new activ page header!
-        HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, EEPROM_START_ADDRESS + (new_page_index * EEPROM_PAGE_SIZE ), ((uint32_t)EEPROM_ACTIVE_PAGE_HEADER) );
+
+       	   uint32_t dataIndex = (uint32_t) (new_page_index * EEPROM_PAGE_SIZE);
+           HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, EEPROM_START_ADDRESS + dataIndex, ((uint32_t)EEPROM_ACTIVE_PAGE_HEADER) );
     }
 
-    uint32_t new_entry_flash_address = EEPROM_START_ADDRESS + ( new_page_index * EEPROM_PAGE_SIZE ) + EEPROM_PAGE_HEADER_SIZE + ( new_entry_index * EEPROM_ENTRY_SIZE );
+	uint32_t dataIndex = (uint32_t) (new_page_index * EEPROM_PAGE_SIZE) + EEPROM_PAGE_HEADER_SIZE;
+	dataIndex += (uint32_t)(new_entry_index * EEPROM_ENTRY_SIZE);
+
+    uint32_t new_entry_flash_address = EEPROM_START_ADDRESS + dataIndex;
 
     // make new activ entry header!
     new_entry_flash_address++;
@@ -206,10 +218,10 @@ uint32_t flash_download(char *filename, uint32_t filesize, uint32_t http_range_s
 
     // flash new usersettings .. (if not appended)
 	if(! append){
-		user_settings.first_free_flash_sector = get_sector(Address) + 1;
+		user_settings.first_free_flash_sector = (uint8_t)(get_sector(Address) + 1);
     	flash_set_eeprom_user_settings(user_settings);
 	}
-	return (uint32_t)( DOWNLOAD_AREA_START_ADDRESS + 128U * 1024U * ( start_sector - 5) );
+	return (uint32_t)( DOWNLOAD_AREA_START_ADDRESS + 128U * 1024U * (uint32_t)( start_sector - 5) );
 }
 
 
@@ -473,7 +485,7 @@ static uint8_t get_sector(uint32_t Address)
   if((Address >= ADDR_FLASH_SECTOR_0) && (Address < ADDR_FLASH_SECTOR_4)){
     sector = (uint8_t)((Address - ADDR_FLASH_SECTOR_0) / 0x4000);
   }else if((Address >= ADDR_FLASH_SECTOR_5) && (Address < ADDR_FLASH_SECTOR_12)){
-    sector = (uint8_t)((Address - ADDR_FLASH_SECTOR_5) / 0x20000 ) + 5;
+    sector = (uint8_t)(((Address - ADDR_FLASH_SECTOR_5) / 0x20000 ) + 5);
   }else{
     sector = FLASH_SECTOR_4;
   }
@@ -482,7 +494,7 @@ static uint8_t get_sector(uint32_t Address)
 
 int16_t get_active_eeprom_page(){
     int16_t index = 0;
-    eeprom_pointer = &eeprom_data[0];
+    eeprom_pointer = (const uint8_t *)(&eeprom_data[0]);
     while ( index <  EEPROM_MAX_PAGE_ID &&  (*( uint32_t*)(eeprom_pointer)) == EEPROM_INVALID_PAGE_HEADER ){
         index++;
         eeprom_pointer += EEPROM_PAGE_SIZE;
@@ -494,7 +506,10 @@ int16_t get_active_eeprom_page(){
 
 int16_t get_active_eeprom_page_entry(int16_t page_index){
     int16_t index = 0;
-    eeprom_pointer =  &eeprom_data[(page_index * EEPROM_PAGE_SIZE) + EEPROM_PAGE_HEADER_SIZE];
+
+	uint32_t dataIndex = (uint32_t) (page_index * EEPROM_PAGE_SIZE) + EEPROM_PAGE_HEADER_SIZE;
+
+    eeprom_pointer =  &eeprom_data[dataIndex];
     while( index <  EEPROM_MAX_ENTRY_ID && (*( uint16_t*)(eeprom_pointer)) == EEPROM_INVALID_ENTRY_HEADER ){
         index++;
         eeprom_pointer += EEPROM_ENTRY_SIZE;

@@ -1002,6 +1002,7 @@ HAL_StatusTypeDef HAL_DMA_RegisterCallback(DMA_HandleTypeDef *hdma, HAL_DMA_Call
       hdma->XferAbortCallback = pCallback;
       break;
 
+    case HAL_DMA_XFER_ALL_CB_ID:
     default:
       break;
     }

@@ -43,7 +43,7 @@ extern "C" {
 
 #define EEPROM_PAGE_HEADER_SIZE      sizeof(EEPROM_EMPTY_PAGE_HEADER)
 #define EEPROM_ENTRY_HEADER_SIZE     sizeof(EEPROM_EMPTY_ENTRY_HEADER)
-#define EEPROM_PAGE_SIZE             512U    // 4 byte page header + 508 byte for entries
+#define EEPROM_PAGE_SIZE             512    // 4 byte page header + 508 byte for entries
 #define EEPROM_ENTRY_SIZE             39    // 2 byte entry header + 37 byte payload
 
 #define EEPROM_MAX_PAGE_ID           ((uint8_t)(EEPROM_SIZE / EEPROM_PAGE_SIZE ) -1)

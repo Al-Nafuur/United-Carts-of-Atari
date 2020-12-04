@@ -292,6 +292,8 @@ HAL_StatusTypeDef HAL_EXTI_RegisterCallback(EXTI_HandleTypeDef *hexti, EXTI_Call
       hexti->RisingCallback = pPendingCbfn;
       break;
 
+    case HAL_EXTI_FALLING_CB_ID:
+    case HAL_EXTI_RISING_CB_ID:
     default:
       status = HAL_ERROR;
       break;
