@@ -485,19 +485,17 @@ void emulate_DPCplus_cartridge( uint32_t image_size)
 				}else{
 					while (ADDR_IN == addr){
 						// move copy routine for data fetchers here (non blocking !)
+						--myDataFetcherCopyPointer;
 						if(myDataFetcherCopyType == 1){
-							// TODO: WARNING::: THE FOLLOWING CODE HAS UNDEFINED BEHAVIOUR -- PLEASE FIX!!!
-							// TODO: PUT THE POINTER DECREMENT BEFOR (OR AFTER) THE COPY!!!!
-							//TODO: undefined if "--" is executed before or after the source access (!!!)
-							// replace with a pre or pos-decrement, depending on what is intended
-							--myDataFetcherCopyPointer;
 							destination[myDataFetcherCopyPointer] = source[myDataFetcherCopyPointer];
-							if(myDataFetcherCopyPointer == 0)
-								myDataFetcherCopyType = 0;
 						}else{ // if(myDataFetcherCopyType == 2){
-							destination[--myDataFetcherCopyPointer] = myDataFetcherCopyValue;
-							if(myDataFetcherCopyPointer == 0)
-								myDataFetcherCopyType = 0;
+							destination[myDataFetcherCopyPointer] = myDataFetcherCopyValue;
+						}
+						if(myDataFetcherCopyPointer == 0){
+							myDataFetcherCopyType = 0;
+							while (ADDR_IN == addr)
+								;
+							break;
 						}
 					}
 				}
