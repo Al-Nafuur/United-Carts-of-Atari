@@ -49,7 +49,7 @@
 #define MENU_TEXT_UPPERCASE					"Uppercase"
 #define MENU_TEXT_SYMBOLS					"Symbols"
 
-#define URLENCODE_MENU_TEXT_PLUS_CONNECT            "PlusStore%20connect"
+#define URLENCODE_MENU_TEXT_PLUS_CONNECT            "PlusStore%20Connect"
 #define URLENCODE_MENU_TEXT_SETUP 	                "Setup"
 
 #define AUTOSTART_FILENAME_PREFIX           "Autostart."
