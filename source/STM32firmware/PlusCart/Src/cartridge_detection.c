@@ -15,7 +15,7 @@
  * Cartridge Type Detection
  *************************************************************************/
 int isValidHostChar(char c) {
-    return ( c == 45 || c == 46 || (c > 47 && c < 58) || (c > 64 && c < 91) || (c > 96 && c < 122) );
+    return ( c == 45 || c == 46 || (c > 47 && c < 58) || (c > 64 && c < 91) || (c > 96 && c < 123) );
 }
 
 /*
@@ -29,7 +29,7 @@ int isValidHostChar(char c) {
  * but we don't allow Search-String chars too
  */
 int isValidPathChar(char c) {
-    return ((c > 44 && c < 58) || (c > 64 && c < 91) || (c > 96 && c < 122) );
+    return ((c > 44 && c < 58) || (c > 64 && c < 91) || (c > 96 && c < 123) );
 }
 
 int searchForBytes(unsigned char *bytes, unsigned int size, unsigned char *signature, unsigned int sigsize, int minhits)
