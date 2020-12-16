@@ -73,18 +73,16 @@ void esp8266_PlusStore_API_prepare_request_header(char *path, bool prepare_range
     strcat(http_request_header, API_ATCMD_4a);
 
     size_t header_len = strlen(http_request_header);
-    itoa(user_settings.first_free_flash_sector, (char *)&http_request_header[header_len++], 10); // 5 - 12
-    if(user_settings.first_free_flash_sector > 9)
-        header_len++;
+    itoa(user_settings.first_free_flash_sector, (char *)&http_request_header[header_len++], 16); // 5 - C
     http_request_header[header_len++] = ',';
-    itoa(user_settings.font_style, &http_request_header[header_len++], 10);              // 0 - 3
+    itoa(user_settings.font_style, &http_request_header[header_len++], 10);                      // 0 - 3
     http_request_header[header_len++] = ',';
-    itoa(user_settings.line_spacing, &http_request_header[header_len++], 10);            // 0 - 2
+    itoa(user_settings.line_spacing, &http_request_header[header_len++], 10);                    // 0 - 2
     http_request_header[header_len++] = ',';
     itoa(user_settings.tv_mode, (char *)&http_request_header[header_len++], 10);                 // 1 - 3
     http_request_header[header_len] = '\0';
 
-    if(STM32F4_FLASH_SIZE > 512)
+    if(STM32F4_FLASH_SIZE > 512U)
         strcat(http_request_header, ",1");
     else
         strcat(http_request_header, ",0");
