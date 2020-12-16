@@ -238,7 +238,7 @@ void make_menu_entry_font( MENU_ENTRY **dst, char *name, int type, uint8_t font)
 
 
 
-const char *keyboardUppercase[] = {
+const char *keyboardUppercase[]__attribute__((section(".flash0#"))) = {
 	" 1  2  3  4  5  6  7  8  9  0",
 	"  Q  W  E  R  T  Y  U  I  O  P",
 	"   A  S  D  F  G  H  J  K  L",
@@ -246,7 +246,7 @@ const char *keyboardUppercase[] = {
 	0
 };
 
-const char *keyboardLowercase[] = {
+const char *keyboardLowercase[]__attribute__((section(".flash0#"))) = {
 	" 1  2  3  4  5  6  7  8  9  0",
 	"  q  w  e  r  t  y  u  i  o  p",
 	"   a  s  d  f  g  h  j  k  l",
@@ -254,7 +254,7 @@ const char *keyboardLowercase[] = {
 	0
 };
 
-const char *keyboardSymbols[] = {
+const char *keyboardSymbols[]__attribute__((section(".flash0#"))) = {
 	" " MENU_TEXT_SPACE "   ( )  { }  [ ]  < >",
 	"  !  ?  .  ,  :  ;  \"  '  `",
 	"   @  ^  |  \\  ~  #  $  %  &",
@@ -269,7 +269,7 @@ enum keyboardType {
 	KEYBOARD_NONE,
 };
 
-static const char **keyboards[] = {
+static const char **keyboards[]__attribute__((section(".flash0#"))) = {
 	keyboardUppercase,
 	keyboardLowercase,
 	keyboardSymbols,
