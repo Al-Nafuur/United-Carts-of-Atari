@@ -111,6 +111,7 @@ const EXT_TO_CART_TYPE_MAP ext_to_cart_type_map[]__attribute__((section(".flash0
 	{"3EP",  { base_type_3EPlus, false, false }},
 	{"DPCP", { base_type_DPCplus, false, false }},
 	{"SB",   { base_type_SB, false, false }},
+	{"UA",   { base_type_UA, false, false }},
 
 	{0,{0,0,0}}
 };
@@ -886,6 +887,8 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 			cart_type.base_type = base_type_3E;
 		else if (isProbably3F(d->filesize, buffer))
 			cart_type.base_type = base_type_3F;
+		else if (isProbablyUA(d->filesize, buffer))
+			cart_type.base_type = base_type_UA;
 		else if (isProbablyFE(d->filesize, buffer) && !f8)
 			cart_type.base_type = base_type_FE;
 		else if (isProbably0840(d->filesize, buffer))
@@ -997,6 +1000,8 @@ void emulate_cartridge(CART_TYPE cart_type, MENU_ENTRY *d)
 		emulate_standard_cartridge(offset, cart_type.withPlusFunctions, 0x1FF4, 0x1FFB, cart_type.withSuperChip );
 	else if (cart_type.base_type == base_type_FE)
 		emulate_FE_cartridge();
+	else if (cart_type.base_type == base_type_UA)
+		emulate_UA_cartridge();
 	else if (cart_type.base_type == base_type_3F)
 		emulate_3F_cartridge();
 	else if (cart_type.base_type == base_type_3E)

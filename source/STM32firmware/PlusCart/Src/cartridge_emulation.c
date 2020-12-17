@@ -138,6 +138,56 @@ void emulate_standard_cartridge(int header_length, bool withPlusFunctions, uint1
 
 	exit_cartridge(addr, addr_prev);
 }
+/* UA
+ *
+ *
+ */
+void emulate_UA_cartridge()
+{
+	setup_cartridge_image();
+
+	uint16_t addr, addr_prev = 0, data = 0, data_prev = 0;
+	unsigned char *bankPtr = &cart_rom[0];
+	bool joy_status = false;
+
+
+	if (!reboot_into_cartridge()) return;
+	__disable_irq();	// Disable interrupts
+
+	while (1)
+	{
+		while ((addr = ADDR_IN) != addr_prev)
+			addr_prev = addr;
+		// got a stable address
+		if (addr & 0x1000)
+		{ // A12 high
+			// normal rom access
+			DATA_OUT = ((uint16_t)bankPtr[addr&0xFFF]);
+			SET_DATA_MODE_OUT
+			// wait for address bus to change
+			while (ADDR_IN == addr)
+				;
+			SET_DATA_MODE_IN
+		}else{
+			if (addr == 0x220 ){	// bank-switch
+				bankPtr = &cart_rom[0];
+			}else if(addr == 0x240){
+				bankPtr = &cart_rom[4*1024];
+			}else if(addr == SWCHB){
+				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+				if( !(data_prev & 0x1) && joy_status)
+					break;
+			}else if(addr == SWCHA){
+				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+				joy_status = !(data_prev & 0x80);
+			}
+		}
+	}
+
+	exit_cartridge(addr, addr_prev);
+}
+
+
 
 /* FA (CBS RAM plus) Bankswitching
  * -------------------------------

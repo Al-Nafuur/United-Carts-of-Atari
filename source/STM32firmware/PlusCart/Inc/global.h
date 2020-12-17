@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include "stm32f4xx_hal.h"
 
-#define VERSION                   "0.16.3 DEV"
+#define VERSION                   "0.16.4 DEV"
 #define PLUSSTORE_API_HOST        "pluscart.firmaplus.de"
 
 #define CHARS_PER_LINE					32
@@ -125,6 +125,7 @@ enum cart_base_type{
 	base_type_3EPlus,
 	base_type_DPCplus,
 	base_type_SB,
+	base_type_UA,
 	base_type_ACE
 };
 

@@ -50,6 +50,7 @@ bool setup_cartridge_image(const char* filename, uint32_t image_size, uint8_t* b
         case base_type_F8:
         case base_type_F6:
         case base_type_F4:
+        case base_type_UA:
         case base_type_FE:
         case base_type_3F:
         case base_type_3E:
