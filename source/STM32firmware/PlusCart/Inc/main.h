@@ -81,7 +81,7 @@ void Error_Handler(void);
 enum e_status_message {
 	none = -2,
 	keyboard_input,
-	root,
+	STATUS_ROOT,
 	version,
 	paging,
 	select_wifi_network,
@@ -107,8 +107,15 @@ enum e_status_message {
 	no_offline_roms_detected,
 	romtype_DPCplus_unsupported,
 	exit_emulation,
-	insert_search,
 	rom_download_failed,
+
+	STATUS_SETUP,
+	STATUS_SETUP_TV_MODE,
+	STATUS_SETUP_FONT_STYLE,
+	STATUS_SETUP_LINE_SPACING,
+	STATUS_SEARCH_FOR_ROM,
+	STATUS_SEARCH_DETAILS,
+	STATUS_CHOOSE_ROM,
 
 };
 
