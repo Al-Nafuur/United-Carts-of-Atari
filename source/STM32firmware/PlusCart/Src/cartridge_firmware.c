@@ -641,8 +641,8 @@ void createMenuForAtari(
 
 	if (strlen(pendingStatusMessage) >= i) {
 		vp = pendingStatusMessage + strlen(pendingStatusMessage) - i;
-		*vp = 138;
-		*(vp+1) = 139;
+		*vp = CHAR_PERIODPERIOD;
+		*(vp+1) = CHAR_PERIODPERIOD2;
 	}
 
 	strncpy(menu_header, vp, i);
