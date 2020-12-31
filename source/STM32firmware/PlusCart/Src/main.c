@@ -183,7 +183,7 @@ unsigned int cart_size_bytes;
 
 USER_SETTINGS user_settings;
 
-char curPath[256], visualPath[256], shortPath[20];
+char curPath[256], visualPath[256];
 char input_field[STATUS_MESSAGE_LENGTH + 1];
 
 enum inputMode {
@@ -779,30 +779,27 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 
 		// remove encodings for visuals
 
-		*visualPath = 0;
-		int vp = 0;
-		for (char *p = curPath; *p; p++) {
+		char *vp = visualPath;
+		for (char *p = curPath; *p; p++)
 			if (*p == '%') {
-				visualPath[vp++] = (char) ((*(p+1)-'0') * 16 + (*p+2) - '0');
+				*vp++ = (char) ((*(p+1)-'0') * 16 + (*p+2) - '0');
 				p += 2;
 			}
-			else {
-				visualPath[vp++] = *p;
-			}
-		}
-		visualPath[vp] = 0;
+			else
+				*vp++ = *p;
+		*vp = 0;
 
 		// truncate path string to last visible n characters
 
-		strcpy(shortPath, visualPath);
-		int available = sizeof(shortPath) / sizeof(char);
-		if (strlen(visualPath) >= available) {
-			strcpy(shortPath, "...");
-			available -= 3;
-			strcat(shortPath, visualPath + strlen(visualPath) - available);
+		vp = visualPath;
+
+		uint8_t shortLen = 20;
+		if (strlen(visualPath) >= shortLen) {
+			vp = visualPath + strlen(visualPath) - shortLen;
+			strncpy(vp, "...", 3);
 		}
 
-		set_menu_status_msg(shortPath);
+		set_menu_status_msg(vp);
 		loadStore = true;
 	}
 
