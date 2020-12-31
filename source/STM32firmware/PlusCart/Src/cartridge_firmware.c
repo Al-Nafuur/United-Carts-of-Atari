@@ -539,6 +539,17 @@ void add_exit_kernel() {
 	bufferp += sizeof(exit_kernel);
 }
 
+int cvtToNum(char *p) {
+	int num = 0;
+	if (*p >= '0' && *p <= '9')
+		num = *p - '0';
+	else if (*p >= 'A' && *p <= 'F')
+		num = *p - 'A' + 10;
+	else if (*p >= 'a' && *p <= 'f')
+		num = *p - 'a' + 10;
+	return num;
+}
+
 
 void createMenuForAtari(
 		MENU_ENTRY *menu_entries,
@@ -617,7 +628,7 @@ void createMenuForAtari(
 	char *vp = pendingStatusMessage;
 	for (char *p = pendingStatusMessage; *p; p++)
 		if (*p == '%') {
-			*vp++ = (char) ((*(p+1)-'0') * 16 + (*p+2) - '0');
+			*vp++ = (char) (cvtToNum(p+1) * 16 + cvtToNum(p+2));
 			p += 2;
 		}
 		else
