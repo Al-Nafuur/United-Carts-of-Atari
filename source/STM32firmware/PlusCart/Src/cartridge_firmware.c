@@ -27,6 +27,7 @@
 
 
 static char menu_header[CHARS_PER_LINE/* + 2*/]__attribute__((section(".ccmram")));
+static char pendingStatusMessage[256]__attribute__((section(".ccmram")));
 static unsigned char menu_status[STATUS_MAX]__attribute__((section(".ccmram")));
 static unsigned const char *firmware_rom = firmware_ntsc_rom;
 
@@ -567,10 +568,12 @@ void createMenuForAtari(
 	set_menu_status_byte(STATUS_MaxPage, max_page);
 	set_menu_status_byte(STATUS_ItemsOnActPage, items_on_act_page);
 
+	memset(menu_header, 0, sizeof(menu_header)/sizeof(char));
+
 	// Display paging information
 
+	uint8_t i = STATUS_MESSAGE_LENGTH - 1;
 	if (max_page > 0) {
-		uint8_t i = STATUS_MESSAGE_LENGTH - 1;
 		max_page++;
 		while (max_page != 0) {
 			menu_header[i--] = (char)((max_page % 10) + '0');
@@ -586,7 +589,7 @@ void createMenuForAtari(
 		if (i % 2 == 0)
 			menu_header[i--] = ' ';
 		menu_header[i--] = CHAR_R_Page;
-		menu_header[i] = CHAR_L_Page;
+		menu_header[i--] = CHAR_L_Page;
 	}
 
 	if (is_connected == true) {
@@ -603,6 +606,38 @@ void createMenuForAtari(
 		menu_header[CHARS_PER_LINE - 1 - 1] = CHAR_L_NoAccount;
 		menu_header[CHARS_PER_LINE - 1 - 0] = CHAR_R_NoAccount;
 	}
+
+
+	//TODO: here we copy/truncate the status string --> menu_header
+	//note: "i" == available chars
+
+
+	// remove encodings for visuals
+
+	char *vp = pendingStatusMessage;
+	for (char *p = pendingStatusMessage; *p; p++)
+		if (*p == '%') {
+			*vp++ = (char) ((*(p+1)-'0') * 16 + (*p+2) - '0');
+			p += 2;
+		}
+		else
+			*vp++ = *p;
+	*vp = 0;
+
+	// truncate path string to last visible n characters
+
+	vp = pendingStatusMessage;
+
+	if (strlen(pendingStatusMessage) >= i) {
+		vp = pendingStatusMessage + strlen(pendingStatusMessage) - i;
+		strncpy(vp, "..", 2);
+	}
+
+	strncpy(menu_header, vp, i);
+
+
+
+
 
 
 	uint8_t colourSet = user_settings.tv_mode == TV_MODE_NTSC ? 0 : 1;
@@ -699,9 +734,10 @@ void createMenuForAtari(
 }
 
 void set_menu_status_msg(const char *message) {
-	size_t msg_len = strlen(message);
-	memset(menu_header, ' ', CHARS_PER_LINE);
-	strncpy(menu_header, message, msg_len > STATUS_MESSAGE_LENGTH ? STATUS_MESSAGE_LENGTH : msg_len);
+//	size_t msg_len = strlen(message);
+//	memset(menu_header, ' ', CHARS_PER_LINE);
+//	strncpy(menu_header, message, msg_len > STATUS_MESSAGE_LENGTH ? STATUS_MESSAGE_LENGTH : msg_len);
+	strcpy(pendingStatusMessage, message);
 }
 
 void set_menu_status_byte(enum eStatus_bytes_id byte_id, uint8_t status_byte) {

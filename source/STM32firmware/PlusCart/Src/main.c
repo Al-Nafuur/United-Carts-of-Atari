@@ -776,30 +776,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 	}
 
 	else {
-
-		// remove encodings for visuals
-
-		char *vp = visualPath;
-		for (char *p = curPath; *p; p++)
-			if (*p == '%') {
-				*vp++ = (char) ((*(p+1)-'0') * 16 + (*p+2) - '0');
-				p += 2;
-			}
-			else
-				*vp++ = *p;
-		*vp = 0;
-
-		// truncate path string to last visible n characters
-
-		vp = visualPath;
-
-		uint8_t shortLen = 20;
-		if (strlen(visualPath) >= shortLen) {
-			vp = visualPath + strlen(visualPath) - shortLen;
-			strncpy(vp, "...", 3);
-		}
-
-		set_menu_status_msg(vp);
+		set_menu_status_msg(curPath);
 		loadStore = true;
 	}
 
