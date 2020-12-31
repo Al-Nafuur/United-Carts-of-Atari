@@ -183,7 +183,7 @@ unsigned int cart_size_bytes;
 
 USER_SETTINGS user_settings;
 
-char curPath[256], visualPath[256];
+char curPath[256];
 char input_field[STATUS_MESSAGE_LENGTH + 1];
 
 enum inputMode {

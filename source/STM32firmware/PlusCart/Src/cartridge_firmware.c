@@ -639,7 +639,7 @@ void createMenuForAtari(
 
 	vp = pendingStatusMessage;
 
-	if (strlen(pendingStatusMessage) >= i) {
+	if (strlen(pendingStatusMessage) > i) {
 		vp = pendingStatusMessage + strlen(pendingStatusMessage) - i;
 		*vp = CHAR_PERIODPERIOD;
 		*(vp+1) = CHAR_PERIODPERIOD2;
