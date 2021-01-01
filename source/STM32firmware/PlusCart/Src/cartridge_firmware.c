@@ -26,8 +26,8 @@
 	sharedFont[ convertAsciiToCharnum(fontType, r) * 12 + s ])
 
 
-static char menu_header[CHARS_PER_LINE/* + 2*/]__attribute__((section(".ccmram")));
-static char pendingStatusMessage[256]__attribute__((section(".ccmram")));
+static char menu_header[CHARS_PER_LINE]__attribute__((section(".ccmram")));
+static char pendingStatusMessage[STATUS_MESSAGE_LENGTH]__attribute__((section(".ccmram")));
 static unsigned char menu_status[STATUS_MAX]__attribute__((section(".ccmram")));
 static unsigned const char *firmware_rom = firmware_ntsc_rom;
 
@@ -579,12 +579,36 @@ void createMenuForAtari(
 	set_menu_status_byte(STATUS_MaxPage, max_page);
 	set_menu_status_byte(STATUS_ItemsOnActPage, items_on_act_page);
 
-	memset(menu_header, 0, sizeof(menu_header)/sizeof(char));
+	memset(menu_header, ' ', sizeof(menu_header)/sizeof(char));
 
 	// Display paging information
 
-	uint8_t i = STATUS_MESSAGE_LENGTH - 1;
+	uint8_t i = CHARS_PER_LINE - 1;
+
+	// Account icon
+	if (plus_store_status[0] == '1') {
+		menu_header[i--] = CHAR_R_Account;
+		menu_header[i--] = CHAR_L_Account;
+	} else {
+		menu_header[i--] = CHAR_R_NoAccount;
+		menu_header[i--] = CHAR_L_NoAccount;
+	}
+
+	// Wifi icon
+	if (is_connected) {
+		menu_header[i--] = CHAR_R_Wifi;
+		menu_header[i--] = CHAR_L_Wifi;
+	} else {
+		menu_header[i--] = CHAR_R_NoWifi;
+		menu_header[i--] = CHAR_L_NoWifi;
+	}
+
+	// Page info
 	if (max_page > 0) {
+
+		uint8_t pagePos = i;
+		i--;
+
 		max_page++;
 		while (max_page != 0) {
 			menu_header[i--] = (char)((max_page % 10) + '0');
@@ -597,32 +621,23 @@ void createMenuForAtari(
 			menu_header[i--] = (char)((page_id % 10) + '0');
 			page_id = page_id / 10;
 		}
-		if (i % 2 == 0)
-			menu_header[i--] = ' ';
+
+		// if the position would cause character glitching in 2-char page, then shift everything left
+
+		if (i % 2 == 0) {
+			for (uint8_t j = 8; j > 0; j--)
+				menu_header[pagePos - j] = menu_header[pagePos - j + 1];
+			i--;
+		}
+
 		menu_header[i--] = CHAR_R_Page;
 		menu_header[i--] = CHAR_L_Page;
+
+
 	}
 
-	if (is_connected == true) {
-		menu_header[CHARS_PER_LINE - 1 - 3] = CHAR_L_Wifi;
-		menu_header[CHARS_PER_LINE - 1 - 2] = CHAR_R_Wifi;
-	} else {
-		menu_header[CHARS_PER_LINE - 1 - 3] = CHAR_L_NoWifi; //CHAR_L_NoWifi;
-		menu_header[CHARS_PER_LINE - 1 - 2] = CHAR_R_NoWifi; //CHAR_R_NoWifi;
-	}
-	if (plus_store_status[0] == '1') {
-		menu_header[CHARS_PER_LINE - 1 - 1] = CHAR_L_Account;
-		menu_header[CHARS_PER_LINE - 1 - 0] = CHAR_R_Account;
-	} else {
-		menu_header[CHARS_PER_LINE - 1 - 1] = CHAR_L_NoAccount;
-		menu_header[CHARS_PER_LINE - 1 - 0] = CHAR_R_NoAccount;
-	}
-
-
-	// copy/truncate the status string --> menu_header
-	// note: "i" == available chars
-
-	// remove %XX encodings for visuals
+	// "..." truncated status message
+	// first, remove %XX encodings for visuals
 
 	char *vp = pendingStatusMessage;
 	for (char *p = pendingStatusMessage; *p; p++)
@@ -634,7 +649,8 @@ void createMenuForAtari(
 			*vp++ = *p;
 	*vp = 0;
 
-	// truncate path string to last visible n characters
+	// now truncate path string to last visible n characters
+	// put an "..." at the front of long status lines, and shift start point...
 
 	vp = pendingStatusMessage;
 
@@ -745,10 +761,8 @@ void createMenuForAtari(
 }
 
 void set_menu_status_msg(const char *message) {
-//	size_t msg_len = strlen(message);
-//	memset(menu_header, ' ', CHARS_PER_LINE);
-//	strncpy(menu_header, message, msg_len > STATUS_MESSAGE_LENGTH ? STATUS_MESSAGE_LENGTH : msg_len);
-	strcpy(pendingStatusMessage, message);
+	memset(pendingStatusMessage, 0, sizeof(pendingStatusMessage)/sizeof(char));
+	strncpy(pendingStatusMessage, message, sizeof(pendingStatusMessage)/sizeof(char) - 1);
 }
 
 void set_menu_status_byte(enum eStatus_bytes_id byte_id, uint8_t status_byte) {
