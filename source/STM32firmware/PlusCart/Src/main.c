@@ -328,7 +328,8 @@ void make_keyboard(MENU_ENTRY **dst, enum keyboardType selector){
 	if (selector != KEYBOARD_SYMBOLS)
 		make_menu_entry(dst, MENU_TEXT_SYMBOLS, Setup_Menu);
 
-	make_menu_entry(dst, MENU_TEXT_DELETE_CHAR, Delete_Keyboard_Char);
+	if (strlen(input_field))
+		make_menu_entry(dst, MENU_TEXT_DELETE_CHAR, Delete_Keyboard_Char);
 	make_menu_entry(dst, "Enter", Menu_Action);
 }
 
@@ -1127,14 +1128,21 @@ void emulate_cartridge(CART_TYPE cart_type, MENU_ENTRY *d)
 }
 
 void truncate_curPath(uint8_t count){
+
+	for (int selector = 0; keyboards[selector]; selector++)
+		for (const char **kbRow = keyboards[selector]; *kbRow; kbRow++) {
+			char *kb = strstr(curPath, *kbRow);
+			if (kb) {
+				*(kb-1) = 0;
+				return;
+			}
+		}
+
 	for (uint8_t i = 0; i < count; i++) {
 		unsigned int len = strlen(curPath);
 
 		while (len && curPath[--len] != PATH_SEPERATOR);
 		curPath[len] = 0;
-
-		if (len && curPath[len - 1] == ' ')
-			truncate_curPath(1);
 	}
 }
 
@@ -1344,11 +1352,8 @@ int main(void)
 					truncate_curPath(1);
 
 				inputActive = MODE_SHOW_PATH;
-				*input_field = 0; //input_field[0] = 0; // Reset Keyboard input field
+				*input_field = 0;
 			}
-
-//			else if (d->type == Leave_SubKeyboard_Menu)
-//				main_status = keyboard_input;
 
 			else if (d->type == Delete_Keyboard_Char) {
 
@@ -1377,12 +1382,13 @@ int main(void)
 
 				append_entry_to_path(d);
 
-				//if (inputActive /*strlen(input_field)*/)
-				//	main_status = keyboard_input;
-
 				if (d->type == Keyboard_Char) {
+
+					if (inputActive == MODE_SHOW_INPUT)
+						strcat(input_field, d->entryname);
+
 					inputActive = MODE_SHOW_INPUT;
-					strcat(input_field, d->entryname);
+
 					if (strlen(input_field) > STATUS_MESSAGE_LENGTH) {
 						for (int i = 0; i < STATUS_MESSAGE_LENGTH; i++) {
 							input_field[i] = input_field[i + 1];
@@ -1408,24 +1414,22 @@ int main(void)
     //main_status = (main_status != none)?main_status:menuStatusMessage;
 
 //    if(main_status == keyboard_input){
-//    	set_menu_status_msg(input_field);
+//    	set_menu_status_msg);
 //    	set_menu_status_byte(STATUS_PageType, (uint8_t) Keyboard);
 //    }
 
 
-	if (/*menuStatusMessage == keyboard_input &&*/ *input_field) {
+	if (*input_field) {
 		set_menu_status_msg(input_field);
 		set_menu_status_byte(STATUS_PageType, (uint8_t) Keyboard);
 	}
 
     else {
 
-    	if (menuStatusMessage >= 0) //!= none)
+    	if (menuStatusMessage >= 0)
     		set_menu_status_msg(status_message[menuStatusMessage]);
-//    	else
-//    		set_menu_status_msg("NONE");
 
-       	if(act_page > (num_menu_entries / numMenuItemsPerPage[user_settings.line_spacing]) )
+    	if(act_page > (num_menu_entries / numMenuItemsPerPage[user_settings.line_spacing]) )
     		act_page = 0;
 
     	set_menu_status_byte(STATUS_PageType, (uint8_t) Directory);
