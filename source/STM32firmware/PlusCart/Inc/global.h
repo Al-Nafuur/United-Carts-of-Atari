@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include "stm32f4xx_hal.h"
 
-#define VERSION                   "0.16.4 DEV"
+#define VERSION                   "0.16.5 DEV"
 #define PLUSSTORE_API_HOST        "pluscart.firmaplus.de"
 
 #define CHARS_PER_LINE					32
@@ -43,14 +43,18 @@
 #define MENU_TEXT_PLUS_CONNECT              "PlusStore Connect"
 #define MENU_TEXT_PLUS_REMOVE               "PlusStore Disconnect"
 #define MENU_TEXT_ESP8266_RESTORE           "ESP8266 Factory Reset"
+#define MENU_TEXT_ESP8266_UPDATE            "ESP8266 Update"
+
+#define MENU_TEXT_SYSTEM_INFO               "System Info"
 #define MENU_TEXT_SEARCH_FOR_ROM            "Search ROM"
 #define MENU_TEXT_SPACE						"Space"
 #define MENU_TEXT_LOWERCASE					"Lowercase"
 #define MENU_TEXT_UPPERCASE					"Uppercase"
 #define MENU_TEXT_SYMBOLS					"Symbols"
 
-#define URLENCODE_MENU_TEXT_PLUS_CONNECT            "PlusStore%20Connect"
-#define URLENCODE_MENU_TEXT_SETUP 	                "Setup"
+#define URLENCODE_MENU_TEXT_SYSTEM_INFO     "System%20Info"
+#define URLENCODE_MENU_TEXT_PLUS_CONNECT    "PlusStore%20Connect"
+#define URLENCODE_MENU_TEXT_SETUP 	        "Setup"
 
 #define AUTOSTART_FILENAME_PREFIX           "Autostart."
 

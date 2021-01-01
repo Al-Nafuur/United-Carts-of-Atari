@@ -41,6 +41,7 @@
 #include "main.h"
 #include "font.h"
 #include "esp8266.h"
+#include "stm32_udid.h"
 #include "flash.h"
 #include "cartridge_io.h"
 #include "cartridge_firmware.h"
@@ -150,6 +151,7 @@ static const char status_message[][28]__attribute__((section(".flash01"))) = {
 		"Select TV Mode",
 		"Select Font",
 		"Select Line Spacing",
+		"System Info",
 		MENU_TEXT_SEARCH_FOR_ROM,
 		"Enter search details",
 		"Search results"
@@ -338,14 +340,39 @@ MENU_ENTRY* generateSetupMenu(MENU_ENTRY *dst) {
 	make_menu_entry(&dst, MENU_TEXT_FONT_SETUP, Setup_Menu);
 	make_menu_entry(&dst, MENU_TEXT_SPACING_SETUP, Setup_Menu);
 	make_menu_entry(&dst, MENU_TEXT_WIFI_SETUP, Setup_Menu);
-		make_menu_entry(&dst, MENU_TEXT_WPS_CONNECT, Menu_Action);
+	make_menu_entry(&dst, MENU_TEXT_WPS_CONNECT, Menu_Action);
 	make_menu_entry(&dst, MENU_TEXT_WIFI_MANAGER, Menu_Action);
 	//make_menu_entry(&dst, MENU_TEXT_PRIVATE_KEY, Input_Field);
 	make_menu_entry(&dst, MENU_TEXT_ESP8266_RESTORE, Menu_Action);
+	if(strcmp(esp8266_at_version, "1.7.4.0") != 0)
+		make_menu_entry(&dst, MENU_TEXT_ESP8266_UPDATE, Menu_Action);
+
+	make_menu_entry(&dst, MENU_TEXT_SYSTEM_INFO, Sub_Menu);
+
 	if (flash_has_downloaded_roms())
 		make_menu_entry(&dst, MENU_TEXT_DELETE_OFFLINE_ROMS, Menu_Action);
 	else
 		make_menu_entry(&dst, MENU_TEXT_DETECT_OFFLINE_ROMS, Menu_Action);
+
+	return dst;
+}
+
+MENU_ENTRY* generateSystemInfo(MENU_ENTRY *dst) {
+	make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
+	make_menu_entry(&dst, "STM32 Firmware Version:", Leave_Menu);
+	make_menu_entry(&dst, VERSION, Leave_Menu);
+	make_menu_entry(&dst, "WiFi AT Firmware version:", Leave_Menu);
+	make_menu_entry(&dst, esp8266_at_version, Leave_Menu);
+
+	if(STM32F4_FLASH_SIZE > 512U){
+    	make_menu_entry(&dst, "Flashsize 1MB", Leave_Menu);
+	}else{
+    	make_menu_entry(&dst, "Flashsize 512K", Leave_Menu);
+    }
+
+	make_menu_entry(&dst, "PlusCart Device ID: ", Leave_Menu);
+	make_menu_entry(&dst, stm32_udid, Leave_Menu);
+
 
 	return dst;
 }
@@ -435,6 +462,17 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			dst = generateSetupMenu(dst);
         	//menuStatusMessage = version;  interferes with generic flow/usage of menu names -- TODO: switch to Setup/ABOUT menu option
 			loadStore = true;
+		}
+		else if (strstr(mts, URLENCODE_MENU_TEXT_SYSTEM_INFO) == mts) {
+			menuStatusMessage = STATUS_SETUP_SYSTEM_INFO;
+			dst = generateSystemInfo(dst);
+			loadStore = true;
+
+		}
+		else if (strstr(mts, MENU_TEXT_ESP8266_UPDATE) == mts) {
+			esp8266_update();
+			truncate_curPath(1);
+			menuStatusMessage = buildMenuFromPath(d);
 		}
 
 		// Text line spacing
@@ -732,6 +770,10 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 				menuStatusMessage = generateKeyboard(&dst, d, menuStatusMessage, private_key);
 			}
 		}
+		else{
+			// unknown entry must be from PlusStore API, so load from store.
+			loadStore = true;
+		}
 	}
 
 	else if (strstr(curPath, MENU_TEXT_OFFLINE_ROMS) == curPath) {
@@ -834,16 +876,6 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 
         	esp8266_PlusStore_API_end_transmission();
         }else if(strlen(curPath) == 0){
-
-/*        	// re-ask for wifi connection details
-			menuStatusMessage = select_wifi_network;
-			make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
-			if( esp8266_wifi_list( &dst, &num_menu_entries) == false){
-	    		return esp_timeout;
-	    	}
-*/
-
-
         	make_menu_entry(&dst, MENU_TEXT_WIFI_RECONNECT, Menu_Action);
     	}
     }
@@ -1163,6 +1195,7 @@ void system_secondary_init(void){
 
 	MX_USART1_UART_Init();
 	esp8266_init();
+	read_esp8266_at_version();
 	// set up status area
 }
 

@@ -56,6 +56,9 @@ extern "C" {
 
 #define MAX_RANGE_SIZE           32768
 
+char stm32_udid[25];
+char esp8266_at_version[15];
+
 typedef struct {
 	uint32_t start;
 	uint32_t stop;
@@ -65,6 +68,8 @@ typedef struct {
 /** Should be written by the user for input from / output to the ESP module **/
 
 void esp8266_init(void) __attribute__((section(".flash01")));
+void esp8266_update(void) __attribute__((section(".flash01")));
+
 
 /** Function prototypes **/
 
@@ -99,6 +104,7 @@ void esp8266_print(char *) __attribute__((section(".flash01")));
 void esp8266_AT_WiFiManager() __attribute__((section(".flash01")));
 
 void generate_udid_string(void) __attribute__((section(".flash01")));
+void read_esp8266_at_version(void) __attribute__((section(".flash01")));
 
 #ifdef	__cplusplus
 }

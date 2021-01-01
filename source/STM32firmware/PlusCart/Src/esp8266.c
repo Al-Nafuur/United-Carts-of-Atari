@@ -42,7 +42,6 @@ void connect_tcp_link(char link_id ) __attribute__((section(".flash01")));
 bool init_send_tcp_link(char link_id, uint16_t bytes_to_send) __attribute__((section(".flash01")));
 void close_tcp_link(char link_id) __attribute__((section(".flash01")));
 
-char stm32_udid[25];
 char tmp_uart_buffer[50];
 
 bool esp8266_PlusStore_API_connect(){
@@ -197,25 +196,6 @@ uint16_t esp8266_skip_http_response_header(){
 	return content_length;
 }
 
-void get_boundary_http_header(char * buffer){
-	int count = 0;
-	uint8_t c;
-	while(HAL_UART_Receive(&huart1, &c, 1, PLUSSTORE_RESPONSE_START_TIMEOUT ) == HAL_OK){
-       	if( c == '\n' ){
-       		if (count == 1){
-       			esp8266_skip_http_response_header(); // first row in multipart response is empty
-       			break;
-       		}
-       		count = 0;
-       	}else{
-       		if(count > 44 && count < 58){
-       			buffer[count - 45] = c;
-       		}
-       		count++;
-       	}
-	}
-}
-
 /**
   * @brief ESP8266 Initialization Function
   * @param None
@@ -241,6 +221,19 @@ void esp8266_init()
 
 }
 //________UART module Initialized__________//
+
+void esp8266_update()
+{
+	if(esp8266_send_command("AT+CIUPDATE\r\n", 120000) != ESP8266_OK ) // wait 2 minutes max for firmware download and flashing
+		return;
+	// Update success wait for ESP8266 reboot (we don't monitor ESP8266_WIFI_DISCONNECT).
+	if( wait_response(15000) != ESP8266_READY)
+		return;
+	 wait_response(7000); // wait for reconnect to WiFi
+
+	 read_esp8266_at_version(); // read (hopefully) new AT version
+
+}
 
 uint64_t esp8266_send_command(char *command, uint32_t timeout){
     esp8266_print(command);
@@ -798,4 +791,23 @@ void generate_udid_string(){
 			content_len = content_len/16;
 		}
 	}
+}
+
+void read_esp8266_at_version(){
+    esp8266_print("AT+GMR\r\n");
+    unsigned char c;
+    int stage = 0;
+
+    esp8266_at_version[0] = 0;
+
+    while(HAL_UART_Receive(&huart1, &c, 1, 200 ) == HAL_OK){
+		if( (stage == 0 && c == ':') || (stage == 1 && c == '(') ){
+			stage++;
+		}else if(stage == 1){ // && i < SIZEOF esp8266_at_version
+			strcat(esp8266_at_version, &c);
+		}else if (stage == 2){
+			break;
+		}
+    }
+    wait_response(200); // read rest of message
 }
