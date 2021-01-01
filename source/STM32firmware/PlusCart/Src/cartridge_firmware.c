@@ -619,11 +619,10 @@ void createMenuForAtari(
 	}
 
 
-	//TODO: here we copy/truncate the status string --> menu_header
-	//note: "i" == available chars
+	// copy/truncate the status string --> menu_header
+	// note: "i" == available chars
 
-
-	// remove encodings for visuals
+	// remove %XX encodings for visuals
 
 	char *vp = pendingStatusMessage;
 	for (char *p = pendingStatusMessage; *p; p++)

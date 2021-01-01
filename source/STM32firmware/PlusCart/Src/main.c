@@ -278,6 +278,7 @@ const char *keyboardSymbols[]__attribute__((section(".flash0#"))) = {
 	0
 };
 
+
 enum keyboardType {
 	KEYBOARD_UPPERCASE,
 	KEYBOARD_LOWERCASE,
@@ -1128,8 +1129,12 @@ void emulate_cartridge(CART_TYPE cart_type, MENU_ENTRY *d)
 void truncate_curPath(uint8_t count){
 	for (uint8_t i = 0; i < count; i++) {
 		unsigned int len = strlen(curPath);
+
 		while (len && curPath[--len] != PATH_SEPERATOR);
 		curPath[len] = 0;
+
+		if (len && curPath[len - 1] == ' ')
+			truncate_curPath(1);
 	}
 }
 
