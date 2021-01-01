@@ -119,8 +119,6 @@ const EXT_TO_CART_TYPE_MAP ext_to_cart_type_map[]__attribute__((section(".flash0
 };
 
 static const char status_message[][28]__attribute__((section(".flash01"))) = {
-		"PlusCart(+) by W.Stubig"          ,
-		"PlusCart(+) Ver. " VERSION        ,
 		"PlusCart(+)"                      ,
 		"Select WiFi Network"              ,
 		"No WiFi"                          ,
@@ -1404,7 +1402,7 @@ int main(void)
 
     else {
 
-    	if (menuStatusMessage >= 0)
+    	if (menuStatusMessage >= STATUS_ROOT)
     		set_menu_status_msg(status_message[menuStatusMessage]);
 
     	if(act_page > (num_menu_entries / numMenuItemsPerPage[user_settings.line_spacing]) )
@@ -1412,10 +1410,9 @@ int main(void)
 
     	set_menu_status_byte(STATUS_PageType, (uint8_t) Directory);
     }
-    bool paging_required = (menuStatusMessage == /*(main_status == */paging);
     bool is_connected = esp8266_is_connected();
 
-    createMenuForAtari(menu_entries, act_page, num_menu_entries, paging_required, is_connected, plus_store_status );
+    createMenuForAtari(menu_entries, act_page, num_menu_entries, is_connected, plus_store_status );
     HAL_Delay(200);
 
   } // while(1)
