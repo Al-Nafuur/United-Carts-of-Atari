@@ -82,8 +82,6 @@ enum e_status_message {
 	none = -2,
 	keyboard_input,
 	STATUS_ROOT,
-	version,
-	paging,
 	select_wifi_network,
 	wifi_not_connected,
 	wifi_connected,
