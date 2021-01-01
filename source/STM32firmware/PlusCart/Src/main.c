@@ -186,7 +186,7 @@ unsigned int cart_size_bytes;
 USER_SETTINGS user_settings;
 
 char curPath[256];
-char input_field[STATUS_MESSAGE_LENGTH + 1];
+char input_field[STATUS_MESSAGE_LENGTH];
 
 enum inputMode {
 	MODE_SHOW_INSTRUCTION,
@@ -280,6 +280,7 @@ const char *keyboardSymbols[]__attribute__((section(".flash0#"))) = {
 	0
 };
 
+
 enum keyboardType {
 	KEYBOARD_UPPERCASE,
 	KEYBOARD_LOWERCASE,
@@ -329,7 +330,9 @@ void make_keyboard(MENU_ENTRY **dst, enum keyboardType selector){
 	if (selector != KEYBOARD_SYMBOLS)
 		make_menu_entry(dst, MENU_TEXT_SYMBOLS, Setup_Menu);
 
-	make_menu_entry(dst, MENU_TEXT_DELETE_CHAR, Delete_Keyboard_Char);
+	if (*input_field)
+		make_menu_entry(dst, MENU_TEXT_DELETE_CHAR, Delete_Keyboard_Char);
+
 	make_menu_entry(dst, "Enter", Menu_Action);
 }
 
@@ -442,13 +445,6 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 	};
 
 
-
-//	if (*curPath)
-//		set_menu_status_msg(curPath);
-//	else
-//		menuStatusMessage = STATUS_PLUSCART;
-	//set_menu_status_msg(status_message[menuStatusMessage]);
-
 	MENU_ENTRY *dst = (MENU_ENTRY *)&menu_entries[0];
 	char *mts = curPath + sizeof(MENU_TEXT_SETUP);   // does a +1 because of MENU_TEXT_SETUP trailing 0
 		// and this caters for the trailing slash in the setup string (if present)
@@ -456,11 +452,8 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 	if(strstr(curPath, MENU_TEXT_SETUP) == curPath) {
 
 		if (!strcmp(curPath, MENU_TEXT_SETUP)){
-
 			menuStatusMessage = STATUS_SETUP;
-
 			dst = generateSetupMenu(dst);
-        	//menuStatusMessage = version;  interferes with generic flow/usage of menu names -- TODO: switch to Setup/ABOUT menu option
 			loadStore = true;
 		}
 		else if (strstr(mts, URLENCODE_MENU_TEXT_SYSTEM_INFO) == mts) {
@@ -533,18 +526,11 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			        	menuStatusMessage = wifi_not_connected;
 			    	}
 					curPath[0] = '\0';
-				}else{
+				}
 
-					//menuStatusMessage = insert_password;
-
+				else
 					menuStatusMessage = generateKeyboard(&dst, d, menuStatusMessage, insert_password);
 
-//					if (inputActive != MODE_SHOW_INPUT) {
-//						inputActive = MODE_SHOW_INPUT;
-//						menuStatusMessage = keyboard_input;
-//					}
-
-				}
 			}
 
 			else {
@@ -789,8 +775,16 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			loadStore = true;
 			menuStatusMessage = STATUS_CHOOSE_ROM;
 		}
-		else
+		else {
+
+			// Temporary HACK.  We want to clear the input_field on first-run
+			// Use of "inputActive" does not work... :(
+
+			if (strstr(input_field, "Search ROM"))
+				*input_field = 0;
+
 			menuStatusMessage = generateKeyboard(&dst, d, menuStatusMessage, STATUS_SEARCH_DETAILS);
+		}
 	}
 
 	else if (d->type == Menu_Action){
@@ -1158,8 +1152,19 @@ void emulate_cartridge(CART_TYPE cart_type, MENU_ENTRY *d)
 }
 
 void truncate_curPath(uint8_t count){
+
+	for (int selector = 0; keyboards[selector]; selector++)
+		for (const char **kbRow = keyboards[selector]; *kbRow; kbRow++) {
+			char *kb = strstr(curPath, *kbRow);
+			if (kb) {
+				*(kb-1) = 0;
+				return;
+			}
+		}
+
 	for (uint8_t i = 0; i < count; i++) {
 		unsigned int len = strlen(curPath);
+
 		while (len && curPath[--len] != PATH_SEPERATOR);
 		curPath[len] = 0;
 	}
@@ -1206,39 +1211,7 @@ void append_entry_to_path(MENU_ENTRY *d){
 			sprintf(curPath + strlen(curPath), strchr(" =+&#%", *p) ? "%%%02X" : "%c", *p);
 	else
 		strcat(curPath, d->entryname);
-
-
-/*           char encode_chars[] = " =+&#%";
-           int i = 0, t;
-           unsigned int len = strlen(d->entryname);
-           char tmp[] = "00";
-           while(i < len){
-               if(strchr(encode_chars, d->entryname[i])) {
-                       t = 1;
-                       uint8_t seq = (uint8_t)d->entryname[i];
-                      do {
-                               tmp[t] = (char)((seq % 16) + '0');
-                               if (tmp[t] > '9')
-                                   tmp[t] = (char)(tmp[t] + 7);
-                               t--;
-                               seq /= 16;
-                       } while (seq);
-                   strcat(curPath, "%");
-                   strcat(curPath, tmp);
-
-                }else{
-                    strncat(curPath, &d->entryname[i], 1);
-                }
-               i++;
-            }
-        }else{
-                strcat(curPath, d->entryname);
-        }
-*/
 }
-
-
-
 
 
 /* USER CODE END 0 */
@@ -1354,7 +1327,7 @@ int main(void)
 				}
 
 				else
-					menuStatusMessage = /*main_status = */romtype_unknown;
+					menuStatusMessage = romtype_unknown;
 			}
 
 			truncate_curPath(1);
@@ -1372,11 +1345,8 @@ int main(void)
 					truncate_curPath(1);
 
 				inputActive = MODE_SHOW_PATH;
-				*input_field = 0; //input_field[0] = 0; // Reset Keyboard input field
+				*input_field = 0;
 			}
-
-//			else if (d->type == Leave_SubKeyboard_Menu)
-//				main_status = keyboard_input;
 
 			else if (d->type == Delete_Keyboard_Char) {
 
@@ -1385,14 +1355,9 @@ int main(void)
 					input_field[--len] = 0;
 					curPath[strlen(curPath) - 1] = 0;
 				}
-				menuStatusMessage = /*main_status = */keyboard_input;
+				menuStatusMessage = keyboard_input;
 
 			} else {
-
-				// go into Menu TODO find better way for separation of first keyboard char!!
-				// TODO: odd  -- essentially if the string is exact "Search Rom" or "connect" then a "/" is suffixed
-				// this is a separator for the API I guess.
-
 
 				if ((d->type != Keyboard_Char && strlen(curPath) > 0)
 						|| !strcmp(MENU_TEXT_SETUP"/"MENU_TEXT_PLUS_CONNECT, curPath)
@@ -1405,24 +1370,26 @@ int main(void)
 
 				append_entry_to_path(d);
 
-				//if (inputActive /*strlen(input_field)*/)
-				//	main_status = keyboard_input;
-
 				if (d->type == Keyboard_Char) {
+
 					inputActive = MODE_SHOW_INPUT;
+					//if (inputActive == MODE_SHOW_INPUT)
 					strcat(input_field, d->entryname);
-					if (strlen(input_field) > STATUS_MESSAGE_LENGTH) {
-						for (int i = 0; i < STATUS_MESSAGE_LENGTH; i++) {
+
+
+					// essentially "redundant" as the curPath won't be long enough anyway...
+
+					if (strlen(input_field) > STATUS_MESSAGE_LENGTH - 1)
+						for (int i = 0; i < STATUS_MESSAGE_LENGTH - 1; i++)
 							input_field[i] = input_field[i + 1];
-						}
-					}
-					menuStatusMessage = /*main_status = */keyboard_input;
+
+					menuStatusMessage = keyboard_input;
 				}
 
 				else {
 					if (d->type == Menu_Action) {
 						inputActive = MODE_SHOW_PATH;
-						*input_field = 0; //input_field[0] = 0;
+						*input_field = 0;
 					}
 				}
 			}
@@ -1431,29 +1398,17 @@ int main(void)
 	}
 
 
-
-    // Menu status message and PageType byte
-    //main_status = (main_status != none)?main_status:menuStatusMessage;
-
-//    if(main_status == keyboard_input){
-//    	set_menu_status_msg(input_field);
-//    	set_menu_status_byte(STATUS_PageType, (uint8_t) Keyboard);
-//    }
-
-
-	if (/*menuStatusMessage == keyboard_input &&*/ *input_field) {
+	if (*input_field) {
 		set_menu_status_msg(input_field);
 		set_menu_status_byte(STATUS_PageType, (uint8_t) Keyboard);
 	}
 
     else {
 
-    	if (menuStatusMessage >= 0) //!= none)
+    	if (menuStatusMessage >= 0)
     		set_menu_status_msg(status_message[menuStatusMessage]);
-//    	else
-//    		set_menu_status_msg("NONE");
 
-       	if(act_page > (num_menu_entries / numMenuItemsPerPage[user_settings.line_spacing]) )
+    	if(act_page > (num_menu_entries / numMenuItemsPerPage[user_settings.line_spacing]) )
     		act_page = 0;
 
     	set_menu_status_byte(STATUS_PageType, (uint8_t) Directory);

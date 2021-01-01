@@ -8,7 +8,7 @@
 #define PLUSSTORE_API_HOST        "pluscart.firmaplus.de"
 
 #define CHARS_PER_LINE					32
-#define STATUS_MESSAGE_LENGTH           (CHARS_PER_LINE - 5)
+#define STATUS_MESSAGE_LENGTH           256
 
 #define NUM_MENU_ITEMS			      	1024
 
