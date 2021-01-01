@@ -361,7 +361,6 @@ MENU_ENTRY* generateSetupMenu(MENU_ENTRY *dst) {
 }
 
 MENU_ENTRY* generateSystemInfo(MENU_ENTRY *dst) {
-	make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
 	make_menu_entry(&dst, "STM32 Firmware Version:", Leave_Menu);
 	make_menu_entry(&dst, VERSION, Leave_Menu);
 	make_menu_entry(&dst, "WiFi AT Firmware version:", Leave_Menu);
