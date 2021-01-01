@@ -796,18 +796,17 @@ void generate_udid_string(){
 void read_esp8266_at_version(){
     esp8266_print("AT+GMR\r\n");
     unsigned char c;
-    int stage = 0;
-
-    esp8266_at_version[0] = 0;
+    int stage = 0, i = 0;
 
     while(HAL_UART_Receive(&huart1, &c, 1, 200 ) == HAL_OK){
-		if( (stage == 0 && c == ':') || (stage == 1 && c == '(') ){
+		if( i==14 || (stage == 0 && c == ':') || (stage == 1 && c == '(')){
 			stage++;
 		}else if(stage == 1){ // && i < SIZEOF esp8266_at_version
-			strcat(esp8266_at_version, &c);
+			esp8266_at_version[i++] = c;
 		}else if (stage == 2){
 			break;
 		}
     }
+    esp8266_at_version[i] = '\0';
     wait_response(200); // read rest of message
 }
