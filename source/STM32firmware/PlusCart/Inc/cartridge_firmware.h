@@ -52,7 +52,7 @@ int emulate_firmware_cartridge();
 
 void set_menu_status_msg(const char* message);
 
-void createMenuForAtari(MENU_ENTRY * menu_entries, uint8_t page_id, int num_menu_entries, bool paging_required, bool is_connected, uint8_t * plus_store_status);
+void createMenuForAtari(MENU_ENTRY * menu_entries, uint8_t page_id, int num_menu_entries, bool is_connected, uint8_t * plus_store_status);
 
 void set_menu_status_byte(enum eStatus_bytes_id byte_id, uint8_t status_byte);
 

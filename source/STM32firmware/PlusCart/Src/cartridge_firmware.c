@@ -555,7 +555,6 @@ void createMenuForAtari(
 		MENU_ENTRY *menu_entries,
 		uint8_t page_id,
 		int num_menu_entries,
-		bool paging_required,
 		bool is_connected,
 		uint8_t *plus_store_status) {
 
