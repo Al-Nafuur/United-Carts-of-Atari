@@ -365,10 +365,11 @@ MENU_ENTRY* generateSystemInfo(MENU_ENTRY *dst) {
 	make_menu_entry(&dst, esp8266_at_version, Leave_Menu);
 
 	if(STM32F4_FLASH_SIZE > 512U){
-    	make_menu_entry(&dst, "Flashsize 1MB", Leave_Menu);
+    	make_menu_entry(&dst, "Flashsize 1 MiB", Leave_Menu);
 	}else{
-    	make_menu_entry(&dst, "Flashsize 512K", Leave_Menu);
+    	make_menu_entry(&dst, "Flashsize 512 KiB", Leave_Menu);
     }
+	// user_settings.first_free_flash_sector;
 
 	make_menu_entry(&dst, "PlusCart Device ID: ", Leave_Menu);
 	make_menu_entry(&dst, stm32_udid, Leave_Menu);
