@@ -372,22 +372,34 @@ MENU_ENTRY* generateSetupMenu(MENU_ENTRY *dst) {
 }
 
 MENU_ENTRY* generateSystemInfo(MENU_ENTRY *dst) {
-	make_menu_entry(&dst, "STM32 Firmware Version:", Leave_Menu);
-	make_menu_entry(&dst, VERSION, Leave_Menu);
-	make_menu_entry(&dst, "WiFi AT Firmware version:", Leave_Menu);
-	make_menu_entry(&dst, esp8266_at_version, Leave_Menu);
+	make_menu_entry(&dst, "PlusCart Device ID", Leave_Menu);
+
+	*input_field = 0;
+	strcat(input_field, "        ");
+	strcat(input_field, stm32_udid);
+	make_menu_entry(&dst, input_field, Leave_Menu);
+
+	make_menu_entry(&dst, "STM Firmware       "VERSION, Leave_Menu);
+
+	*input_field = 0;
+	strcat(input_field, "WiFi Firmware      ");
+	strcat(input_field, esp8266_at_version);
+	make_menu_entry(&dst, input_field, Leave_Menu);
 
 	if(STM32F4_FLASH_SIZE > 512U){
-    	make_menu_entry(&dst, "Flashsize 1 MiB", Leave_Menu);
+    	make_menu_entry(&dst, "Flash Size         1 MiB", Leave_Menu);
 	}else{
-    	make_menu_entry(&dst, "Flashsize 512 KiB", Leave_Menu);
+    	make_menu_entry(&dst, "Flash Size         512 KiB", Leave_Menu);
     }
-	// user_settings.first_free_flash_sector;
 
-	make_menu_entry(&dst, "PlusCart Device ID: ", Leave_Menu);
-	make_menu_entry(&dst, stm32_udid, Leave_Menu);
+	*input_field = 0;
+	strcat(input_field, "Flash Used         ");
+	int i = (user_settings.first_free_flash_sector - 4 ) * 128;
+	itoa(i, (char *)&input_field[19], 10);
+	strcat(input_field, " KiB");
+	make_menu_entry(&dst, input_field, Leave_Menu);
 
-
+	*input_field = 0;
 	return dst;
 }
 
