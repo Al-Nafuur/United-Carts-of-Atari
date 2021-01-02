@@ -118,41 +118,44 @@ const EXT_TO_CART_TYPE_MAP ext_to_cart_type_map[]__attribute__((section(".flash0
 	{0,{0,0,0}}
 };
 
-static const char status_message[][28]__attribute__((section(".flash01"))) = {
-		"PlusCart(+)"                      ,
-		"Select WiFi Network"              ,
-		"No WiFi"                          ,
-		"WiFi connected"                   ,
-		"Request timeout"                  ,
-		"Enter WiFi Password"              ,
-		"Enter email or username"          ,
-		"Connected, email sent"            ,
-		"User created, email sent"         ,
-		"PlusStore connect failed"         ,
-		"Disconnected from PlusStore"      ,
-		"Enter Secret-Key"                 ,
-		"Secret-Key saved"                 ,
-		"Offline ROMs erased"              ,
-		"ROM file too big!"                ,
-		"ACE is not supported"             ,
-		"Unknown/invalid ROM"              ,
-		"Done"                             ,
-		"Failed"                           ,
-		"Firmware download failed"         ,
-		"Offline ROMs detected"            ,
-		"No offline ROMs detected"         ,
-		"DPC+ is not supported"            ,
-		"Emulation exited"				   ,
-		"ROM Download Failed"              ,
+const char *status_message[] = {
 
-		"Setup",
-		"Select TV Mode",
-		"Select Font",
-		"Select Line Spacing",
-		"System Info",
-		MENU_TEXT_SEARCH_FOR_ROM,
-		"Enter search details",
-		"Search results"
+	"PlusCart(+)",
+	"Select WiFi Network",
+	"No WiFi",
+	"WiFi connected",
+	"Request timeout",
+	"Enter WiFi Password",
+	"Enter email or username",
+	"Connected, email sent",
+	"User created, email sent",
+	"PlusStore connect failed",
+	"Disconnected from PlusStore",
+	"Enter Secret-Key",
+	"Secret-Key saved",
+	"Offline ROMs erased",
+	"ROM file too big!",
+	"ACE is not supported",
+	"Unknown/invalid ROM",
+	"Done",
+	"Failed",
+	"Firmware download failed",
+	"Offline ROMs detected",
+	"No offline ROMs detected",
+	"DPC+ is not supported",
+	"Emulation exited",
+	"ROM Download Failed",
+
+	"Setup",
+	"Select TV Mode",
+	"Select Font",
+	"Select Line Spacing",
+	"Setup/System Info",
+	MENU_TEXT_SEARCH_FOR_ROM,
+	"Enter search details",
+	"Search results",
+
+//	MENU_TEXT_APPEARANCE,
 };
 
 const uint8_t numMenuItemsPerPage[] = {
@@ -334,12 +337,22 @@ void make_keyboard(MENU_ENTRY **dst, enum keyboardType selector){
 	make_menu_entry(dst, "Enter", Menu_Action);
 }
 
+/*
+MENU_ENTRY *generateAppearanceMenu(MENU_ENTRY *dst) {
+	make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
+	make_menu_entry(&dst, MENU_TEXT_TV_MODE_SETUP, Setup_Menu);
+	make_menu_entry(&dst, MENU_TEXT_FONT_SETUP, Setup_Menu);
+	make_menu_entry(&dst, MENU_TEXT_SPACING_SETUP, Setup_Menu);
+	return dst;
+}*/
+
 
 MENU_ENTRY* generateSetupMenu(MENU_ENTRY *dst) {
 	make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
 	make_menu_entry(&dst, MENU_TEXT_TV_MODE_SETUP, Setup_Menu);
 	make_menu_entry(&dst, MENU_TEXT_FONT_SETUP, Setup_Menu);
 	make_menu_entry(&dst, MENU_TEXT_SPACING_SETUP, Setup_Menu);
+//	make_menu_entry(&dst, MENU_TEXT_APPEARANCE, Setup_Menu);
 	make_menu_entry(&dst, MENU_TEXT_WIFI_SETUP, Setup_Menu);
 	make_menu_entry(&dst, MENU_TEXT_WPS_CONNECT, Menu_Action);
 	make_menu_entry(&dst, MENU_TEXT_WIFI_MANAGER, Menu_Action);
@@ -446,6 +459,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 	MENU_ENTRY *dst = (MENU_ENTRY *)&menu_entries[0];
 	char *mts = curPath + sizeof(MENU_TEXT_SETUP);   // does a +1 because of MENU_TEXT_SETUP trailing 0
 		// and this caters for the trailing slash in the setup string (if present)
+//	char *mtsap = mts + sizeof(MENU_TEXT_APPEARANCE);
 
 	if(strstr(curPath, MENU_TEXT_SETUP) == curPath) {
 
@@ -454,6 +468,12 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			dst = generateSetupMenu(dst);
 			loadStore = true;
 		}
+
+//		else if (strstr(mts, MENU_TEXT_APPEARANCE) == mts) {
+//			dst = generateAppearanceMenu(dst);
+//			loadStore = true;
+//		}
+
 		else if (strstr(mts, URLENCODE_MENU_TEXT_SYSTEM_INFO) == mts) {
 			menuStatusMessage = STATUS_SETUP_SYSTEM_INFO;
 			dst = generateSystemInfo(dst);
@@ -469,15 +489,14 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 		// Text line spacing
 		else if (strstr(mts, MENU_TEXT_SPACING_SETUP) == mts) {
 
-			if(d->type == Menu_Action){
+			if(d->type == Menu_Action) {
 
-				uint8_t new_spacing = 0;  // dense
-				while ( strcmp(&curPath[sizeof(MENU_TEXT_SETUP) + 2 + sizeof(MENU_TEXT_SPACING_SETUP)],
-						&spacingModes[new_spacing][2]) != 0)
-					new_spacing++;
+				uint8_t lineSpacing = 0;
+				while (!strstr(d->entryname, spacingModes[lineSpacing]))
+					lineSpacing++;
 
-				if(user_settings.line_spacing != new_spacing){
-					user_settings.line_spacing = new_spacing;
+				if(user_settings.line_spacing != lineSpacing) {
+					user_settings.line_spacing = lineSpacing;
 					flash_set_eeprom_user_settings(user_settings);
 				}
 
@@ -485,21 +504,20 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 				menuStatusMessage = buildMenuFromPath(d);
 			}
 
-			else{
+			else {
 
 				menuStatusMessage = STATUS_SETUP_LINE_SPACING;
 
 				make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
 
 				for (uint8_t spacing = 0; spacing < sizeof spacingModes / sizeof *spacingModes; spacing++) {
-					char spacingLine[33];
-					strcpy(spacingLine, spacingModes[spacing]);
+					make_menu_entry(&dst, spacingModes[spacing], Menu_Action);
 					if (user_settings.line_spacing == spacing)
-						spacingLine[0] = CHAR_SELECTION;
-					make_menu_entry(&dst, spacingLine, Menu_Action);
+						*(dst-1)->entryname = CHAR_SELECTION;
 				}
 			}
 		}
+
 
 		// WiFi Setup
 		else if (strstr(mts, MENU_TEXT_WIFI_SETUP) == mts) {
@@ -544,14 +562,14 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 
 			if(d->type == Menu_Action){
 
-				uint8_t new_tv_mode = TV_MODE_NTSC;
-				while ( strcmp(&curPath[sizeof(MENU_TEXT_SETUP) + 2 + sizeof(MENU_TEXT_TV_MODE_SETUP)],
-						&tvModes[new_tv_mode][2]) != 0)
-					new_tv_mode++;
+				uint8_t tvMode = TV_MODE_NTSC;
+				while (!strstr(d->entryname, tvModes[tvMode]))
+					tvMode++;
 
-				set_tv_mode(new_tv_mode);
-				if(user_settings.tv_mode != new_tv_mode){
-					user_settings.tv_mode = new_tv_mode;
+				set_tv_mode(tvMode);
+
+				if(user_settings.tv_mode != tvMode){
+					user_settings.tv_mode = tvMode;
 					flash_set_eeprom_user_settings(user_settings);
 				}
 
@@ -562,15 +580,14 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			else {
 
 				menuStatusMessage = STATUS_SETUP_TV_MODE;
+				set_menu_status_msg(curPath);
 
 				make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
 
 				for (int tv = 1; tv < sizeof tvModes / sizeof *tvModes; tv++) {
-					char tvLine[33];
-					strcpy(tvLine, tvModes[tv]);
+					make_menu_entry(&dst, tvModes[tv], Menu_Action);
 					if (user_settings.tv_mode == tv)
-						tvLine[0] = CHAR_SELECTION;
-					make_menu_entry(&dst, tvLine, Menu_Action);
+						*(dst-1)->entryname = CHAR_SELECTION;
 				}
 			}
 
@@ -580,14 +597,12 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 
 			if(d->type == Menu_Action){
 
-				uint8_t new_font_style = 0;
-				while ( new_font_style < sizeof(menuFontNames)/sizeof(char *) - 1 &&
-						strcmp( &curPath[sizeof(MENU_TEXT_SETUP) + 2 + sizeof(MENU_TEXT_FONT_SETUP)],
-								&menuFontNames[new_font_style][2]))
-					new_font_style++;
+				uint8_t fontStyle = 0;
+				while (!strstr(d->entryname, menuFontNames[fontStyle]))
+					fontStyle++;
 
-				if(user_settings.font_style != new_font_style){
-					user_settings.font_style = new_font_style;
+				if(user_settings.font_style != fontStyle){
+					user_settings.font_style = fontStyle;
 					flash_set_eeprom_user_settings(user_settings);
 				}
 
@@ -598,15 +613,12 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			else{
 
 				menuStatusMessage = STATUS_SETUP_FONT_STYLE;
-
 				make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
 
-				uint8_t fontCount = sizeof menuFontNames / sizeof *menuFontNames;
-				char fontLine[fontCount][33];
-				for (uint8_t font=0; font < fontCount; font++) {
-					strcpy(fontLine[font], menuFontNames[font]);
-					fontLine[font][0] = user_settings.font_style == font ? CHAR_SELECTION: ' ';
-					make_menu_entry_font(&dst, fontLine[font], Menu_Action, font);
+				for (uint8_t font=0; font < sizeof menuFontNames / sizeof *menuFontNames; font++) {
+					make_menu_entry_font(&dst, menuFontNames[font], Menu_Action, font);
+					if (user_settings.font_style == font)
+						*(dst-1)->entryname = CHAR_SELECTION;
 				}
 			}
 
