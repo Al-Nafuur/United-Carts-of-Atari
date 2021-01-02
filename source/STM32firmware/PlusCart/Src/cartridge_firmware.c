@@ -585,7 +585,7 @@ void createMenuForAtari(
 	uint8_t i = CHARS_PER_LINE - 1;
 
 	// Account icon
-	if (plus_store_status[0] == '1') {
+	if (*plus_store_status == '1') {
 		menu_header[i--] = CHAR_R_Account;
 		menu_header[i--] = CHAR_L_Account;
 	} else {

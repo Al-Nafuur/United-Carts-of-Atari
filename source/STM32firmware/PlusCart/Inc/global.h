@@ -23,6 +23,7 @@
 #define MENU_TEXT_WIFI_MANAGER              "Start WiFi Manager Portal"
 #define MENU_TEXT_ESP8266_RESTORE           "Delete WiFi Connections"
 #define MENU_TEXT_ESP8266_UPDATE            "WiFi Firmware Update"
+//#define MENU_TEXT_APPEARANCE                "Appearance"
 
 #define MENU_TEXT_WIFI_RECONNECT            "WiFi Retry"
 #define MENU_TEXT_TV_MODE_SETUP             "TV Mode"

@@ -116,6 +116,8 @@ enum e_status_message {
 	STATUS_SEARCH_DETAILS,
 	STATUS_CHOOSE_ROM,
 
+	STATUS_APPEARANCE,
+
 };
 
 /* USER CODE END Private defines */
