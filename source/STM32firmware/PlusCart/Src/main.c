@@ -118,7 +118,7 @@ const EXT_TO_CART_TYPE_MAP ext_to_cart_type_map[]__attribute__((section(".flash0
 	{0,{0,0,0}}
 };
 
-const char *status_message[] = {
+const char *status_message[]__attribute__((section(".flash01#"))) = {
 
 	"PlusCart(+)",
 	"Select WiFi Network",
