@@ -224,6 +224,12 @@ void esp8266_init()
 
 void esp8266_update()
 {
+	uint8_t c;
+	//wait 2 seconds
+	HAL_Delay(2000);
+
+	while(HAL_UART_Receive(&huart1, &c, 1, 10 ) == HAL_OK);// first read old messages..
+
 	if(esp8266_send_command("AT+CIUPDATE\r\n", 120000) != ESP8266_OK ) // wait 2 minutes max for firmware download and flashing
 		return;
 	// Update success wait for ESP8266 reboot (we don't monitor ESP8266_WIFI_DISCONNECT).
@@ -233,6 +239,7 @@ void esp8266_update()
 
 	 read_esp8266_at_version(); // read (hopefully) new AT version
 
+	 esp8266_init(); // redo init
 }
 
 uint64_t esp8266_send_command(char *command, uint32_t timeout){
