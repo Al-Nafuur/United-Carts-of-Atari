@@ -494,7 +494,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			if(d->type == Menu_Action) {
 
 				uint8_t lineSpacing = 0;
-				while (!strstr(d->entryname, spacingModes[lineSpacing]))
+				while (!strstr(spacingModes[lineSpacing], d->entryname + 1))
 					lineSpacing++;
 
 				if(user_settings.line_spacing != lineSpacing) {
@@ -565,7 +565,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			if(d->type == Menu_Action){
 
 				uint8_t tvMode = TV_MODE_NTSC;
-				while (!strstr(d->entryname, tvModes[tvMode]))
+				while (!strstr(tvModes[tvMode], d->entryname + 1))
 					tvMode++;
 
 				set_tv_mode(tvMode);
@@ -600,7 +600,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			if(d->type == Menu_Action){
 
 				uint8_t fontStyle = 0;
-				while (!strstr(d->entryname, menuFontNames[fontStyle]))
+				while (!strstr(menuFontNames[fontStyle], d->entryname + 1))
 					fontStyle++;
 
 				if(user_settings.font_style != fontStyle){
