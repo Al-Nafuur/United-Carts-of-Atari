@@ -37,7 +37,7 @@ const uint8_t start_bank[]__attribute__((section(".flash01"))) = {
 		0xd8,					// cld
 		0x8d, 0xf4, 0xff,		// sta HOTSPOT
 		0x4c, 0x37, 0x12,		// jmp ContDrawScreen
-		0x9d, 0xf5, 0xff// sta $FFF5,x					*** PATCH LOW BYTE OF ADDRESS ***
+		0x9d, 0xf5, 0xff		// sta $FFF5,x					*** PATCH LOW BYTE OF ADDRESS ***
 
 		};
 
@@ -51,7 +51,7 @@ const uint8_t end_bank[] __attribute__((section(".flash01"))) = {
 
 const uint8_t switch_bank[]__attribute__((section(".flash01"))) = {
 
-0x4c, 0x07, 0x10		// jmp SwitchBank
+		0x4c, 0x07, 0x10		// jmp SwitchBank
 
 		};
 
@@ -207,7 +207,7 @@ const uint8_t header_bottom2[]__attribute__((section(".flash01"))) = {
 const uint8_t normal_bottom[]__attribute__((section(".flash01"))) = {
 #define PATCH_NORMAL_BOTTOM_LINE 3
 
-		0xe6, lineCounter,
+		0xe6, lineCounter,		// inc lineCounter
 		0xa5, PATCH,			// lda LineBackColor+{1}
 };
 
@@ -240,9 +240,6 @@ const uint8_t normal_top[]__attribute__((section(".flash01"))) = {
 		0xa9, PATCH,			// lda #{1}			(*** PATCHED ***)
 		0x85, 0x06,				// sta COLUP0
 		0x85, 0x07,				// sta COLUP1
-
-
-
 	};
 
 const uint8_t exit_kernel[]__attribute__((section(".flash01"))) = {
@@ -482,20 +479,22 @@ void add_normal_bottom(uint8_t line) {
 	bufferp[PATCH_NORMAL_BOTTOM_LINE] = (uint8_t) (lineBackColour + line + 1);
 	bufferp += sizeof(normal_bottom);
 
-	if (user_settings.font_style != 0) {
-		for (uint8_t line = 0; line < user_settings.line_spacing; line++)
-			add_wsync();
-	}
+	if (!user_settings.font_style && user_settings.line_spacing)
+		add_wsync();
 
-	if (user_settings.font_style == 0) {
+	for (uint8_t linex = 0; linex < user_settings.line_spacing; linex++)
+		add_wsync();
 
-		for (uint8_t line = 0; line < user_settings.line_spacing; line++)
-			add_wsync();
 
-		if ( user_settings.line_spacing > 0) {
-			add_wsync();
-		}
-	}
+
+	/*
+	int8_t linex = 0;
+	if (!user_settings.font_style)
+		linex = user_settings.line_spacing ? -1 : 0;
+
+	do add_wsync();
+	while (++linex < user_settings.line_spacing);
+	 */
 
 	memcpy(bufferp, normal_bottom2, sizeof(normal_bottom2));
 	bufferp += sizeof(normal_bottom2);
@@ -506,17 +505,9 @@ void add_normal_top(uint8_t colour) {
 	bufferp[PATCH_NORMAL_TOP_TEXT_COLOUR] = colour;
 	bufferp += sizeof(normal_top);
 
-	if (user_settings.font_style != 0) {
-		for (uint8_t line = 0; line < user_settings.line_spacing + 1; line++)
-			add_wsync();
-	}
-
-    if (user_settings.font_style == 0 && user_settings.line_spacing == 0)
-    	add_wsync();
-
-    if (user_settings.font_style == 0 && user_settings.line_spacing != 0)
-    	for (uint8_t line = 0; line < user_settings.line_spacing; line++)
-			add_wsync();
+	int8_t line = user_settings.font_style ? -1 : 0;
+	do add_wsync();
+	while (++line < user_settings.line_spacing);
 }
 
 void add_text_colour(uint8_t colour) {
@@ -681,7 +672,7 @@ void createMenuForAtari(
 
 			//menu_entries[list_entry].font = user_settings.font_style;
 
-			if (entry == 0) {		// header line
+			if (!entry) {		// header line
 
 				add_text_colour(0x0A);
 
@@ -726,29 +717,22 @@ void createMenuForAtari(
 
 			add_end_kernel();
 
-			if (entry == 0) {
+			if (!entry)
 				add_header_bottom(textColour[colourSet][(int) (menu_entries[list_entry + 1].type)]);
 
-			} else {
+			else {
+
+				if (entry < numMenuItemsPerPage[user_settings.line_spacing])
+					add_normal_bottom(entry);
 
 				if (entry == 4 || entry == 9 || entry == numMenuItemsPerPage[user_settings.line_spacing]) {
-					if (entry > 4) {
-						if (entry < numMenuItemsPerPage[user_settings.line_spacing])
-							add_normal_bottom(entry);
-						if (entry == numMenuItemsPerPage[user_settings.line_spacing]) {
-							add_exit_kernel();
-						}
-					}
-					add_end_bank(bank);
-					bank++;
 
+					if (entry == numMenuItemsPerPage[user_settings.line_spacing])
+						add_exit_kernel();
+
+					add_end_bank(bank++);
 					add_start_bank(bank);
-					if (entry == 4) {
-						add_normal_bottom(entry);
-					}
-
-				} else
-					add_normal_bottom(entry);
+				}
 
 				if (entry != numMenuItemsPerPage[user_settings.line_spacing])
 					add_normal_top(textColour[colourSet][(int)(menu_entries[list_entry+1].type)]);
