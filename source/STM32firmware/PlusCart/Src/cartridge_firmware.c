@@ -485,17 +485,6 @@ void add_normal_bottom(uint8_t line) {
 	for (uint8_t linex = 0; linex < user_settings.line_spacing; linex++)
 		add_wsync();
 
-
-
-	/*
-	int8_t linex = 0;
-	if (!user_settings.font_style)
-		linex = user_settings.line_spacing ? -1 : 0;
-
-	do add_wsync();
-	while (++linex < user_settings.line_spacing);
-	 */
-
 	memcpy(bufferp, normal_bottom2, sizeof(normal_bottom2));
 	bufferp += sizeof(normal_bottom2);
 }
@@ -530,15 +519,21 @@ void add_exit_kernel() {
 	bufferp += sizeof(exit_kernel);
 }
 
-int cvtToNum(char *p) {
-	int num = 0;
+char cvtToNum(char *p) {
+
+	const char *digits = "0123456789ABCDEF";
+	return (char)(strchr(digits, *p) - digits);
+
+
+/*	char num = 0;
 	if (*p >= '0' && *p <= '9')
-		num = *p - '0';
+		num = (char)(*p - '0');
 	else if (*p >= 'A' && *p <= 'F')
-		num = *p - 'A' + 10;
+		num = (char)(*p - 'A' + 10);
 	else if (*p >= 'a' && *p <= 'f')
 		num = *p - 'a' + 10;
 	return num;
+	*/
 }
 
 
@@ -652,11 +647,6 @@ void createMenuForAtari(
 
 	strncpy(menu_header, vp, i);
 
-
-
-
-
-
 	uint8_t colourSet = user_settings.tv_mode == TV_MODE_NTSC ? 0 : 1;
 
 
@@ -670,17 +660,10 @@ void createMenuForAtari(
 			bool is_kernel_a = bank < 4, isFolder = false;
 			unsigned int list_entry = entry + offset;
 
-			//menu_entries[list_entry].font = user_settings.font_style;
-
 			if (!entry) {		// header line
 
 				add_text_colour(0x0A);
-
 				memcpy(menu_string, menu_header, CHARS_PER_LINE);
-
-				// If you want a different font for header line, set it here
-				// menu_entries[list_entry].font = user_settings.font_style; // <-- OR, font # hardwire
-
 				isFolder = true;
 
 			} else {
@@ -718,7 +701,7 @@ void createMenuForAtari(
 			add_end_kernel();
 
 			if (!entry)
-				add_header_bottom(textColour[colourSet][(int) (menu_entries[list_entry + 1].type)]);
+				add_header_bottom(textColour[colourSet][menu_entries[list_entry].type]);
 
 			else {
 
@@ -735,7 +718,7 @@ void createMenuForAtari(
 				}
 
 				if (entry != numMenuItemsPerPage[user_settings.line_spacing])
-					add_normal_top(textColour[colourSet][(int)(menu_entries[list_entry+1].type)]);
+					add_normal_top(textColour[colourSet][menu_entries[list_entry + 1].type]);
 
 			}
 		}
@@ -744,7 +727,7 @@ void createMenuForAtari(
 }
 
 void set_menu_status_msg(const char *message) {
-	memset(pendingStatusMessage, 0, sizeof(pendingStatusMessage)/sizeof(char));
+	//memset(pendingStatusMessage, 0, sizeof(pendingStatusMessage)/sizeof(char));
 	strncpy(pendingStatusMessage, message, sizeof(pendingStatusMessage)/sizeof(char) - 1);
 }
 
@@ -781,7 +764,7 @@ int emulate_firmware_cartridge() {
 	uint8_t data = 0, data_prev = 0;
 	unsigned const char *bankPtr = &firmware_rom[0];
 
-	while (1) {
+	while (true) {
 		while ((addr = ADDR_IN) != addr_prev)
 			addr_prev = addr;
 
@@ -841,8 +824,7 @@ int emulate_firmware_cartridge() {
 			}
 
 			SET_DATA_MODE_OUT
-			while (ADDR_IN == addr)
-				;
+			while (ADDR_IN == addr);
 			SET_DATA_MODE_IN
 		}
 	}

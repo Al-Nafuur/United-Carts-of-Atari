@@ -54,7 +54,7 @@
 #include "cartridge_emulation_dpcp.h"
 
 
-void truncate_curPath(uint8_t count);
+void truncate_curPath(/*uint8_t count*/);
 
 /* USER CODE END Includes */
 
@@ -236,7 +236,7 @@ char *get_filename_ext(char *filename) {
 	return (dot + 1);
 }
 
-void make_menu_entry( MENU_ENTRY **dst, const char *name, int type){
+inline void make_menu_entry_font( MENU_ENTRY **dst, const char *name, int type, uint8_t font) {
 	(*dst)->type = type;
 	strcpy((*dst)->entryname, name);
 	(*dst)->filesize = 0U;
@@ -245,16 +245,9 @@ void make_menu_entry( MENU_ENTRY **dst, const char *name, int type){
 	num_menu_entries++;
 }
 
-void make_menu_entry_font( MENU_ENTRY **dst, char *name, int type, uint8_t font) {
-	(*dst)->type = type;
-	strcpy((*dst)->entryname, name);
-	(*dst)->filesize = 0U;
-	(*dst)->font = font;
-	(*dst)++;
-	num_menu_entries++;
+void make_menu_entry( MENU_ENTRY **dst, const char *name, int type){
+	make_menu_entry_font(dst, name, type, user_settings.font_style);
 }
-
-
 
 
 const char *keyboardUppercase[]__attribute__((section(".flash0#"))) = {
@@ -404,7 +397,7 @@ enum e_status_message generateKeyboard(
 		for (const char **row = *kb; *row; row++)
 			if (!strcmp(*row, d->entryname)) {
 				make_keyboardFromLine(dst, d->entryname);
-				truncate_curPath(1);
+				truncate_curPath();
 				return menuStatusMessage;
 			}
 
@@ -423,7 +416,7 @@ enum e_status_message generateKeyboard(
 	}
 
 	make_keyboard(dst, lastKb);
-	truncate_curPath(1);
+	truncate_curPath();
 	return menuStatusMessage;
 }
 
@@ -484,7 +477,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 		}
 		else if (strstr(mts, MENU_TEXT_ESP8266_UPDATE) == mts) {
 			esp8266_update();
-			truncate_curPath(1);
+			truncate_curPath();
 			menuStatusMessage = buildMenuFromPath(d);
 		}
 
@@ -502,7 +495,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 					flash_set_eeprom_user_settings(user_settings);
 				}
 
-				truncate_curPath(1);
+				truncate_curPath();
 				menuStatusMessage = buildMenuFromPath(d);
 			}
 
@@ -575,7 +568,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 					flash_set_eeprom_user_settings(user_settings);
 				}
 
-				truncate_curPath(1);
+				truncate_curPath();
 				menuStatusMessage = buildMenuFromPath(d);
 			}
 
@@ -608,7 +601,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 					flash_set_eeprom_user_settings(user_settings);
 				}
 
-				truncate_curPath(1);
+				truncate_curPath();
 				menuStatusMessage = buildMenuFromPath(d);
 			}
 
@@ -1103,67 +1096,93 @@ void emulate_cartridge(CART_TYPE cart_type, MENU_ENTRY *d)
 		offset = esp8266_PlusROM_API_connect(cart_size_bytes);
 	}
 
-	if (cart_type.base_type == base_type_2K){
+
+	if (cart_type.base_type == base_type_2K) {
 		memcpy(buffer+0x800, buffer, 0x800);
 		emulate_standard_cartridge(offset, cart_type.withPlusFunctions, 0x2000, 0x0000, cart_type.withSuperChip);
-	}else if (cart_type.base_type == base_type_4K )
+	}
+
+	else if (cart_type.base_type ==  base_type_4K)
 		emulate_standard_cartridge(offset, cart_type.withPlusFunctions, 0x2000, 0x0000, cart_type.withSuperChip);
+
 	else if (cart_type.base_type == base_type_F8)
 		emulate_standard_cartridge(offset, cart_type.withPlusFunctions, 0x1FF8, 0x1FF9, cart_type.withSuperChip);
+
 	else if (cart_type.base_type == base_type_F6)
 		emulate_standard_cartridge(offset, cart_type.withPlusFunctions, 0x1FF6, 0x1FF9, cart_type.withSuperChip);
+
 	else if (cart_type.base_type == base_type_F4)
 		emulate_standard_cartridge(offset, cart_type.withPlusFunctions, 0x1FF4, 0x1FFB, cart_type.withSuperChip );
+
 	else if (cart_type.base_type == base_type_FE)
 		emulate_FE_cartridge();
+
 	else if (cart_type.base_type == base_type_UA)
 		emulate_UA_cartridge();
+
 	else if (cart_type.base_type == base_type_3F)
 		emulate_3F_cartridge();
+
 	else if (cart_type.base_type == base_type_3E)
 		emulate_3E_cartridge(offset, cart_type.withPlusFunctions);
+
 	else if (cart_type.base_type == base_type_E0)
 		emulate_E0_cartridge();
+
 	else if (cart_type.base_type == base_type_0840)
 		emulate_0840_cartridge();
+
 	else if (cart_type.base_type == base_type_CV)
 		emulate_CV_cartridge();
+
 	else if (cart_type.base_type == base_type_EF)
 		emulate_standard_cartridge(offset, cart_type.withPlusFunctions, 0x1FE0, 0x1FEF, cart_type.withSuperChip);
+
 	else if (cart_type.base_type == base_type_F0)
 		emulate_F0_cartridge();
+
 	else if (cart_type.base_type == base_type_FA)
 		emulate_FA_cartridge(offset, cart_type.withPlusFunctions);
+
 	else if (cart_type.base_type == base_type_E7)
 		emulate_E7_cartridge();
+
 	else if (cart_type.base_type == base_type_DPC)
 		emulate_DPC_cartridge((uint32_t)cart_size_bytes);
+
 	else if (cart_type.base_type == base_type_AR)
 		emulate_ar_cartridge(curPath, cart_size_bytes, buffer, user_settings.tv_mode);
+
 	else if (cart_type.base_type == base_type_PP)
 		emulate_pp_cartridge( buffer + 8*1024);
+
 	else if (cart_type.base_type == base_type_DF)
 		emulate_df_cartridge(curPath, cart_size_bytes, buffer, d);
+
 	else if (cart_type.base_type == base_type_DFSC)
 		emulate_dfsc_cartridge(curPath, cart_size_bytes, buffer, d);
+
 	else if (cart_type.base_type == base_type_BF)
 		emulate_bf_cartridge(curPath, cart_size_bytes, buffer, d);
+
 	else if (cart_type.base_type == base_type_BFSC)
 		emulate_bfsc_cartridge(curPath, cart_size_bytes, buffer, d);
+
 	else if (cart_type.base_type == base_type_3EPlus)
 		emulate_3EPlus_cartridge(offset, cart_type.withPlusFunctions);
+
 	else if (cart_type.base_type == base_type_DPCplus)
 		emulate_DPCplus_cartridge(cart_size_bytes);
+
 	else if (cart_type.base_type == base_type_SB)
 		emulate_SB_cartridge(curPath, cart_size_bytes, buffer, d);
 
-	if (cart_type.withPlusFunctions == true ){
+	if (cart_type.withPlusFunctions)
 		esp8266_PlusStore_API_end_transmission();
-	}
 
 }
 
-void truncate_curPath(uint8_t count){
+void truncate_curPath(/*uint8_t count*/){
 
 	for (int selector = 0; keyboards[selector]; selector++)
 		for (const char **kbRow = keyboards[selector]; *kbRow; kbRow++) {
@@ -1174,12 +1193,12 @@ void truncate_curPath(uint8_t count){
 			}
 		}
 
-	for (uint8_t i = 0; i < count; i++) {
-		unsigned int len = strlen(curPath);
+	// trim to last / OR if none, whole path
+	char *sep = strrchr(curPath, PATH_SEPERATOR);
+	if (!sep)
+		sep = curPath;
+	*sep = 0;
 
-		while (len && curPath[--len] != PATH_SEPERATOR);
-		curPath[len] = 0;
-	}
 }
 
 void system_secondary_init(void){
@@ -1189,6 +1208,8 @@ void system_secondary_init(void){
 		curPath[0] = '\0';
 		strcat(curPath, MENU_TEXT_OFFLINE_ROMS);
 		flash_file_list(&curPath[sizeof(MENU_TEXT_OFFLINE_ROMS) - 1], &dst, &num_menu_entries);
+
+//		if (strstr(d->entryname, AUTOSTART_FILENAME_PREFIX) == d->entryname) {
 
 		if(strncmp(AUTOSTART_FILENAME_PREFIX, d->entryname, sizeof(AUTOSTART_FILENAME_PREFIX) - 1) == 0 ){
     		CART_TYPE cart_type = identify_cartridge(d);
@@ -1333,7 +1354,7 @@ int main(void)
 
 					// ...?
 					if (d->filesize > (BUFFER_SIZE * 1024)) { // reload menu
-						truncate_curPath(1);
+						truncate_curPath();
 						menuStatusMessage = buildMenuFromPath(d);
 					}
 				}
@@ -1342,7 +1363,7 @@ int main(void)
 					menuStatusMessage = romtype_unknown;
 			}
 
-			truncate_curPath(1);
+			truncate_curPath();
 
 		}
 
@@ -1354,7 +1375,7 @@ int main(void)
 				if (strstr(curPath, "Search") == curPath)
 					*curPath = 0;
 				else
-					truncate_curPath(1);
+					truncate_curPath();
 
 				inputActive = MODE_SHOW_PATH;
 				*input_field = 0;
@@ -1385,15 +1406,9 @@ int main(void)
 				if (d->type == Keyboard_Char) {
 
 					inputActive = MODE_SHOW_INPUT;
-					//if (inputActive == MODE_SHOW_INPUT)
-					strcat(input_field, d->entryname);
 
-
-					// essentially "redundant" as the curPath won't be long enough anyway...
-
-					if (strlen(input_field) > STATUS_MESSAGE_LENGTH - 1)
-						for (int i = 0; i < STATUS_MESSAGE_LENGTH - 1; i++)
-							input_field[i] = input_field[i + 1];
+					if (strlen(input_field) + strlen(d->entryname) < STATUS_MESSAGE_LENGTH - 1)
+						strcat(input_field, d->entryname);
 
 					menuStatusMessage = keyboard_input;
 				}
@@ -1575,6 +1590,8 @@ void Error_Handler(void)
   */
 void assert_failed(uint8_t *file, uint32_t line)
 { 
+//	assert_param();
+
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
      tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
