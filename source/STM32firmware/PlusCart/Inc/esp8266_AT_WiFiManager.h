@@ -65,14 +65,14 @@ const char html_connect_form[]   = "<form method='get'action='" GET_SAVE_CONNECT
 const char html_back[]           = "</br><form action=\"/index.html\"method=\"get\"><button>Back</button></form>";
 
 
-const char html_saved[]          = "<div>Credentials Saved<br/>Trying to connect WiFi modul to network.<br/>"
-		                           "Check if the action was successful by clicking the Info Button.<br/>"
+const char html_saved[]          = "<div>Credentials Saved<br/>Trying to connect WiFi module to network.<br/>"
+		                           "To check if the action was successful go back to the main menu and click the Connection Info button.<br/>"
 		                           "If it failed, restart the WiFi Manager Portal to try again</div>";
 
 const char html_exit[]           = "<div>WiFi Manager closed. PlusCart is restarting.</div>";
 const char html_plus_failed[]    = "<div>Connection request for your PlusCart failed, maybe the PlusCart is already connected?</div>";
 const char html_plus_created[]   = "<div>PlusStore account for your email has been created, please check your mail and finish the registration.</div>";
-const char html_plus_connected[] = "<div>Connection request for your PlusCart send, please check your mail and confirm.</div>";
+const char html_plus_connected[] = "<div>Connection request for your PlusCart sent, please check your email and confirm.</div>";
 
 
 const char html_end[]            = "</div></body></html>";
