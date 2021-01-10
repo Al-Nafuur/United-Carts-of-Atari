@@ -537,17 +537,18 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 					if (strlen(curPath) > i){
 
 						if(d->type == Menu_Action){ // if actual Entry is of type Menu_Action -> Connect to WiFi
-							// curPath is: MENU_TEXT_SETUP + "/" + MENU_TEXT_WIFI_SETUP + "/" SSID[33] + Password + "/Enter" + '\0'
-							curPath[strlen(curPath) - 6 ] = '\0'; // delete "/Enter" at end of Path
+							// curPath is: MENU_TEXT_SETUP + "/" + MENU_TEXT_WIFI_SETUP + "/" + MENU_TEXT_WIFI_SELECT + "/" SSID[33] + Password + "/Enter" + '\0'
+							//curPath[strlen(curPath) - 6 ] = '\0'; // delete "/Enter" at end of Path
+							truncate_curPath();
 
 							// TODO before we send them to esp8266 escape , " and \ in SSID and Password..
-					        while( curPath[i] != 30 && i < ( sizeof(MENU_TEXT_WIFI_SETUP) + sizeof(MENU_TEXT_SETUP) + 31) ){
+					        while( curPath[i] != 30 && i < ( SIZEOF_WIFI_SELECT_BASE_PATH + 31) ){
 					            i++;
 					        }
 					        curPath[i] = 0;
 
-					    	if(esp8266_wifi_connect( &curPath[sizeof(MENU_TEXT_WIFI_SETUP) + sizeof(MENU_TEXT_SETUP)  ],
-					    			&curPath[sizeof(MENU_TEXT_WIFI_SETUP) + sizeof(MENU_TEXT_SETUP) + 32])){
+					    	if(esp8266_wifi_connect( &curPath[SIZEOF_WIFI_SELECT_BASE_PATH  ],
+					    			&curPath[SIZEOF_WIFI_SELECT_BASE_PATH + 32])){
 					        	menuStatusMessage = wifi_connected;
 					    	}else{
 					        	menuStatusMessage = wifi_not_connected;

@@ -63,6 +63,9 @@
 
 #define PATH_SEPERATOR '/' /*CHAR_SELECTION*/
 
+#define SIZEOF_WIFI_SELECT_BASE_PATH        sizeof(MENU_TEXT_SETUP) + sizeof(MENU_TEXT_WIFI_SETUP) + sizeof(MENU_TEXT_WIFI_SELECT)
+
+
 extern UART_HandleTypeDef huart1;
 extern char http_request_header[];
 
