@@ -64,10 +64,14 @@ const uint8_t textline_start_even[]__attribute__((section(".flash01"))) = {
 
 	//		SLEEP 8
 
-		0xea,
-		0xea,
-		0xea,
-		0xea,
+		0xa9, 0,				// lda #0
+		0x85, 0x0B,				// sta REFP0
+		0x85, 0x0C,				// sta REFP1
+
+//		0xea,
+//		0xea,
+//		0xea,
+//		0xea,
 	};
 
 const uint8_t textline_start_odd[]__attribute__((section(".flash01"))) = {
