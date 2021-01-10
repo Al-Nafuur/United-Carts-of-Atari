@@ -16,6 +16,8 @@
 extern "C" {
 #endif
 
+#define CURRENT_ESP8266_FIRMWARE "1.7.4.0"
+
 /** API connect/request **/
 #define  API_ATCMD_1	"AT+CIPSTART=\"TCP\",\"" PLUSSTORE_API_HOST "\",80\r\n"
 #define  API_ATCMD_1a	"AT+CIPSTART=%c,\"TCP\",\"" PLUSSTORE_API_HOST "\",80\r\n"

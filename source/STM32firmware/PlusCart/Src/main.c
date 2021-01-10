@@ -293,6 +293,20 @@ static const char **keyboards[]__attribute__((section(".flash0#"))) = {
 enum keyboardType lastKb = KEYBOARD_UPPERCASE;
 
 
+int compVersions ( const char * version1, const char * version2 ) {
+    unsigned major1 = 0, minor1 = 0, bugfix1 = 0;
+    unsigned major2 = 0, minor2 = 0, bugfix2 = 0;
+    sscanf(version1, "%u.%u.%u", &major1, &minor1, &bugfix1);
+    sscanf(version2, "%u.%u.%u", &major2, &minor2, &bugfix2);
+    if (major1 < major2) return -1;
+    if (major1 > major2) return 1;
+    if (minor1 < minor2) return -1;
+    if (minor1 > minor2) return 1;
+    if (bugfix1 < bugfix2) return -1;
+    if (bugfix1 > bugfix2) return 1;
+    return 0;
+}
+
 void make_keyboardFromLine(MENU_ENTRY **dst, char *line) {
 
 	make_menu_entry(dst, MENU_TEXT_GO_BACK, Leave_SubKeyboard_Menu);
@@ -342,18 +356,11 @@ MENU_ENTRY *generateAppearanceMenu(MENU_ENTRY *dst) {
 
 MENU_ENTRY* generateSetupMenu(MENU_ENTRY *dst) {
 	make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
+	make_menu_entry(&dst, MENU_TEXT_WIFI_SETUP, Setup_Menu);
 	make_menu_entry(&dst, MENU_TEXT_TV_MODE_SETUP, Setup_Menu);
 	make_menu_entry(&dst, MENU_TEXT_FONT_SETUP, Setup_Menu);
 	make_menu_entry(&dst, MENU_TEXT_SPACING_SETUP, Setup_Menu);
 //	make_menu_entry(&dst, MENU_TEXT_APPEARANCE, Setup_Menu);
-	make_menu_entry(&dst, MENU_TEXT_WIFI_SETUP, Setup_Menu);
-	make_menu_entry(&dst, MENU_TEXT_WPS_CONNECT, Menu_Action);
-	make_menu_entry(&dst, MENU_TEXT_WIFI_MANAGER, Menu_Action);
-	//make_menu_entry(&dst, MENU_TEXT_PRIVATE_KEY, Input_Field);
-	make_menu_entry(&dst, MENU_TEXT_ESP8266_RESTORE, Menu_Action);
-	if(strcmp(esp8266_at_version, "1.7.4.0") != 0)
-		make_menu_entry(&dst, MENU_TEXT_ESP8266_UPDATE, Menu_Action);
-
 	make_menu_entry(&dst, MENU_TEXT_SYSTEM_INFO, Sub_Menu);
 
 	if (flash_has_downloaded_roms())
@@ -475,11 +482,6 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			loadStore = true;
 
 		}
-		else if (strstr(mts, MENU_TEXT_ESP8266_UPDATE) == mts) {
-			esp8266_update();
-			truncate_curPath();
-			menuStatusMessage = buildMenuFromPath(d);
-		}
 
 		// Text line spacing
 		else if (strstr(mts, MENU_TEXT_SPACING_SETUP) == mts) {
@@ -517,41 +519,83 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 		// WiFi Setup
 		else if (strstr(mts, MENU_TEXT_WIFI_SETUP) == mts) {
 
-			int i = sizeof(MENU_TEXT_WIFI_SETUP) + sizeof(MENU_TEXT_SETUP);
-			if (strlen(curPath) > i){
+			int i = sizeof(MENU_TEXT_SETUP) + sizeof(MENU_TEXT_WIFI_SETUP);
+			if ( strlen(curPath) <= i ){
+				make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
+				make_menu_entry(&dst, MENU_TEXT_WIFI_SELECT, Setup_Menu);
+				make_menu_entry(&dst, MENU_TEXT_WIFI_WPS_CONNECT, Menu_Action);
+				make_menu_entry(&dst, MENU_TEXT_WIFI_MANAGER, Menu_Action);
+				make_menu_entry(&dst, MENU_TEXT_ESP8266_RESTORE, Menu_Action);
+				if(compVersions(esp8266_at_version, CURRENT_ESP8266_FIRMWARE) == -1)
+					make_menu_entry(&dst, MENU_TEXT_ESP8266_UPDATE, Menu_Action);
 
-				if(d->type == Menu_Action){ // if actual Entry is of type Menu_Action -> Connect to WiFi
-					// curPath is: MENU_TEXT_SETUP + "/" + MENU_TEXT_WIFI_SETUP + "/" SSID[33] + Password + "/Enter" + '\0'
-					curPath[strlen(curPath) - 6 ] = '\0'; // delete "/Enter" at end of Path
+			}else{
+				mts += sizeof(MENU_TEXT_WIFI_SETUP);
 
-					// TODO before we send them to esp8266 escape , " and \ in SSID and Password..
-			        while( curPath[i] != 30 && i < ( sizeof(MENU_TEXT_WIFI_SETUP) + sizeof(MENU_TEXT_SETUP) + 31) ){
-			            i++;
-			        }
-			        curPath[i] = 0;
+				if(strstr(mts, MENU_TEXT_WIFI_SELECT) == mts ){
+					i += (int) sizeof(MENU_TEXT_WIFI_SELECT);
+					if (strlen(curPath) > i){
 
-			    	if(esp8266_wifi_connect( &curPath[sizeof(MENU_TEXT_WIFI_SETUP) + sizeof(MENU_TEXT_SETUP)  ],
-			    			&curPath[sizeof(MENU_TEXT_WIFI_SETUP) + sizeof(MENU_TEXT_SETUP) + 32])){
-			        	menuStatusMessage = wifi_connected;
-			    	}else{
-			        	menuStatusMessage = wifi_not_connected;
-			    	}
-					curPath[0] = '\0';
+						if(d->type == Menu_Action){ // if actual Entry is of type Menu_Action -> Connect to WiFi
+							// curPath is: MENU_TEXT_SETUP + "/" + MENU_TEXT_WIFI_SETUP + "/" SSID[33] + Password + "/Enter" + '\0'
+							curPath[strlen(curPath) - 6 ] = '\0'; // delete "/Enter" at end of Path
+
+							// TODO before we send them to esp8266 escape , " and \ in SSID and Password..
+					        while( curPath[i] != 30 && i < ( sizeof(MENU_TEXT_WIFI_SETUP) + sizeof(MENU_TEXT_SETUP) + 31) ){
+					            i++;
+					        }
+					        curPath[i] = 0;
+
+					    	if(esp8266_wifi_connect( &curPath[sizeof(MENU_TEXT_WIFI_SETUP) + sizeof(MENU_TEXT_SETUP)  ],
+					    			&curPath[sizeof(MENU_TEXT_WIFI_SETUP) + sizeof(MENU_TEXT_SETUP) + 32])){
+					        	menuStatusMessage = wifi_connected;
+					    	}else{
+					        	menuStatusMessage = wifi_not_connected;
+					    	}
+							curPath[0] = '\0';
+						}
+
+						else
+							menuStatusMessage = generateKeyboard(&dst, d, menuStatusMessage, insert_password);
+
+					}
+
+					else {
+						menuStatusMessage = select_wifi_network;
+						make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
+						if( esp8266_wifi_list( &dst, &num_menu_entries) == false){
+				    		return esp_timeout;
+				    	}
+					}
+
+				}
+				else if (strstr(mts, MENU_TEXT_WIFI_WPS_CONNECT) == mts) {
+
+			    	menuStatusMessage = esp8266_wps_connect() ? wifi_connected : wifi_not_connected;
+					*curPath = 0;
+					HAL_Delay(2000);
 				}
 
-				else
-					menuStatusMessage = generateKeyboard(&dst, d, menuStatusMessage, insert_password);
+				else if (strstr(mts, MENU_TEXT_WIFI_MANAGER) == mts) {
 
-			}
+					menuStatusMessage = done;
+					esp8266_AT_WiFiManager();
+			    	*curPath = 0;
+				}
 
-			else {
-				menuStatusMessage = select_wifi_network;
-				make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
-				if( esp8266_wifi_list( &dst, &num_menu_entries) == false){
-		    		return esp_timeout;
-		    	}
+				else if (strstr(mts, MENU_TEXT_ESP8266_RESTORE) == mts) {
+
+					menuStatusMessage = esp8266_reset(true) ? done : failed;
+					*curPath = 0;
+				}
+				else if (strstr(mts, MENU_TEXT_ESP8266_UPDATE) == mts) {
+					esp8266_update();
+					truncate_curPath();
+					menuStatusMessage = buildMenuFromPath(d);
+				}
 			}
 		}
+
 
 		else if (strstr(mts, MENU_TEXT_TV_MODE_SETUP) == mts) {
 
@@ -725,27 +769,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
     		num_menu_entries = 0;
         	*curPath = 0;
 		}
-
-		else if (strstr(mts, MENU_TEXT_WPS_CONNECT) == mts) {
-
-	    	menuStatusMessage = esp8266_wps_connect() ? wifi_connected : wifi_not_connected;
-			*curPath = 0;
-			HAL_Delay(2000);
-		}
-
-		else if (strstr(mts, MENU_TEXT_WIFI_MANAGER) == mts) {
-
-			menuStatusMessage = done;
-			esp8266_AT_WiFiManager();
-	    	*curPath = 0;
-		}
-
-		else if (strstr(mts, MENU_TEXT_ESP8266_RESTORE) == mts) {
-
-			menuStatusMessage = esp8266_reset(true) ? done : failed;
-			*curPath = 0;
-		}
-
+/*
 		else if (strstr(mts, MENU_TEXT_PRIVATE_KEY) == mts) {
 
 			if(d->type == Menu_Action) { // if actual Entry is of type Menu_Action -> Save Private key
@@ -761,6 +785,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 				menuStatusMessage = generateKeyboard(&dst, d, menuStatusMessage, private_key);
 			}
 		}
+*/
 		else{
 			// unknown entry must be from PlusStore API, so load from store.
 			loadStore = true;

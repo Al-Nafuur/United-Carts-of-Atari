@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include "stm32f4xx_hal.h"
 
-#define VERSION                   "0.16.6 DEV"
+#define VERSION                   "0.16.7 DEV"
 #define PLUSSTORE_API_HOST        "pluscart.firmaplus.de"
 
 #define CHARS_PER_LINE					32
@@ -19,7 +19,8 @@
 #define MENU_TEXT_DELETE_OFFLINE_ROMS       "Erase Offline ROMs"
 #define MENU_TEXT_SETUP                     "Setup"
 #define MENU_TEXT_WIFI_SETUP                "WiFi Setup"
-#define MENU_TEXT_WPS_CONNECT               "WiFi WPS Connect"
+#define MENU_TEXT_WIFI_SELECT               "Select WiFi Network"
+#define MENU_TEXT_WIFI_WPS_CONNECT          "WiFi WPS Connect"
 #define MENU_TEXT_WIFI_MANAGER              "Start WiFi Manager Portal"
 #define MENU_TEXT_ESP8266_RESTORE           "Delete WiFi Connections"
 #define MENU_TEXT_ESP8266_UPDATE            "WiFi Firmware Update"
