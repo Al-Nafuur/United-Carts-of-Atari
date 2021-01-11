@@ -240,7 +240,7 @@ inline void make_menu_entry_font( MENU_ENTRY **dst, const char *name, int type, 
 	(*dst)->type = type;
 	strcpy((*dst)->entryname, name);
 	(*dst)->filesize = 0U;
-	(*dst)->font = user_settings.font_style;
+	(*dst)->font = font;
 	(*dst)++;
 	num_menu_entries++;
 }
