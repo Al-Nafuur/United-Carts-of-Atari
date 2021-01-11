@@ -357,9 +357,10 @@ MENU_ENTRY *generateAppearanceMenu(MENU_ENTRY *dst) {
 MENU_ENTRY* generateSetupMenu(MENU_ENTRY *dst) {
 	make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
 	make_menu_entry(&dst, MENU_TEXT_WIFI_SETUP, Setup_Menu);
-	make_menu_entry(&dst, MENU_TEXT_TV_MODE_SETUP, Setup_Menu);
-	make_menu_entry(&dst, MENU_TEXT_FONT_SETUP, Setup_Menu);
-	make_menu_entry(&dst, MENU_TEXT_SPACING_SETUP, Setup_Menu);
+	make_menu_entry(&dst, MENU_TEXT_DISPLAY, Setup_Menu);
+//	make_menu_entry(&dst, MENU_TEXT_TV_MODE_SETUP, Setup_Menu);
+//	make_menu_entry(&dst, MENU_TEXT_FONT_SETUP, Setup_Menu);
+//	make_menu_entry(&dst, MENU_TEXT_SPACING_SETUP, Setup_Menu);
 //	make_menu_entry(&dst, MENU_TEXT_APPEARANCE, Setup_Menu);
 	make_menu_entry(&dst, MENU_TEXT_SYSTEM_INFO, Sub_Menu);
 
@@ -483,44 +484,17 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 
 		}
 
-		// Text line spacing
-		else if (strstr(mts, MENU_TEXT_SPACING_SETUP) == mts) {
-
-			if(d->type == Menu_Action) {
-
-				uint8_t lineSpacing = 0;
-				while (!strstr(spacingModes[lineSpacing], d->entryname + 1))
-					lineSpacing++;
-
-				if(user_settings.line_spacing != lineSpacing) {
-					user_settings.line_spacing = lineSpacing;
-					flash_set_eeprom_user_settings(user_settings);
-				}
-
-				truncate_curPath();
-				menuStatusMessage = buildMenuFromPath(d);
-			}
-
-			else {
-
-				menuStatusMessage = STATUS_SETUP_LINE_SPACING;
-
-				make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
-
-				for (uint8_t spacing = 0; spacing < sizeof spacingModes / sizeof *spacingModes; spacing++) {
-					make_menu_entry(&dst, spacingModes[spacing], Menu_Action);
-					if (user_settings.line_spacing == spacing)
-						*(dst-1)->entryname = CHAR_SELECTION;
-				}
-			}
-		}
 
 
 		// WiFi Setup
 		else if (strstr(mts, MENU_TEXT_WIFI_SETUP) == mts) {
 
-			int i = sizeof(MENU_TEXT_SETUP) + sizeof(MENU_TEXT_WIFI_SETUP);
+			int i = sizeof(MENU_TEXT_SETUP) + sizeof(MENU_TEXT_WIFI_SETUP) - 1;
+
 			if ( strlen(curPath) <= i ){
+
+				set_menu_status_msg(curPath);
+
 				make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
 				make_menu_entry(&dst, MENU_TEXT_WIFI_SELECT, Setup_Menu);
 				make_menu_entry(&dst, MENU_TEXT_WIFI_WPS_CONNECT, Menu_Action);
@@ -529,10 +503,14 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 				if(compVersions(esp8266_at_version, CURRENT_ESP8266_FIRMWARE) == -1)
 					make_menu_entry(&dst, MENU_TEXT_ESP8266_UPDATE, Menu_Action);
 
-			}else{
+			}
+
+			else {
+
 				mts += sizeof(MENU_TEXT_WIFI_SETUP);
 
-				if(strstr(mts, MENU_TEXT_WIFI_SELECT) == mts ){
+				if (strstr(mts, MENU_TEXT_WIFI_SELECT) == mts) {
+
 					i += (int) sizeof(MENU_TEXT_WIFI_SELECT);
 					if (strlen(curPath) > i){
 
@@ -597,72 +575,132 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			}
 		}
 
+		// Display
 
-		else if (strstr(mts, MENU_TEXT_TV_MODE_SETUP) == mts) {
+		else if (strstr(mts, MENU_TEXT_DISPLAY) == mts) {
 
-			if(d->type == Menu_Action){
 
-				uint8_t tvMode = TV_MODE_NTSC;
-				while (!strstr(tvModes[tvMode], d->entryname + 1))
-					tvMode++;
+			int i = sizeof(MENU_TEXT_SETUP) + sizeof(MENU_TEXT_DISPLAY) - 1;
+			if (strlen(curPath) <= i) {
 
-				set_tv_mode(tvMode);
+				set_menu_status_msg(curPath);
 
-				if(user_settings.tv_mode != tvMode){
-					user_settings.tv_mode = tvMode;
-					flash_set_eeprom_user_settings(user_settings);
-				}
-
-				truncate_curPath();
-				menuStatusMessage = buildMenuFromPath(d);
+				make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
+				make_menu_entry(&dst, MENU_TEXT_TV_MODE_SETUP, Setup_Menu);
+				make_menu_entry(&dst, MENU_TEXT_FONT_SETUP, Setup_Menu);
+				make_menu_entry(&dst, MENU_TEXT_SPACING_SETUP, Setup_Menu);
 			}
 
 			else {
 
-				menuStatusMessage = STATUS_SETUP_TV_MODE;
-				set_menu_status_msg(curPath);
+				mts += sizeof(MENU_TEXT_DISPLAY);
+				if (strstr(mts, MENU_TEXT_TV_MODE_SETUP) == mts) {
 
-				make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
+					if(d->type == Menu_Action){
 
-				for (int tv = 1; tv < sizeof tvModes / sizeof *tvModes; tv++) {
-					make_menu_entry(&dst, tvModes[tv], Menu_Action);
-					if (user_settings.tv_mode == tv)
-						*(dst-1)->entryname = CHAR_SELECTION;
+						uint8_t tvMode = TV_MODE_NTSC;
+						while (!strstr(tvModes[tvMode], d->entryname + 1))
+							tvMode++;
+
+						set_tv_mode(tvMode);
+
+						if(user_settings.tv_mode != tvMode){
+							user_settings.tv_mode = tvMode;
+							flash_set_eeprom_user_settings(user_settings);
+						}
+
+						truncate_curPath();
+						menuStatusMessage = buildMenuFromPath(d);
+					}
+
+					else {
+
+						menuStatusMessage = STATUS_SETUP_TV_MODE;
+						set_menu_status_msg(curPath);
+
+						make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
+
+						for (int tv = 1; tv < sizeof tvModes / sizeof *tvModes; tv++) {
+							make_menu_entry(&dst, tvModes[tv], Menu_Action);
+							if (user_settings.tv_mode == tv)
+								*(dst-1)->entryname = CHAR_SELECTION;
+						}
+					}
+
 				}
+
+				else if (strstr(mts, MENU_TEXT_FONT_SETUP) == mts) {
+
+					if(d->type == Menu_Action){
+
+						uint8_t fontStyle = 0;
+						while (!strstr(menuFontNames[fontStyle], d->entryname + 1))
+							fontStyle++;
+
+						if(user_settings.font_style != fontStyle){
+							user_settings.font_style = fontStyle;
+							flash_set_eeprom_user_settings(user_settings);
+						}
+
+						truncate_curPath();
+						menuStatusMessage = buildMenuFromPath(d);
+					}
+
+					else{
+
+						menuStatusMessage = STATUS_SETUP_FONT_STYLE;
+						make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
+
+						for (uint8_t font=0; font < sizeof menuFontNames / sizeof *menuFontNames; font++) {
+							make_menu_entry_font(&dst, menuFontNames[font], Menu_Action, font);
+							if (user_settings.font_style == font)
+								*(dst-1)->entryname = CHAR_SELECTION;
+						}
+					}
+
+				}
+
+				// Text line spacing
+				else if (strstr(mts, MENU_TEXT_SPACING_SETUP) == mts) {
+
+					if(d->type == Menu_Action) {
+
+						uint8_t lineSpacing = 0;
+						while (!strstr(spacingModes[lineSpacing], d->entryname + 1))
+							lineSpacing++;
+
+						if(user_settings.line_spacing != lineSpacing) {
+							user_settings.line_spacing = lineSpacing;
+							flash_set_eeprom_user_settings(user_settings);
+						}
+
+						truncate_curPath();
+						menuStatusMessage = buildMenuFromPath(d);
+					}
+
+					else {
+
+						menuStatusMessage = STATUS_SETUP_LINE_SPACING;
+
+						make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
+
+						for (uint8_t spacing = 0; spacing < sizeof spacingModes / sizeof *spacingModes; spacing++) {
+							make_menu_entry(&dst, spacingModes[spacing], Menu_Action);
+							if (user_settings.line_spacing == spacing)
+								*(dst-1)->entryname = CHAR_SELECTION;
+						}
+					}
+				}
+
+
+
 			}
+
+
 
 		}
 
-		else if (strstr(mts, MENU_TEXT_FONT_SETUP) == mts) {
 
-			if(d->type == Menu_Action){
-
-				uint8_t fontStyle = 0;
-				while (!strstr(menuFontNames[fontStyle], d->entryname + 1))
-					fontStyle++;
-
-				if(user_settings.font_style != fontStyle){
-					user_settings.font_style = fontStyle;
-					flash_set_eeprom_user_settings(user_settings);
-				}
-
-				truncate_curPath();
-				menuStatusMessage = buildMenuFromPath(d);
-			}
-
-			else{
-
-				menuStatusMessage = STATUS_SETUP_FONT_STYLE;
-				make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
-
-				for (uint8_t font=0; font < sizeof menuFontNames / sizeof *menuFontNames; font++) {
-					make_menu_entry_font(&dst, menuFontNames[font], Menu_Action, font);
-					if (user_settings.font_style == font)
-						*(dst-1)->entryname = CHAR_SELECTION;
-				}
-			}
-
-		}
 
 		else if (strstr(mts, MENU_TEXT_PLUS_CONNECT) == mts) {
 
