@@ -179,15 +179,15 @@ UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
 int num_menu_entries = 0;
-char http_request_header[512];//__attribute__ ((section (".noinit")));
+char http_request_header[512] __attribute__ ((section (".noinit")));
 
 uint8_t buffer[BUFFER_SIZE * 1024] __attribute__((section(".buffer")));
 unsigned int cart_size_bytes;
 
 USER_SETTINGS user_settings;
 
-char curPath[256];
-char input_field[STATUS_MESSAGE_LENGTH];
+char curPath[256] __attribute__ ((section (".noinit")));
+char input_field[STATUS_MESSAGE_LENGTH] __attribute__ ((section (".noinit")));
 
 enum inputMode {
 	MODE_SHOW_INSTRUCTION,
@@ -1390,11 +1390,10 @@ int main(void)
 
 		if (d->type == Cart_File || d->type == Offline_Cart_File) {
 
-			// TODO: THIS MAGIC NUMBER "12" SHOULD BE FIXED TO AN EQUATE
 			// selection is a rom file
+			int flash_sectors = (STM32F4_FLASH_SIZE > 512U) ? 12 : 8;
 			int32_t max_romsize = (((BUFFER_SIZE + CCM_RAM_SIZE) * 1024)
-					+ (12 - user_settings.first_free_flash_sector) * 128 * 1024);	//TODO: what's the 12?  linespermenu?
-
+					+ (flash_sectors - user_settings.first_free_flash_sector ) * 128 * 1024);
 			if (d->filesize > max_romsize)
 				menuStatusMessage /*main_status*/ = not_enough_menory;
 
@@ -1417,7 +1416,7 @@ int main(void)
 
 
 					// ...?
-					if (d->filesize > (BUFFER_SIZE * 1024)) { // reload menu
+					if (d->filesize > (BUFFER_SIZE * 1024) || cart_type.base_type == base_type_DPC) { // reload menu
 						truncate_curPath();
 						menuStatusMessage = buildMenuFromPath(d);
 					}
