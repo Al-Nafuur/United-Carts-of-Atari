@@ -65,6 +65,8 @@ typedef struct {
 	enum cart_base_type base_type;
 	bool withSuperChip;
 	bool withPlusFunctions;
+	bool uses_ccmram;
+	bool uses_systick;
 	uint32_t flash_part_address;
 } CART_TYPE;
 
@@ -79,41 +81,41 @@ typedef struct {
 /* USER CODE BEGIN PD */
 
 const EXT_TO_CART_TYPE_MAP ext_to_cart_type_map[]__attribute__((section(".flash01"))) = {
-	{"ROM",  { base_type_None, false, false }},
-	{"BIN",  { base_type_None, false, false }},
-	{"A26",  { base_type_None, false, false }},
-	{"2K",   { base_type_2K, false, false }},
-	{"4K",   { base_type_4K, false, false }},
-	{"4KS",  { base_type_4K, true, false }},
-	{"F8",   { base_type_F8, false, false }},
-	{"F6",   { base_type_F6, false, false }},
-	{"F4",   { base_type_F4, false, false }},
-	{"F8S",  { base_type_F8, true, false }},
-	{"F6S",  { base_type_F6, true, false }},
-	{"F4S",  { base_type_F4, true, false }},
-	{"FE",   { base_type_FE, false, false }},
-	{"3F",   { base_type_3F, false, false }},
-	{"3E",   { base_type_3E, false, false }},
-	{"E0",   { base_type_E0, false, false }},
-	{"084",  { base_type_0840, false, false }},
-	{"CV",   { base_type_CV, false, false }},
-	{"EF",   { base_type_EF, false, false }},
-	{"EFS",  { base_type_EF, true, false }},
-	{"F0",   { base_type_F0, false, false }},
-	{"FA",   { base_type_FA, false, false }},
-	{"E7",   { base_type_E7, false, false }},
-	{"DPC",  { base_type_DPC, false, false }},
-	{"AR",   { base_type_AR, false, false }},
-	{"BF",   { base_type_BF, false, false }},
-	{"BFS",  { base_type_BFSC, false, false }},
-	{"ACE",  { base_type_ACE, false, false }},
-	{"WD",   { base_type_PP, false, false }},
-	{"DF",   { base_type_DF, false, false }},
-	{"DFS",  { base_type_DFSC, false, false }},
-	{"3EP",  { base_type_3EPlus, false, false }},
-	{"DPCP", { base_type_DPCplus, false, false }},
-	{"SB",   { base_type_SB, false, false }},
-	{"UA",   { base_type_UA, false, false }},
+	{"ROM",  { base_type_None,    false, false, false, false }},
+	{"BIN",  { base_type_None,    false, false, false, false }},
+	{"A26",  { base_type_None,    false, false, false, false }},
+	{"2K",   { base_type_2K,      false, false, false, false }},
+	{"4K",   { base_type_4K,      false, false, false, false }},
+	{"4KS",  { base_type_4K,      true,  false, false, false }},
+	{"F8",   { base_type_F8,      false, false, false, false }},
+	{"F6",   { base_type_F6,      false, false, false, false }},
+	{"F4",   { base_type_F4,      false, false, false, false }},
+	{"F8S",  { base_type_F8,      true,  false, false, false }},
+	{"F6S",  { base_type_F6,      true,  false, false, false }},
+	{"F4S",  { base_type_F4,      true,  false, false, false }},
+	{"FE",   { base_type_FE,      false, false, false, false }},
+	{"3F",   { base_type_3F,      false, false, false, false }},
+	{"3E",   { base_type_3E,      false, false, false, false }},
+	{"E0",   { base_type_E0,      false, false, false, false }},
+	{"084",  { base_type_0840,    false, false, false, false }},
+	{"CV",   { base_type_CV,      false, false, false, false }},
+	{"EF",   { base_type_EF,      false, false, false, false }},
+	{"EFS",  { base_type_EF,      true,  false, false, false }},
+	{"F0",   { base_type_F0,      false, false, false, false }},
+	{"FA",   { base_type_FA,      false, false, false, false }},
+	{"E7",   { base_type_E7,      false, false, false, false }},
+	{"DPC",  { base_type_DPC,     false, false, true,  true  }},
+	{"AR",   { base_type_AR,      false, false, false, false }},
+	{"BF",   { base_type_BF,      false, false, true,  false }},
+	{"BFS",  { base_type_BFSC,    false, false, true,  false }},
+	{"ACE",  { base_type_ACE,     false, false, false, false }},
+	{"WD",   { base_type_PP,      false, false, false, false }},
+	{"DF",   { base_type_DF,      false, false, true,  false }},
+	{"DFS",  { base_type_DFSC,    false, false, true,  false }},
+	{"3EP",  { base_type_3EPlus,  false, false, false, false }},
+	{"DPCP", { base_type_DPCplus, false, false, false, true  }},
+	{"SB",   { base_type_SB,      false, false, true,  false }},
+	{"UA",   { base_type_UA,      false, false, false, false }},
 
 	{0,{0,0,0}}
 };
@@ -460,11 +462,11 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 
 
 	MENU_ENTRY *dst = (MENU_ENTRY *)&menu_entries[0];
-	char *mts = curPath + sizeof(MENU_TEXT_SETUP);   // does a +1 because of MENU_TEXT_SETUP trailing 0
 		// and this caters for the trailing slash in the setup string (if present)
 //	char *mtsap = mts + sizeof(MENU_TEXT_APPEARANCE);
 
 	if(strstr(curPath, MENU_TEXT_SETUP) == curPath) {
+		char *mts = curPath + sizeof(MENU_TEXT_SETUP);   // does a +1 because of MENU_TEXT_SETUP trailing 0
 
 		if (!strcmp(curPath, MENU_TEXT_SETUP)){
 			menuStatusMessage = STATUS_SETUP;
@@ -968,7 +970,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 CART_TYPE identify_cartridge( MENU_ENTRY *d )
 {
 
-	CART_TYPE cart_type = { base_type_None, false, false };
+	CART_TYPE cart_type = { base_type_None, false, false, false, false };
 
 	strcat(curPath, "/");
 	append_entry_to_path(d);
@@ -985,6 +987,8 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 		if (strcasecmp(ext, p->ext) == 0) {
 			cart_type.base_type = p->cart_type.base_type;
 			cart_type.withSuperChip = p->cart_type.withSuperChip;
+			cart_type.uses_ccmram = p->cart_type.uses_ccmram;
+			cart_type.uses_systick = p->cart_type.uses_systick;
 			break;
 		}
 		p++;
@@ -1012,6 +1016,7 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 		goto close;
 	}
 	if(d->filesize >  (BUFFER_SIZE * 1024)){
+		cart_type.uses_ccmram = true;
 		if(d->type == Cart_File ){
 			bytes_read_tail = (uint8_t)esp8266_PlusStore_API_file_request( tail, curPath, (d->filesize - 16), 16 );
 		}else{
@@ -1074,6 +1079,8 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 	}
 	else if(d->filesize >= 10240 && d->filesize <= 10496)
 	{  // ~10K - Pitfall II
+		cart_type.uses_ccmram = true;
+		cart_type.uses_systick = true;
 		cart_type.base_type = base_type_DPC;
 	}
 	else if (d->filesize == 12*1024)
@@ -1100,8 +1107,10 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 			cart_type.base_type = base_type_3E;
 		else if (isProbably3F(d->filesize, buffer))
 			cart_type.base_type = base_type_3F;
-		else if (isProbablyDPCplus(d->filesize, buffer))
+		else if (isProbablyDPCplus(d->filesize, buffer)){
 			cart_type.base_type = base_type_DPCplus;
+			cart_type.uses_systick = true;
+		}
 		else
 			cart_type.base_type = base_type_F4;
 	}
@@ -1414,11 +1423,13 @@ int main(void)
 					set_menu_status_byte(STATUS_StatusByteReboot, 0);
 					menuStatusMessage = /*main_status = */exit_emulation;
 
-
-					// ...?
-					if (d->filesize > (BUFFER_SIZE * 1024) || cart_type.base_type == base_type_DPC) { // reload menu
+					if(cart_type.uses_systick){
+						SysTick_Config(SystemCoreClock / 1000U);	// 1KHz
+					}
+					if (cart_type.uses_ccmram) {
 						truncate_curPath();
-						menuStatusMessage = buildMenuFromPath(d);
+						d->type = Sub_Menu;
+						buildMenuFromPath(d);
 					}
 				}
 

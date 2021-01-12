@@ -26,9 +26,9 @@
 	sharedFont[ convertAsciiToCharnum(fontType, r) * 12 + s ])
 
 
-static char menu_header[CHARS_PER_LINE]__attribute__((section(".ccmram")));
-static char pendingStatusMessage[STATUS_MESSAGE_LENGTH]__attribute__((section(".ccmram")));
-static unsigned char menu_status[STATUS_MAX]__attribute__((section(".ccmram")));
+static char menu_header[CHARS_PER_LINE]__attribute__((section(".ccmram#")));
+static char pendingStatusMessage[STATUS_MESSAGE_LENGTH]__attribute__((section(".ccmram#")));
+static unsigned char menu_status[STATUS_MAX]__attribute__((section(".ccmram#")));
 static unsigned const char *firmware_rom = firmware_ntsc_rom;
 
 const uint8_t start_bank[]__attribute__((section(".flash01"))) = {
