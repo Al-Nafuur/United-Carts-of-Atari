@@ -1331,7 +1331,7 @@ void emulate_DPC_cartridge( uint32_t image_size)
 
 				case 0x03:
 				{	// DFx counter high
-					DpcCounters[index] = (uint8_t)((((uint16_t)(value & 0x07)) << 8 ) | ctr);
+					DpcCounters[index] = (uint16_t) ((((uint16_t)(value & 0x07)) << 8 ) | ctr);
 
 					if (index >= 0x05)
 						music_modes = (uint8_t)((music_modes & ~(0x01 << (index - 0x05))) | ((value & 0x10) >> (0x09 - index)));
