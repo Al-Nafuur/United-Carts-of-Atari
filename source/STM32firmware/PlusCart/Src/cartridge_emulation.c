@@ -1295,7 +1295,13 @@ void emulate_DPC_cartridge( uint32_t image_size)
 						DpcFlags[index] = 0xff;
 
 					if (index >= 0x05) {
-						dpctop_music = (dpctop_music & ~(0x000000ff << (8*(index - 0x05)))) | ((uint32_t)value << (8*(index - 0x05)));
+
+						dpctop_music &= (uint32_t)(~(0x000000ff << (8*(index - 0x05))));
+						dpctop_music |= ((uint32_t)value << (8*(index - 0x05)));
+
+
+
+//						dpctop_music = (dpctop_music & ~(0x000000ff << (8*(index - 0x05)))) | ((uint32_t)value << (8*(index - 0x05)));
 /* This code might compile without warnings,
  * but then the sound is awful!
   						uint8_t shift = (uint8_t)(8 * (index - 0x05));
@@ -1312,8 +1318,13 @@ void emulate_DPC_cartridge( uint32_t image_size)
 					if(ctr == value)
 						DpcFlags[index] = 0x00;
 
+
+
 					if (index >= 0x05) {
-						dpcbottom_music = (dpcbottom_music & ~(0x000000ff << (8*(index - 0x05)))) | ((uint32_t)value << (8*(index - 0x05)));
+						dpcbottom_music &= (uint32_t) (~(0x00000000000000ff << (8*(index - 0x05))));
+						dpcbottom_music |= ((uint32_t)value << (8*(index - 0x05)));
+
+//						dpcbottom_music = (dpcbottom_music & ~(0x000000ff << (8*(index - 0x05)))) | ((uint32_t)value << (8*(index - 0x05)));
 /* This code might compile without warnings,
  * but then the sound is awful!
  						uint8_t shift = (uint8_t) (index - 0x05);
