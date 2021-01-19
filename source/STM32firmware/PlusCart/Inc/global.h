@@ -2,9 +2,25 @@
 #define GLOBAL_H
 
 #include <stdint.h>
+#include <stdbool.h>
 #include "stm32f4xx_hal.h"
 
-#define VERSION                   "0.16.7 DEV"
+#define UNOCART  1
+#define PLUSCART 2
+#define TRUE     1
+#define FALSE    0
+
+/*
+ * Define hardware and periphery
+ */
+#define HARDWARE_TYPE             PLUSCART
+#define MENU_TYPE                 UNOCART
+#define USE_SD_CARD				  TRUE
+#define USE_WIFI                  FALSE
+
+// End of hardware and periphery
+
+#define VERSION                   "1.0.0"
 #define PLUSSTORE_API_HOST        "pluscart.firmaplus.de"
 
 #define CHARS_PER_LINE					32
@@ -14,6 +30,7 @@
 
 #define MENU_TEXT_GO_BACK                   "(Go Back)"
 #define MENU_TEXT_DELETE_CHAR               "Delete Character"
+#define MENU_TEXT_SD_CARD_CONTENT           "SD-Card Content"
 #define MENU_TEXT_OFFLINE_ROMS              "Offline ROMs"
 #define MENU_TEXT_DETECT_OFFLINE_ROMS       "Detect Offline ROMs"
 #define MENU_TEXT_DELETE_OFFLINE_ROMS       "Erase Offline ROMs"
@@ -56,6 +73,7 @@
 #define MENU_TEXT_UPPERCASE                 "Uppercase"
 #define MENU_TEXT_SYMBOLS                   "Symbols"
 
+
 #define URLENCODE_MENU_TEXT_SYSTEM_INFO     "System%20Info"
 #define URLENCODE_MENU_TEXT_PLUS_CONNECT    "PlusStore%20Connect"
 #define URLENCODE_MENU_TEXT_SETUP           "Setup"
@@ -69,6 +87,7 @@
 
 extern UART_HandleTypeDef huart1;
 extern char http_request_header[];
+extern char stm32_udid[];
 
 extern uint8_t buffer[];
 extern unsigned int cart_size_bytes;
@@ -94,17 +113,19 @@ enum eStatus_bytes_PageTypes {
 enum MENU_ENTRY_Type {
 	Root_Menu = -1,
 	Leave_Menu,
-	Sub_Menu,
+	Sub_Menu,  // should be PlusStore or WiFi_Sub_Menu
 	Cart_File,
 	Input_Field,
 	Keyboard_Char,
 	Keyboard_Row,
 	Menu_Action,
 	Delete_Keyboard_Char,
-	Offline_Cart_File,
-	Offline_Sub_Menu,
+	Offline_Cart_File,  // should be Flash_Sub_Menu
+	Offline_Sub_Menu,  // should be Flash_Sub_Menu
 	Setup_Menu,
 	Leave_SubKeyboard_Menu,
+	SD_Cart_File,
+	SD_Sub_Menu,
 };
 
 enum cart_base_type{

@@ -4,8 +4,6 @@
  *
  */
 
-#include <stdint.h>
-#include <stdbool.h>
 #include "global.h"
 
 
@@ -58,7 +56,6 @@ extern "C" {
 
 #define MAX_RANGE_SIZE           32768
 
-char stm32_udid[25];
 char esp8266_at_version[15];
 
 typedef struct {
@@ -105,7 +102,6 @@ void esp8266_print(char *) __attribute__((section(".flash01")));
 
 void esp8266_AT_WiFiManager() __attribute__((section(".flash01")));
 
-void generate_udid_string(void) __attribute__((section(".flash01")));
 void read_esp8266_at_version(void) __attribute__((section(".flash01")));
 
 #ifdef	__cplusplus

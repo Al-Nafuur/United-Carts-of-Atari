@@ -39,8 +39,16 @@
 #include <string.h>
 
 #include "main.h"
+#include "global.h"
 #include "font.h"
+#if USE_WIFI
 #include "esp8266.h"
+#endif
+#if USE_SD_CARD
+
+//#include "tm_stm32f4_fatfs.h"
+#endif
+
 #include "stm32_udid.h"
 #include "flash.h"
 #include "cartridge_io.h"
@@ -53,6 +61,7 @@
 #include "cartridge_emulation_sb.h"
 #include "cartridge_emulation_dpcp.h"
 
+void generate_udid_string(void);
 
 void truncate_curPath(/*uint8_t count*/);
 
@@ -122,7 +131,11 @@ const EXT_TO_CART_TYPE_MAP ext_to_cart_type_map[]__attribute__((section(".flash0
 
 const char *status_message[]__attribute__((section(".flash01#"))) = {
 
+#if MENU_TYPE == UNOCART
+	"UnoCart 2600",
+#else
 	"PlusCart(+)",
+#endif
 	"Select WiFi Network",
 	"No WiFi",
 	"WiFi connected",
@@ -183,6 +196,9 @@ UART_HandleTypeDef huart1;
 int num_menu_entries = 0;
 char http_request_header[512] __attribute__ ((section (".noinit")));
 
+char stm32_udid[25];
+
+
 uint8_t buffer[BUFFER_SIZE * 1024] __attribute__((section(".buffer")));
 unsigned int cart_size_bytes;
 
@@ -212,7 +228,9 @@ MENU_ENTRY menu_entries[NUM_MENU_ITEMS] __attribute__((section(".ccmram")));
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+#if USE_WIFI
 static void MX_USART1_UART_Init(void);
+#endif
 
 /* USER CODE BEGIN PFP */
 enum e_status_message buildMenuFromPath( MENU_ENTRY * )__attribute__((section(".flash0"))) ;
@@ -226,6 +244,21 @@ void append_entry_to_path(MENU_ENTRY *);
 /* USER CODE BEGIN 0 */
 
 
+void generate_udid_string(){
+	int i;
+	uint8_t c;
+	memset(stm32_udid, '0', 24);
+	stm32_udid[24] = '\0';
+	for (int j = 2; j > -1; j--){
+		uint32_t content_len = STM32_UDID[j];
+		i = (j * 8) + 7;
+		while (content_len != 0 && i > -1) {
+			c = content_len % 16;
+			stm32_udid[i--] = (char)((c > 9)? (c-10) + 'a' : c + '0');
+			content_len = content_len/16;
+		}
+	}
+}
 
 
 /*************************************************************************
@@ -358,12 +391,13 @@ MENU_ENTRY *generateAppearanceMenu(MENU_ENTRY *dst) {
 
 MENU_ENTRY* generateSetupMenu(MENU_ENTRY *dst) {
 	make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
+#if USE_WIFI
 	make_menu_entry(&dst, MENU_TEXT_WIFI_SETUP, Setup_Menu);
+#endif
+#if USE_SD_CARD
+	make_menu_entry(&dst, "Format SD-Card", Menu_Action);
+#endif
 	make_menu_entry(&dst, MENU_TEXT_DISPLAY, Setup_Menu);
-//	make_menu_entry(&dst, MENU_TEXT_TV_MODE_SETUP, Setup_Menu);
-//	make_menu_entry(&dst, MENU_TEXT_FONT_SETUP, Setup_Menu);
-//	make_menu_entry(&dst, MENU_TEXT_SPACING_SETUP, Setup_Menu);
-//	make_menu_entry(&dst, MENU_TEXT_APPEARANCE, Setup_Menu);
 	make_menu_entry(&dst, MENU_TEXT_SYSTEM_INFO, Sub_Menu);
 
 	if (flash_has_downloaded_roms())
@@ -382,8 +416,15 @@ MENU_ENTRY* generateSystemInfo(MENU_ENTRY *dst) {
 
 	make_menu_entry(&dst, "STM Firmware       "VERSION, Leave_Menu);
 
+#if USE_WIFI
 	sprintf(input_field, "WiFi Firmware      %s", esp8266_at_version);
 	make_menu_entry(&dst, input_field, Leave_Menu);
+#endif
+
+#if USE_SD_CARD
+	sprintf(input_field, "SD-Card Size       %s", "2 GiB");
+	make_menu_entry(&dst, input_field, Leave_Menu);
+#endif
 
 	sprintf(input_field, "Flash Size         %s", STM32F4_FLASH_SIZE > 512U ? "1 MiB": "512 KiB");
 	make_menu_entry(&dst, input_field, Leave_Menu);
@@ -433,7 +474,7 @@ enum e_status_message generateKeyboard(
 
 enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 	int count = 0;
-	bool loadStore = false;
+	bool loadStore = false; // ToDo rename to loadPath (could be SD Path or PlusStore path)
 	bool is_entry_row;
 	uint8_t pos = 0, c;
 	num_menu_entries = 0;
@@ -488,6 +529,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 
 
 
+#if USE_WIFI
 		// WiFi Setup
 		else if (strstr(mts, MENU_TEXT_WIFI_SETUP) == mts) {
 
@@ -576,7 +618,76 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 				}
 			}
 		}
+		else if (strstr(mts, MENU_TEXT_PLUS_CONNECT) == mts) {
 
+			if(d->type == Menu_Action){ // if actual Entry is of type Menu_Action -> Connect user
+
+				if( esp8266_PlusStore_API_connect() == false)
+					return esp_timeout;
+
+				esp8266_PlusStore_API_prepare_request_header(curPath, false, true );
+	        	esp8266_print(http_request_header);
+	        	esp8266_skip_http_response_header();
+	        	while(HAL_UART_Receive(&huart1, &c, 1, 100 ) == HAL_OK){}
+
+	        	switch (c) {
+				case '0':
+	        		menuStatusMessage = plus_connect_failed;
+	        		break;
+				case '1':
+	        		menuStatusMessage = plus_created;
+	        		break;
+				default:
+	        		menuStatusMessage = plus_connected;
+	        		break;
+	        	}
+
+
+	        	esp8266_PlusStore_API_end_transmission();
+
+	        	*curPath = 0;
+			}
+
+			else{
+
+				menuStatusMessage = generateKeyboard(&dst, d, menuStatusMessage, plus_connect);
+				//TODO:
+//				switch (inputActive) {
+//				case MODE_SHOW_INSTRUCTION:
+//					menuStatusMessage = plus_connect;
+//					inputActive = MODE_SHOW_INPUT;
+//					break;
+//				case MODE_SHOW_INPUT:
+//					menuStatusMessage = keyboard_input;
+//					break;
+//				case MODE_SHOW_PATH:
+//					break;
+//				default:
+//					break;
+//				}
+
+				//if (inputActive /*strlen(input_field)*/)
+				//	menuStatusMessage = keyboard_input;
+			}
+		}
+		else if (strstr(mts, MENU_TEXT_PLUS_REMOVE) == mts) {
+
+			if( esp8266_PlusStore_API_connect() == false)
+				return esp_timeout;
+
+			esp8266_PlusStore_API_prepare_request_header(curPath, false, true );
+        	esp8266_print(http_request_header);
+
+            esp8266_skip_http_response_header();
+        	while(HAL_UART_Receive(&huart1, &c, 1, 100 ) == HAL_OK){}
+
+        	menuStatusMessage = (c == '0') ? plus_connect_failed : plus_removed;
+
+        	esp8266_PlusStore_API_end_transmission();
+
+        	*curPath = 0;
+		}
+#endif
 		// Display
 
 		else if (strstr(mts, MENU_TEXT_DISPLAY) == mts) {
@@ -704,77 +815,6 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 
 
 
-		else if (strstr(mts, MENU_TEXT_PLUS_CONNECT) == mts) {
-
-			if(d->type == Menu_Action){ // if actual Entry is of type Menu_Action -> Connect user
-
-				if( esp8266_PlusStore_API_connect() == false)
-					return esp_timeout;
-
-				esp8266_PlusStore_API_prepare_request_header(curPath, false, true );
-	        	esp8266_print(http_request_header);
-	        	esp8266_skip_http_response_header();
-	        	while(HAL_UART_Receive(&huart1, &c, 1, 100 ) == HAL_OK){}
-
-	        	switch (c) {
-				case '0':
-	        		menuStatusMessage = plus_connect_failed;
-	        		break;
-				case '1':
-	        		menuStatusMessage = plus_created;
-	        		break;
-				default:
-	        		menuStatusMessage = plus_connected;
-	        		break;
-	        	}
-
-
-	        	esp8266_PlusStore_API_end_transmission();
-
-	        	*curPath = 0;
-			}
-
-			else{
-
-				menuStatusMessage = generateKeyboard(&dst, d, menuStatusMessage, plus_connect);
-				//TODO:
-//				switch (inputActive) {
-//				case MODE_SHOW_INSTRUCTION:
-//					menuStatusMessage = plus_connect;
-//					inputActive = MODE_SHOW_INPUT;
-//					break;
-//				case MODE_SHOW_INPUT:
-//					menuStatusMessage = keyboard_input;
-//					break;
-//				case MODE_SHOW_PATH:
-//					break;
-//				default:
-//					break;
-//				}
-
-				//if (inputActive /*strlen(input_field)*/)
-				//	menuStatusMessage = keyboard_input;
-			}
-		}
-
-		else if (strstr(mts, MENU_TEXT_PLUS_REMOVE) == mts) {
-
-			if( esp8266_PlusStore_API_connect() == false)
-				return esp_timeout;
-
-			esp8266_PlusStore_API_prepare_request_header(curPath, false, true );
-        	esp8266_print(http_request_header);
-
-            esp8266_skip_http_response_header();
-        	while(HAL_UART_Receive(&huart1, &c, 1, 100 ) == HAL_OK){}
-
-        	menuStatusMessage = (c == '0') ? plus_connect_failed : plus_removed;
-
-        	esp8266_PlusStore_API_end_transmission();
-
-        	*curPath = 0;
-		}
-
 		else if (strstr(mts, MENU_TEXT_OFFLINE_ROM_UPDATE) == mts) {
 
 			if( flash_download("&r=1", d->filesize , 0 , false ) != DOWNLOAD_AREA_START_ADDRESS)
@@ -841,10 +881,17 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 	else if (strstr(curPath, MENU_TEXT_SEARCH_FOR_ROM) == curPath) {
 
 		if(d->type == Menu_Action){
+			// Cart with SD and WiFi will search on both..
+#if USE_SD_CARD
+			loadStore = false;
+			make_menu_entry(&dst, "SD Search not Implemented", Leave_Menu);
+#endif
+#if USE_WIFI
 			// Send search to API
 			for (char* p = curPath; (p = strchr(p, ' ')); *p++ = '+');			// ' ' --> '+'
 			loadStore = true;
 			menuStatusMessage = STATUS_CHOOSE_ROM;
+#endif
 		}
 		else {
 
@@ -862,10 +909,14 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 
 		if (strstr(curPath, MENU_TEXT_FIRMWARE_UPDATE) == curPath) {
 
+#if USE_WIFI
 			strcpy(curPath, "&u=1");
-
 			uint32_t bytes_read = esp8266_PlusStore_API_file_request( buffer, curPath, 0, 0x4000 );
 			bytes_read += esp8266_PlusStore_API_file_request( &buffer[0x4000], curPath, 0x8000, (d->filesize - 0x8000) );
+#else
+			uint32_t bytes_read = 0;
+#endif
+
 			if(bytes_read == d->filesize - 0x4000 ){
 				__disable_irq();
 				HAL_FLASH_Unlock();
@@ -890,7 +941,15 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 
 	// Test we should load store and if connected to AP
     if(	loadStore || strlen(curPath) == 0 ){
-    	if(esp8266_is_connected() == true){
+#if USE_SD_CARD
+    	if(d->type == SD_Sub_Menu ){
+
+    	}
+	// load path from SD-Card into  here
+#endif
+
+#if USE_WIFI
+    	if(d->type == Sub_Menu && esp8266_is_connected() == true){
 			if( esp8266_PlusStore_API_connect() == false){
 				return esp_timeout;
 			}
@@ -943,6 +1002,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
         }else if(strlen(curPath) == 0){
         	make_menu_entry(&dst, MENU_TEXT_WIFI_RECONNECT, Menu_Action);
     	}
+#endif
     }
 
     if(strlen(curPath) == 0){
@@ -951,6 +1011,11 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 
     	if(menuStatusMessage == none)
     		menuStatusMessage = STATUS_ROOT;
+
+#if USE_SD_CARD
+    	make_menu_entry(&dst, MENU_TEXT_SD_CARD_CONTENT, SD_Sub_Menu);
+    	make_menu_entry(&dst, MENU_TEXT_SEARCH_FOR_ROM, Input_Field);
+#endif
 
     	make_menu_entry(&dst, MENU_TEXT_SETUP, Setup_Menu);
 	}
@@ -976,8 +1041,11 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 	append_entry_to_path(d);
 
 	// Test if connected to AP
-    if(d->type == Cart_File && esp8266_is_connected() == false ){
-    	return cart_type;
+    if(d->type == Cart_File ){
+#if USE_WIFI
+    	if(esp8266_is_connected() == false)
+#endif
+    		return cart_type;
     }
 
     // select type by file extension?
@@ -1006,7 +1074,14 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 	uint32_t bytes_read, bytes_to_read = d->filesize > (BUFFER_SIZE * 1024)?(BUFFER_SIZE * 1024):d->filesize;
 	uint8_t tail[16], bytes_read_tail;
 	if(d->type == Cart_File ){
+#if USE_WIFI
 		bytes_read = esp8266_PlusStore_API_file_request( buffer, curPath, 0, bytes_to_read );
+#endif
+#if USE_SD_CARD
+		// f_mount, f_open and f_read .. &curPath[sizeof(MENU_TEXT_SD_CARD_CONTENT)]
+		//bytes_read = ( buffer, curPath, 0, bytes_to_read );
+#endif
+
 	}else{
 		bytes_read = flash_file_request( buffer, d->flash_base_address, 0, bytes_to_read );
 	}
@@ -1018,7 +1093,13 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 	if(d->filesize >  (BUFFER_SIZE * 1024)){
 		cart_type.uses_ccmram = true;
 		if(d->type == Cart_File ){
+#if USE_WIFI
 			bytes_read_tail = (uint8_t)esp8266_PlusStore_API_file_request( tail, curPath, (d->filesize - 16), 16 );
+#endif
+#if USE_SD_CARD
+			// read tail
+			bytes_read_tail = 0;
+#endif
 		}else{
 			bytes_read_tail = (uint8_t)flash_file_request( tail, d->flash_base_address, (d->filesize - 16), 16 );
 		}
@@ -1163,11 +1244,15 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 void emulate_cartridge(CART_TYPE cart_type, MENU_ENTRY *d)
 {
 	int offset = 0;
+
+
+#if USE_WIFI
 	if (cart_type.withPlusFunctions == true ){
  		// Read path and hostname in ROM File from where NMI points to till '\0' and
 		// copy to http_request_header
 		offset = esp8266_PlusROM_API_connect(cart_size_bytes);
 	}
+#endif
 
 
 	if (cart_type.base_type == base_type_2K) {
@@ -1250,8 +1335,10 @@ void emulate_cartridge(CART_TYPE cart_type, MENU_ENTRY *d)
 	else if (cart_type.base_type == base_type_SB)
 		emulate_SB_cartridge(curPath, cart_size_bytes, buffer, d);
 
+#if USE_WIFI
 	if (cart_type.withPlusFunctions)
 		esp8266_PlusStore_API_end_transmission();
+#endif
 
 }
 
@@ -1304,9 +1391,15 @@ void system_secondary_init(void){
 	set_menu_status_byte(STATUS_StatusByteReboot, 0);
 	generate_udid_string();
 
+#if USE_SD_CARD
+	// put SD-Card init here
+#endif
+
+#if USE_WIFI
 	MX_USART1_UART_Init();
 	esp8266_init();
 	read_esp8266_at_version();
+#endif
 	// set up status area
 }
 
@@ -1514,9 +1607,12 @@ int main(void)
 
     	set_menu_status_byte(STATUS_PageType, (uint8_t) Directory);
     }
-    bool is_connected = esp8266_is_connected();
-
-    createMenuForAtari(menu_entries, act_page, num_menu_entries, is_connected, plus_store_status );
+#if USE_WIFI
+	bool is_connected = esp8266_is_connected();
+#else
+	bool is_connected = false;
+#endif
+	createMenuForAtari(menu_entries, act_page, num_menu_entries, is_connected, plus_store_status );
     HAL_Delay(200);
 
   } // while(1)
@@ -1570,6 +1666,7 @@ void SystemClock_Config(void)
   * @param None
   * @retval None
   */
+#if USE_WIFI
 static void MX_USART1_UART_Init(void)
 {
 
@@ -1598,6 +1695,7 @@ static void MX_USART1_UART_Init(void)
   /* USER CODE END USART1_Init 2 */
 
 }
+#endif
 
 /**
   * @brief GPIO Initialization Function
