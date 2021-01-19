@@ -784,22 +784,6 @@ uint64_t wait_response(uint32_t timeout) {
 	return hash;
 }
 
-void generate_udid_string(){
-	int i;
-	uint8_t c;
-	memset(stm32_udid, '0', 24);
-	stm32_udid[24] = '\0';
-	for (int j = 2; j > -1; j--){
-		uint32_t content_len = STM32_UDID[j];
-		i = (j * 8) + 7;
-		while (content_len != 0 && i > -1) {
-			c = content_len % 16;
-			stm32_udid[i--] = (char)((c > 9)? (c-10) + 'a' : c + '0');
-			content_len = content_len/16;
-		}
-	}
-}
-
 void read_esp8266_at_version(){
     esp8266_print("AT+GMR\r\n");
     unsigned char c;
