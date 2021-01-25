@@ -4,12 +4,12 @@
 #include <stdint.h>
 #include "stm32f4xx_hal.h"
 
-#define VERSION                   "0.16.0"
+#define VERSION                   "1.0.0"
 #define PLUSSTORE_API_HOST        "pluscart.firmaplus.de"
 
 #define CHARS_PER_LINE					32
-#define STATUS_MESSAGE_LENGTH           (CHARS_PER_LINE - 5)
-#define NUM_MENU_ITEMS_PER_PAGE      	14
+#define STATUS_MESSAGE_LENGTH           256
+
 #define NUM_MENU_ITEMS			      	1024
 
 #define MENU_TEXT_GO_BACK                   "(Go Back)"
@@ -17,38 +17,55 @@
 #define MENU_TEXT_OFFLINE_ROMS              "Offline ROMs"
 #define MENU_TEXT_DETECT_OFFLINE_ROMS       "Detect Offline ROMs"
 #define MENU_TEXT_DELETE_OFFLINE_ROMS       "Erase Offline ROMs"
-#define MENU_TEXT_SETUP 	                "Setup"
-#define MENU_TEXT_WIFI_SETUP 	            "WiFi Setup"
-#define MENU_TEXT_WPS_CONNECT               "WiFi WPS Connect"
-#define MENU_TEXT_WIFI_MANGER               "Start WiFi Manager Portal"
+#define MENU_TEXT_SETUP                     "Setup"
+#define MENU_TEXT_WIFI_SETUP                "WiFi Connection"
+#define MENU_TEXT_WIFI_SELECT               "Scan for WiFi Access Points"
+#define MENU_TEXT_WIFI_WPS_CONNECT          "WiFi WPS Connect"
+#define MENU_TEXT_WIFI_MANAGER              "Start WiFi Manager Portal"
+#define MENU_TEXT_ESP8266_RESTORE           "Delete WiFi Connections"
+#define MENU_TEXT_ESP8266_UPDATE            "WiFi Firmware Update"
+//#define MENU_TEXT_APPEARANCE                "Appearance"
+#define MENU_TEXT_DISPLAY                   "Display Preferences"
+
 #define MENU_TEXT_WIFI_RECONNECT            "WiFi Retry"
-#define MENU_TEXT_TV_MODE_SETUP             "Set TV Mode"
+#define MENU_TEXT_TV_MODE_SETUP             "TV Mode"
 #define MENU_TEXT_TV_MODE_PAL               "  PAL"
 #define MENU_TEXT_TV_MODE_PAL60             "  PAL 60 Hz"
 #define MENU_TEXT_TV_MODE_NTSC              "  NTSC"
-#define MENU_TEXT_FONT_SETUP                "Set Font Style"
+#define MENU_TEXT_FONT_SETUP                "Font Style"
 #define MENU_TEXT_FONT_TJZ                  "  Small Caps"
 #define MENU_TEXT_FONT_TRICHOTOMIC12        "  Trichotomic-12"
-#define MENU_TEXT_FONT_CAPTAIN_MORGAN_SPICE	"  Captain Morgan Spice"
+#define MENU_TEXT_FONT_CAPTAIN_MORGAN_SPICE "  Captain Morgan Spice"
 #define MENU_TEXT_FONT_GLACIER_BELLE        "  Glacier Belle"
+
+#define MENU_TEXT_SPACING_SETUP             "Line Spacing"
+#define MENU_TEXT_SPACING_DENSE             "  Dense"
+#define MENU_TEXT_SPACING_MEDIUM            "  Regular"
+#define MENU_TEXT_SPACING_SPARSE            "  Sparse"
+
 #define MENU_TEXT_PRIVATE_KEY               "Private Key"
 #define MENU_TEXT_FIRMWARE_UPDATE           "** Update Firmware **"
 #define MENU_TEXT_OFFLINE_ROM_UPDATE        "Download Offline ROMs"
 #define MENU_TEXT_PLUS_CONNECT              "PlusStore Connect"
 #define MENU_TEXT_PLUS_REMOVE               "PlusStore Disconnect"
-#define MENU_TEXT_ESP8266_RESTORE           "ESP8266 Factory Reset"
-#define MENU_TEXT_SEARCH_ROM                "Search ROM"
-#define MENU_TEXT_SPACE						"Space"
-#define MENU_TEXT_LOWERCASE					"Lowercase"
-#define MENU_TEXT_UPPERCASE					"Uppercase"
-#define MENU_TEXT_SYMBOLS					"Symbols"
 
-#define URLENCODE_MENU_TEXT_PLUS_CONNECT            "PlusStore%20connect"
-#define URLENCODE_MENU_TEXT_SETUP 	                "Setup"
+#define MENU_TEXT_SYSTEM_INFO               "System Info"
+#define MENU_TEXT_SEARCH_FOR_ROM            "Search ROM"
+#define MENU_TEXT_SPACE                     "Space"
+#define MENU_TEXT_LOWERCASE                 "Lowercase"
+#define MENU_TEXT_UPPERCASE                 "Uppercase"
+#define MENU_TEXT_SYMBOLS                   "Symbols"
+
+#define URLENCODE_MENU_TEXT_SYSTEM_INFO     "System%20Info"
+#define URLENCODE_MENU_TEXT_PLUS_CONNECT    "PlusStore%20Connect"
+#define URLENCODE_MENU_TEXT_SETUP           "Setup"
 
 #define AUTOSTART_FILENAME_PREFIX           "Autostart."
 
 #define PATH_SEPERATOR '/' /*CHAR_SELECTION*/
+
+#define SIZEOF_WIFI_SELECT_BASE_PATH        sizeof(MENU_TEXT_SETUP) + sizeof(MENU_TEXT_WIFI_SETUP) + sizeof(MENU_TEXT_WIFI_SELECT)
+
 
 extern UART_HandleTypeDef huart1;
 extern char http_request_header[];
@@ -119,6 +136,7 @@ enum cart_base_type{
 	base_type_3EPlus,
 	base_type_DPCplus,
 	base_type_SB,
+	base_type_UA,
 	base_type_ACE
 };
 
@@ -134,9 +152,11 @@ typedef struct {
 	uint8_t tv_mode;
 	uint8_t first_free_flash_sector;
 	uint8_t font_style;
+	uint8_t line_spacing;
 } USER_SETTINGS;
 
 
 extern USER_SETTINGS user_settings;
+extern const uint8_t numMenuItemsPerPage[];
 
 #endif // GLOBAL_H

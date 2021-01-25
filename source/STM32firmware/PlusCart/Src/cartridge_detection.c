@@ -15,7 +15,7 @@
  * Cartridge Type Detection
  *************************************************************************/
 int isValidHostChar(char c) {
-    return ( c == 45 || c == 46 || (c > 47 && c < 58) || (c > 64 && c < 91) || (c > 96 && c < 122) );
+    return ( c == 45 || c == 46 || (c > 47 && c < 58) || (c > 64 && c < 91) || (c > 96 && c < 123) );
 }
 
 /*
@@ -29,7 +29,7 @@ int isValidHostChar(char c) {
  * but we don't allow Search-String chars too
  */
 int isValidPathChar(char c) {
-    return ((c > 44 && c < 58) || (c > 64 && c < 91) || (c > 96 && c < 122) );
+    return ((c > 44 && c < 58) || (c > 64 && c < 91) || (c > 96 && c < 123) );
 }
 
 int searchForBytes(unsigned char *bytes, unsigned int size, unsigned char *signature, unsigned int sigsize, int minhits)
@@ -95,6 +95,30 @@ int isPotentialF8(unsigned int size, unsigned char *bytes){
 
 /* The following detection routines are modified from the Atari 2600 Emulator Stella
   (https://github.com/stella-emu) */
+int isProbablyUA(unsigned int size, unsigned char *bytes)
+{
+  // UA cart bankswitching switches to bank 1 by accessing address 0x240
+  // using 'STA $240' or 'LDA $240'
+  // Similar Brazilian (Digivison) cart bankswitching switches to bank 1 by accessing address 0x2C0
+  // using 'BIT $2C0', 'STA $2C0' or 'LDA $2C0'
+  // Other Brazilian (Atari Mania) ROM's bankswitching switches to bank 1 by accessing address 0xFC0
+  // using 'BIT $FA0', 'BIT $FC0' or 'STA $FA0'
+	unsigned char signature[7][3] = {
+    { 0x8D, 0x40, 0x02 },  // STA $240 (Funky Fish, Pleiades)
+    { 0xAD, 0x40, 0x02 },  // LDA $240 (???)
+    { 0xBD, 0x1F, 0x02 },  // LDA $21F,X (Gingerbread Man)
+    { 0x2C, 0xC0, 0x02 },  // BIT $2C0 (Time Pilot)
+    { 0x8D, 0xC0, 0x02 },  // STA $2C0 (Fathom, Vanguard)
+    { 0xAD, 0xC0, 0x02 },  // LDA $2C0 (Mickey)
+    { 0x2C, 0xC0, 0x0F }   // BIT $FC0 (H.E.R.O., Kung-Fu Master)
+  };
+  for(int i = 0; i < 7; ++i)
+    if(searchForBytes(bytes, size, signature[i], 3, 1))
+      return 1;
+
+  return 0;
+}
+
 
 int isProbablySC(unsigned int size, unsigned char *bytes)
 {

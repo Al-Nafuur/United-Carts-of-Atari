@@ -12,7 +12,7 @@ void emulate_SB_cartridge( const char* filename, uint32_t image_size, uint8_t* b
 
     if (!setup_cartridge_image(filename, image_size, buffer, layout, d, base_type_SB)) return;
 
-    uint8_t banks = ( image_size / 4096 ) - 1;
+    uint8_t banks = (uint8_t)(( image_size / 4096 ) - 1);
     uint8_t *bank = layout->banks[banks];
 
 	uint16_t addr, addr_prev = 0, data_prev = 0, data = 0;

@@ -42,7 +42,6 @@ void connect_tcp_link(char link_id ) __attribute__((section(".flash01")));
 bool init_send_tcp_link(char link_id, uint16_t bytes_to_send) __attribute__((section(".flash01")));
 void close_tcp_link(char link_id) __attribute__((section(".flash01")));
 
-char stm32_udid[25];
 char tmp_uart_buffer[50];
 
 bool esp8266_PlusStore_API_connect(){
@@ -70,6 +69,23 @@ void esp8266_PlusStore_API_prepare_request_header(char *path, bool prepare_range
     strcat(http_request_header, path);
     strcat(http_request_header, API_ATCMD_4);
     strcat(http_request_header, stm32_udid);
+    strcat(http_request_header, API_ATCMD_4a);
+
+    size_t header_len = strlen(http_request_header);
+    itoa(user_settings.first_free_flash_sector, (char *)&http_request_header[header_len++], 16); // 5 - C
+    http_request_header[header_len++] = ',';
+    itoa(user_settings.font_style, &http_request_header[header_len++], 10);                      // 0 - 3
+    http_request_header[header_len++] = ',';
+    itoa(user_settings.line_spacing, &http_request_header[header_len++], 10);                    // 0 - 2
+    http_request_header[header_len++] = ',';
+    itoa(user_settings.tv_mode, (char *)&http_request_header[header_len++], 10);                 // 1 - 3
+    http_request_header[header_len] = '\0';
+
+    if(STM32F4_FLASH_SIZE > 512U)
+        strcat(http_request_header, ",1");
+    else
+        strcat(http_request_header, ",0");
+
     strcat(http_request_header, API_ATCMD_5);
 
     if(prepare_range_request)
@@ -83,42 +99,27 @@ void esp8266_PlusStore_API_end_transmission(){
 	esp8266_send_command("+++", 1000);
 }
 
-uint32_t esp8266_PlusStore_API_range_request(char *path, uint32_t range_count, http_range *range, uint8_t *ext_buffer){
+uint32_t esp8266_PlusStore_API_range_request(char *path, http_range range, uint8_t *ext_buffer){
 	uint32_t response_size = 0;
-	uint16_t expected_size = 0;
+	uint16_t expected_size =  (uint16_t) ( range.stop + 1 - range.start );
 	uint8_t c;
-	char boundary[] = {'\r','\n','-','-', RANGE_BOUNDARY_TEMPLATE , '\r','\n'};
 
-	esp8266_PlusStore_API_prepare_request_header(path, true, false );
+	esp8266_PlusStore_API_prepare_request_header(path, true, false);
 
-	for (uint32_t i = 0; i < range_count; i++) {
- 	    if (i > 0)
-            strcat(http_request_header, ",");
-        sprintf(http_request_header, "%s%lu-%lu" ,http_request_header, range[i].start, range[i].stop  );
-        expected_size += ( range[i].stop + 1 - range[i].start );
- 	}
+    sprintf(http_request_header, "%s%lu-%lu", http_request_header, range.start, range.stop);
     strcat(http_request_header, (char *)"\r\n\r\n");
 
 	esp8266_print(http_request_header);
-    if(range_count > 1){
-    	get_boundary_http_header(&boundary[4]);
-    }
-    esp8266_skip_http_response_header(); // skip normal http-header or first boundary + multipart-header
+
+    esp8266_skip_http_response_header();
     while( response_size < expected_size ){
     	if(HAL_UART_Receive(&huart1, &c, 1, 15000 ) != HAL_OK){
     		break;
     	}
     	ext_buffer[response_size] = c;
-    	if(range_count > 1 && response_size > RANGE_BOUNDARY_SIZE && strncmp((char *) &ext_buffer[response_size - RANGE_BOUNDARY_SIZE], boundary, RANGE_BOUNDARY_SIZE) == 0 ){
-   			response_size -= RANGE_BOUNDARY_SIZE;
-   			esp8266_skip_http_response_header(); //skip multipart-header
-    	}
     	response_size++;
     }
 
-    if(range_count > 1 && response_size > RANGE_BOUNDARY_SIZE){
-			response_size -= RANGE_BOUNDARY_SIZE;
-    }
     return response_size;
 }
 
@@ -126,18 +127,18 @@ uint32_t esp8266_PlusStore_API_file_request(uint8_t *ext_buffer, char *path, uin
 	uint32_t bytes_read = 0, chunk_read = 0;
 	uint32_t max_range_pos = start_pos + length - 1;
 	uint32_t request_count = ( length + ( MAX_RANGE_SIZE - 1 ) )  / MAX_RANGE_SIZE;
-	http_range range[1];
+	http_range range;
 
 	esp8266_PlusStore_API_connect();
 	for (uint32_t i = 0; i < request_count; i++) {
-		range[0].start = start_pos + ( i * MAX_RANGE_SIZE);
-		range[0].stop = range[0].start + (MAX_RANGE_SIZE -1);
-		if(range[0].stop > max_range_pos){
-			range[0].stop = max_range_pos;
+		range.start = start_pos + ( i * MAX_RANGE_SIZE);
+		range.stop = range.start + (MAX_RANGE_SIZE -1);
+		if(range.stop > max_range_pos){
+			range.stop = max_range_pos;
 		}
-		chunk_read = esp8266_PlusStore_API_range_request(path, 1, range, &ext_buffer[(range[0].start - start_pos)]);
+		chunk_read = esp8266_PlusStore_API_range_request(path, range, &ext_buffer[(range.start - start_pos)]);
 		bytes_read += chunk_read;
-		if(chunk_read != ( range[0].stop + 1 - range[0].start ))
+		if(chunk_read != ( range.stop + 1 - range.start ))
 			break;
 	}
 	esp8266_PlusStore_API_end_transmission();
@@ -148,7 +149,7 @@ int esp8266_PlusROM_API_connect(unsigned int size){
 	uint16_t * nmi_p = (uint16_t * )&buffer[size - 6];
 	int i = nmi_p[0] - 0x1000;
 
-	int offset = strlen((char *)&buffer[i]) + 1 + i;
+	int offset = (int)strlen((char *)&buffer[i]) + 1 + i;
 
     esp8266_send_command("AT+CIPCLOSE\r\n", 5000);
 
@@ -167,7 +168,7 @@ int esp8266_PlusROM_API_connect(unsigned int size){
     strcat(http_request_header, (char *)"\r\nConnection: keep-alive\r\nContent-Type: application/octet-stream\r\nPlusStore-ID: v" VERSION " ");
     strcat(http_request_header, (char *)stm32_udid);
     strcat(http_request_header, (char *)"\r\nContent-Length:    \r\n\r\n");
-    offset = strlen(http_request_header);
+    offset = (int)strlen(http_request_header);
 
     esp8266_send_command(API_ATCMD_2, 5000);
     return offset;
@@ -195,25 +196,6 @@ uint16_t esp8266_skip_http_response_header(){
 	return content_length;
 }
 
-void get_boundary_http_header(char * buffer){
-	int count = 0;
-	uint8_t c;
-	while(HAL_UART_Receive(&huart1, &c, 1, PLUSSTORE_RESPONSE_START_TIMEOUT ) == HAL_OK){
-       	if( c == '\n' ){
-       		if (count == 1){
-       			esp8266_skip_http_response_header(); // first row in multipart response is empty
-       			break;
-       		}
-       		count = 0;
-       	}else{
-       		if(count > 44 && count < 58){
-       			buffer[count - 45] = c;
-       		}
-       		count++;
-       	}
-	}
-}
-
 /**
   * @brief ESP8266 Initialization Function
   * @param None
@@ -239,6 +221,26 @@ void esp8266_init()
 
 }
 //________UART module Initialized__________//
+
+void esp8266_update()
+{
+	uint8_t c;
+	//wait 2 seconds
+	HAL_Delay(2000);
+
+	while(HAL_UART_Receive(&huart1, &c, 1, 10 ) == HAL_OK);// first read old messages..
+
+	if(esp8266_send_command("AT+CIUPDATE\r\n", 120000) != ESP8266_OK ) // wait 2 minutes max for firmware download and flashing
+		return;
+	// Update success wait for ESP8266 reboot (we don't monitor ESP8266_WIFI_DISCONNECT).
+	if( wait_response(15000) != ESP8266_READY)
+		return;
+	 wait_response(7000); // wait for reconnect to WiFi
+
+	 read_esp8266_at_version(); // read (hopefully) new AT version
+
+	 esp8266_init(); // redo init
+}
 
 uint64_t esp8266_send_command(char *command, uint32_t timeout){
     esp8266_print(command);
@@ -371,7 +373,7 @@ bool esp8266_is_connected(void){
  * @param ptr A pointer to the string to send.
  */
 void esp8266_print(char *ptr) {
-	 HAL_UART_Transmit(&huart1, (uint8_t *)ptr, strlen((char *)ptr), HAL_UART_TIMEOUT_SEND);
+	 HAL_UART_Transmit(&huart1, (uint8_t *)ptr, (uint16_t)strlen((char *)ptr), HAL_UART_TIMEOUT_SEND);
 }
 
 
@@ -460,7 +462,7 @@ uint8_t process_http_headline(){
             char cur_path[128] = URLENCODE_MENU_TEXT_SETUP "/" URLENCODE_MENU_TEXT_PLUS_CONNECT "/";
             uint8_t c;
             url_param p_array[3] = {{"s="}};
-            char send_link_id = linkId + 1;
+            char send_link_id = (char)(linkId + 1);
 
             if(send_link_id > '3')
             	send_link_id = '0';
@@ -540,7 +542,7 @@ void send_requested_page_to_client(char id, const char* page, unsigned int len, 
             len_of_package_to_TX = 2048;
         }
         else{
-            len_of_package_to_TX = len;
+            len_of_package_to_TX = (uint16_t) len;
             len = 0;
         }
 
@@ -582,7 +584,7 @@ int ishex(char x){
 }
 
 void uri_decode( char *s ){
-	int len = strlen(s);
+	int len = (int) strlen(s);
 	int c;
 	int s_counter = 0, d_counter = 0;
 
@@ -593,7 +595,7 @@ void uri_decode( char *s ){
 		}else if (c == '%' && ( !ishex(s[++s_counter]) || !ishex(s[++s_counter]) || !sscanf(&s[s_counter - 1], "%2x", &c))){
 			return;
 		}
-		s[d_counter++] = c;
+		s[d_counter++] = (char) c;
 	}
 	s[d_counter] = '\0';
 }
@@ -792,8 +794,26 @@ void generate_udid_string(){
 		i = (j * 8) + 7;
 		while (content_len != 0 && i > -1) {
 			c = content_len % 16;
-			stm32_udid[i--] = (c > 9)? (c-10) + 'a' : c + '0';
+			stm32_udid[i--] = (char)((c > 9)? (c-10) + 'a' : c + '0');
 			content_len = content_len/16;
 		}
 	}
+}
+
+void read_esp8266_at_version(){
+    esp8266_print("AT+GMR\r\n");
+    unsigned char c;
+    int stage = 0, i = 0;
+
+    while(HAL_UART_Receive(&huart1, &c, 1, 200 ) == HAL_OK){
+		if( i==14 || (stage == 0 && c == ':') || (stage == 1 && c == '(')){
+			stage++;
+		}else if(stage == 1){ // && i < SIZEOF esp8266_at_version
+			esp8266_at_version[i++] = c;
+		}else if (stage == 2){
+			break;
+		}
+    }
+    esp8266_at_version[i] = '\0';
+    wait_response(200); // read rest of message
 }

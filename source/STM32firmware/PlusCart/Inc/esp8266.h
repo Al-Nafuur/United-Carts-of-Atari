@@ -16,15 +16,19 @@
 extern "C" {
 #endif
 
+#define CURRENT_ESP8266_FIRMWARE "1.7.4.0"
+
 /** API connect/request **/
-#define  API_ATCMD_1  "AT+CIPSTART=\"TCP\",\"" PLUSSTORE_API_HOST "\",80\r\n"
-#define  API_ATCMD_1a  "AT+CIPSTART=%c,\"TCP\",\"" PLUSSTORE_API_HOST "\",80\r\n"
-#define  API_ATCMD_2  "AT+CIPSEND\r\n"
-#define  API_ATCMD_3  "GET /api.php?p="
-#define  API_ATCMD_4  " HTTP/1.0\r\nHost: " PLUSSTORE_API_HOST "\r\nPlusStore-ID: v" VERSION " "
-#define  API_ATCMD_5  "\r\nConnection: keep-alive\r\n"
-#define  API_ATCMD_6a "Range: bytes="
-#define  API_ATCMD_6b "\r\n"
+#define  API_ATCMD_1	"AT+CIPSTART=\"TCP\",\"" PLUSSTORE_API_HOST "\",80\r\n"
+#define  API_ATCMD_1a	"AT+CIPSTART=%c,\"TCP\",\"" PLUSSTORE_API_HOST "\",80\r\n"
+#define  API_ATCMD_2	"AT+CIPSEND\r\n"
+#define  API_ATCMD_3	"GET /api.php?p="
+#define  API_ATCMD_4	" HTTP/1.0\r\nHost: " PLUSSTORE_API_HOST \
+						"\r\nPlusStore-ID: v" VERSION " "
+#define  API_ATCMD_4a	"\r\nClient-Conf: "
+#define  API_ATCMD_5	"\r\nConnection: keep-alive\r\n"
+#define  API_ATCMD_6a	"Range: bytes="
+#define  API_ATCMD_6b	"\r\n"
 
 /* Hash Values of ESP8266 Response messages */
 #define ESP8266_NO_RESPONSE                       5381UL // initial hash value
@@ -48,17 +52,14 @@ extern "C" {
 #define HAL_UART_TIMEOUT_SEND    180
 #define HAL_UART_TIMEOUT_RECEIVE 100
 
-#define PLUSSTORE_CONNECT_TIMEOUT          5000
+#define PLUSSTORE_CONNECT_TIMEOUT         10000
 #define PLUSSTORE_RESPONSE_START_TIMEOUT  25000
 #define PLUSROM_API_CONNECT_TIMEOUT        PLUSSTORE_CONNECT_TIMEOUT
 
-
 #define MAX_RANGE_SIZE           32768
-#define RANGE_BOUNDARY_SIZE        19
-#define RANGE_BOUNDARY_TEMPLATE  '_','_','_','_','_','_','_','_','_','_','_','_','_'
 
-#define TRUE    1
-#define FALSE   0
+char stm32_udid[25];
+char esp8266_at_version[15];
 
 typedef struct {
 	uint32_t start;
@@ -69,6 +70,8 @@ typedef struct {
 /** Should be written by the user for input from / output to the ESP module **/
 
 void esp8266_init(void) __attribute__((section(".flash01")));
+void esp8266_update(void) __attribute__((section(".flash01")));
+
 
 /** Function prototypes **/
 
@@ -88,7 +91,7 @@ bool esp8266_wifi_list(MENU_ENTRY **, int *);
 bool esp8266_wifi_connect(char *, char *);
 bool esp8266_wps_connect(void) __attribute__((section(".flash01")));
 
-uint32_t esp8266_PlusStore_API_range_request( char *, uint32_t, http_range *, uint8_t *) __attribute__((section(".flash01")));
+uint32_t esp8266_PlusStore_API_range_request( char *, http_range, uint8_t *) __attribute__((section(".flash01")));
 uint32_t esp8266_PlusStore_API_file_request( uint8_t *, char *, uint32_t, uint32_t ) __attribute__((section(".flash01")));
 
 // Is connected to AP (AT+CWJAP?)
@@ -103,6 +106,7 @@ void esp8266_print(char *) __attribute__((section(".flash01")));
 void esp8266_AT_WiFiManager() __attribute__((section(".flash01")));
 
 void generate_udid_string(void) __attribute__((section(".flash01")));
+void read_esp8266_at_version(void) __attribute__((section(".flash01")));
 
 #ifdef	__cplusplus
 }

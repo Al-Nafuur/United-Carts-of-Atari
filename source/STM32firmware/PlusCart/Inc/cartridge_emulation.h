@@ -37,15 +37,16 @@ enum Transmission_State{
 #define process_transmission() \
         switch(huart_state){ \
           case Send_Start: { \
-            content_len = out_buffer_write_pointer + 1; \
-            i = content_length_pos; \
+        	content_len = out_buffer_write_pointer; \
+        	content_len++; \
+            i = (uint8_t) content_length_pos; \
             huart_state++; \
             break; \
           } \
           case Send_Prepare_Header: { \
             if (content_len != 0) { \
-              c = content_len % 10; \
-              http_request_header[i--] =  c + '0'; \
+              c = (uint8_t) (content_len % 10); \
+              http_request_header[i--] =  (char) (c + '0'); \
               content_len = content_len/10; \
             }else{ \
               i = 0; \
@@ -118,6 +119,7 @@ enum Transmission_State{
             huart_state = No_Transmission; \
             break; \
           } \
+          case No_Transmission: \
           default: \
             break; \
         }
@@ -126,6 +128,9 @@ void exit_cartridge(uint16_t , uint16_t );
 
 /* 'Standard' Bankswitching */
 void emulate_standard_cartridge(int, bool, uint16_t, uint16_t, int);
+
+/* UA Bankswitching */
+void emulate_UA_cartridge();
 
 /* FA (CBS RAM plus) Bankswitching */
 void emulate_FA_cartridge(int, bool);

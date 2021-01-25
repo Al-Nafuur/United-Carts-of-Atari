@@ -70,7 +70,7 @@ static void setup_multiload_map(uint8_t *multiload_map, uint32_t multiload_count
 	for ( i = 0; i < multiload_count; i++) {
 		start = ((i + 1) * 8448 - 251); // - 256 + 5 -> multiload_id
 		esp8266_PlusStore_API_file_request( &multiload_id, (char*) cartridge_path, start, 1 );
-		multiload_map[multiload_id] = i;
+		multiload_map[multiload_id] = (uint8_t) i;
 	}
 }
 
@@ -89,14 +89,17 @@ static void setup_rom(uint8_t* rom, int tv_mode) {
 		case TV_MODE_PAL60:
 			rom[0x07fa] = 0x02;
 			break;
+
+		default:
+			break;
 	}
 }
 
 static void read_multiload(uint8_t *buffer, const char* cartridge_path, uint8_t physical_index, unsigned int image_size) {
 	__enable_irq();
 
-	uint32_t start = physical_index * 8448;
-	uint16_t size = (image_size < 8448)?image_size:8448;
+	uint32_t start = physical_index * 8448U;
+	uint16_t size = (uint16_t) ((image_size < 8448U)?image_size:8448U);
 
 	esp8266_PlusStore_API_file_request( buffer, (char*) cartridge_path, start, size );
 
@@ -114,7 +117,7 @@ static void load_multiload(uint8_t *ram, uint8_t *rom, uint8_t physical_index, c
 
 	for (uint8_t i = 0; i < header->block_count; i++) {
 		uint8_t location = header->block_location[i];
-		uint8_t bank = (location & 0x03) % 3;
+		uint8_t bank = (uint8_t)((location & 0x03) % 3);
 		uint8_t base = (location & 0x1f) >> 2;
 
 		memcpy(ram + bank * 2048 + base * 256, buffer + 256 * i, 256);
@@ -176,7 +179,7 @@ void emulate_ar_cartridge(const char* cartridge_path, unsigned int image_size, u
 
 			}
 			else if ((addr & 0x0f00) == 0 && (transition_count > 5 || !write_ram_enabled)) {
-				data_hold = addr & 0xff;
+				data_hold = (uint8_t) addr; // & 0xff;
 				transition_count = 0;
 			}
 			else if (addr == 0x1ff8) {
@@ -217,6 +220,9 @@ void emulate_ar_cartridge(const char* cartridge_path, unsigned int image_size, u
 					case 7:
 						bank0 = ram + 2048;
 						bank1 = ram + 2048 * 2;
+						break;
+
+					default:
 						break;
 				}
 			}

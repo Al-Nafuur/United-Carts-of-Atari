@@ -19,6 +19,9 @@ enum eStatus_icons_char_num {
 	CHAR_L_NoAccount,
 	CHAR_R_NoAccount,
 
+	CHAR_PERIODPERIOD,
+	CHAR_PERIODPERIOD2,
+
 
 	// Unrelated, but we want to continue the numbering...
 	// add more here
@@ -84,7 +87,10 @@ enum charNumbers {
  CH_NO_ACCOUNT_L,
  CH_NO_ACCOUNT_R,
 
+
  CH_SELECTION,			// show selected font (box)
+// CH_PERIODPERIOD,
+// CH_PERIODPERIOD2,
 
  // SMALL CAPS FONT
  // OK to add variable # more chars here...
@@ -94,6 +100,8 @@ enum charNumbers {
  CH_SC_PERIOD,
  CH_SC_SEMICOLON,
  CH_SC_COLON,
+ CH_SC_ROUND_OPEN,
+ CH_SC_ROUND_CLOSE,
 
  CH_SC_0,
  CH_SC_1,
@@ -159,6 +167,9 @@ enum charNumbers {
  CH_SC_x,
  CH_SC_y,
  CH_SC_z,
+
+ CH_SC_PERIODPERIOD,
+ CH_SC_PERIODPERIOD2,
 
  // TRICHOTOMIC-12
  // OK to add variable # more chars here...
@@ -227,6 +238,9 @@ enum charNumbers {
  CH_TRICO_x,
  CH_TRICO_y,
  CH_TRICO_z,
+
+ CH_TRICO_PERIODPERIOD,
+ CH_TRICO_PERIODPERIOD2,
 
  // CAPTAIN MORGAN SPICE
  // OK to add variable # more chars here...
@@ -327,6 +341,8 @@ enum charNumbers {
  CH_MORGAN_x,
  CH_MORGAN_y,
  CH_MORGAN_z,
+ CH_MORGAN_PERIODPERIOD,
+ CH_MORGAN_PERIODPERIOD2,
 
  // GLACIER BELLE
  // OK to add variable # more chars here...
@@ -398,6 +414,8 @@ enum charNumbers {
  CH_PELL_y,
  CH_PELL_z,
 
+ CH_PELL_PERIODPERIOD,
+ CH_PELL_PERIODPERIOD2,
 
 };
 

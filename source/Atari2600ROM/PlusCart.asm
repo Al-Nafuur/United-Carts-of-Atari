@@ -1,5 +1,5 @@
     processor 6502
-    include vcs.h
+    include "vcs.h"
 
 
 ;===============================================================================
@@ -34,7 +34,6 @@ NTSC_COL    = 0
 HOTSPOT     = $fff4
 
 COLOR       = 3         ; color scheme
-
 
 
 
@@ -101,18 +100,26 @@ FONT = FONT_{1}
     ;USEFONT Trichotomic_12  ; << change as needed
 
 ;... or...
-FONT = 3
+FONT = 0
 
 ;===============================================================================
 ; C O N S T A N T S
 ;===============================================================================
 
-NUM_MENU_ENTRIES   = 14
+LINE_SPACING = 0
+
+    IF LINE_SPACING < 0 || LINE_SPACING > 2
+        ECHO "BAD LINE SPACING VALUE", [LINE_SPACING]d, "(MUST BE 0,1 OR 2)"
+        ERR
+    ENDIF
+
+
+NUM_MENU_ENTRIES   = 14         ; maximum supported
 
   IF NTSC_COL
 
 BACK_COL    = $92
-TXT_COL     = $0A       ; complimentary color to create better white
+TXT_COL     = $08      ; SPINNER colour complimentary color to create better white
 
 HEADER_COL  = $90
 HTXT_COL    = $0A       ; complimentary color to create better white
@@ -135,16 +142,17 @@ SEL_COL     = $92
    IF COLOR = 3         ; cyan selection
 STXT_COL    = $3e       ; complimentary color to create better white
 LINE_COL    = $a6
-SEL_COL     = $a4
+SEL_COL     = $24
    ENDIF
 
-  ELSE ;/NTSC
+  ELSE
+  ;/PAL...
 
-BACK_COL    = $D4
+BACK_COL    = $D2
 TXT_COL     = $0A       ; complimentary color to create better white
 
-HEADER_COL  = $b0
-HTXT_COL    = $2e       ; complimentary color to create better white
+HEADER_COL  = $B0
+HTXT_COL    = $0A       ; complimentary color to create better white
 
    IF COLOR = 0         ; orange selection
 STXT_COL    = $de       ; complimentary color to create better white
@@ -164,7 +172,7 @@ SEL_COL     = $b2
    IF COLOR = 3         ; cyan selection
 STXT_COL    = $4e       ; complimentary color to create better white
 LINE_COL    = $96
-SEL_COL     = $94
+SEL_COL     = $44
    ENDIF
 
   ENDIF
@@ -182,6 +190,7 @@ SEL_COL     = $94
 
 CommandByte         ds 1   ; $0 to $f item selected, $10 next page, $20 prev page, $30 ready for reboot.
 CurItem		        ds 1
+lineCounter         ds 1
 
 RESERVED_ZP = * - $80
 
@@ -277,9 +286,9 @@ PatchA7_{1} = . + 1
   ENDM
 
     MAC KERNEL_A_BOTH
-        lda LineBackColor+{1}
-        sta COLUBK
-        SLEEP 8
+        ;lda LineBackColor+{1}
+        ;sta COLUBK
+        SLEEP 8+6
         _KERNEL_A {1}_{2}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}
     ENDM
 
@@ -329,9 +338,9 @@ PatchB7_{1} = . + 1
   MAC KERNEL_B_BOTH
 
     sta     HMOVE               ;3      @03
-    lda     LineBackColor+{1}; #{3}                ;2
-    sta     COLUBK              ;3      @08
-    SLEEP 7
+    ;lda     LineBackColor+{1}; #{3}                ;2
+    ;sta     COLUBK              ;3      @08
+    SLEEP 7+6
     _KERNEL_B {1}_{2}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}
   ENDM
 
@@ -381,10 +390,7 @@ PatchB7_{1} = . + 1
         KERNEL_AXC      {1}, 10,  0,   0 , {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}, {15}, {16}, {17}, {18}, {19}, {20}, {21}, {22}, {23}, {24}, {25}, {26}, {27}, {28}, {29}, {30}, {31}, {32}, {33}, {34}, {35}
         KERNEL_BXC      {1}, 11,  0,   0 , {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}, {15}, {16}, {17}, {18}, {19}, {20}, {21}, {22}, {23}, {24}, {25}, {26}, {27}, {28}, {29}, {30}, {31}, {32}, {33}, {34}, {35}
 
-        stx GRP0
-        stx GRP1
-        lda #0 ;2
-        sta ENABL
+        END_KERNEL
 
     ENDM
 
@@ -405,12 +411,7 @@ PatchB7_{1} = . + 1
         KERNEL_BXC      {1}, 10,  0,   0 , {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}, {15}, {16}, {17}, {18}, {19}, {20}, {21}, {22}, {23}, {24}, {25}, {26}, {27}, {28}, {29}, {30}, {31}, {32}, {33}, {34}, {35}
         KERNEL_AXC      {1}, 11,  0,   0 , {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}, {13}, {14}, {15}, {16}, {17}, {18}, {19}, {20}, {21}, {22}, {23}, {24}, {25}, {26}, {27}, {28}, {29}, {30}, {31}, {32}, {33}, {34}, {35}
 
-        ldx #0
-        stx GRP0
-        stx GRP1
-
-        lda #0
-        sta ENABL
+        END_KERNEL
 
     ENDM
 
@@ -420,21 +421,78 @@ PatchB7_{1} = . + 1
         lda #{1}
         sta COLUP0
         sta COLUP1
+
+        lda #1
+        sta lineCounter
+        sta WSYNC
+
+
     ENDM
 
 ;---------------------------------------------------------------------------------------------------
 
-    MAC NORMAL_TOP ; {text colour}
-        lda #{1}
+    MAC END_KERNEL
+        ldx #0
+        stx GRP0
+        stx GRP1
+    ENDM
+
+    MAC NORMAL_BOTTOM ; {line}
+
+        inc lineCounter
+        lda LineBackColor+{1}
+
+    IF FONT != 0
+        REPEAT LINE_SPACING
+            sta WSYNC
+        REPEND
+    ENDIF
+
+    IF FONT=0
+        REPEAT LINE_SPACING
+            sta WSYNC
+        REPEND
+
+        IF LINE_SPACING > 0
+            sta WSYNC
+        ENDIF
+    ENDIF    
+
+
+        sta COLUBK
+    ENDM
+
+
+;---------------------------------------------------------------------------------------------------
+
+    MAC NORMAL_TOP ; {line, #text colour}
+
+        lda #{2}
         sta COLUP0
         sta COLUP1
+
+    IF FONT != 0
+        REPEAT LINE_SPACING+1
+            sta WSYNC
+        REPEND
+    ENDIF
+
+    IF FONT=0 && LINE_SPACING = 0
         sta WSYNC
+    ENDIF    
+
+    IF FONT=0 && LINE_SPACING != 0
+        REPEAT LINE_SPACING
+            sta WSYNC
+        REPEND
+    ENDIF    
+
     ENDM
 
 ;---------------------------------------------------------------------------------------------------
 
-    MAC NORMAL_BOTTOM
-    ENDM
+;    MAC NORMAL_BOTTOM
+;    ENDM
 
 ;---------------------------------------------------------------------------------------------------
 
@@ -448,14 +506,19 @@ PatchB7_{1} = . + 1
         sta WSYNC
         sta WSYNC
         sta WSYNC
-        sta WSYNC
 
-        lda #%00011100
+        lda LineBackColor+1
+        sta COLUBK
+
+    REPEAT LINE_SPACING
+            sta WSYNC
+    REPEND
+
+        lda #%00011010
         sta COLUP0
         sta COLUP1
 
         sta WSYNC
-
 
     ENDM
 
@@ -567,6 +630,9 @@ FirstStart
 
   	                lda $1FF4                       ; enable comm Area
 
+
+                    jsr DetectSystemType
+
                     jsr PrepareWaitCartRoutine
                     ldx #FirstBootCommand
                     jsr START_WAITCART
@@ -582,6 +648,7 @@ MainLoop
                     jsr MenuLoop
 
                     jsr PrepareWaitCartRoutine
+
 
                     ldx CommandByte
                     jsr START_WAITCART  ;@BOO
@@ -664,9 +731,7 @@ _x0X	; down/select pressed
                     beq _pageDown
 
                     inc CurItem
-                    lda #10
-                    sta StickDelayCount
-                    jmp _x4               ; todo use BRA
+                    bne .debounce ;unconditional
 	
 	
 _x1	; check up
@@ -675,11 +740,13 @@ _x1	; check up
                     bne _x2
     ; up pressed
                     ldx CurItem
-                    beq _pageUp            ; branch to 
+                    beq _pageUp
+
                     dec CurItem
-                    lda #10
+
+.debounce           lda #10
                     sta StickDelayCount
-                    jmp _x4               ; todo use BRA
+                    bne _x4
 
 
 _x2
@@ -689,15 +756,27 @@ _x2
                     and SWCHA
                     bne _x3
     ; left pressed
-_pageUp
-    ; CurPage-- request
+
+                    sta CurItem
+
                     ldx CurPage
                     beq _x3
-
-                    lda #NUM_MENU_ENTRIES-1    ; set CurItem to last entry
-                    sta CurItem
                     lda #PrevPageCommand
-                    jmp ExitMenu
+                    bne ExitMenu                    ; unconditional
+
+
+_pageUp             ldx CurPage
+                    beq _x3
+
+                    ldx lineCounter ;ItemsOnActPage              ; set CurItem to last entry
+                    dex
+                    stx CurItem
+
+_pageUp2            ldx CurPage
+                    beq _x3
+
+_pp2                lda #PrevPageCommand
+                    bne ExitMenu
 
 _x3
     ; check right
@@ -709,6 +788,11 @@ _x3
 _pageDown
 
      ; CurPage++ request
+
+
+                    ldx ItemsOnActPage
+                    dex
+                    stx CurItem
 
                     ldx CurPage
                     cpx MaxPage
@@ -746,8 +830,8 @@ GameInit
                     sta NUSIZ0
                     sta NUSIZ1
 
-                    lda #$d0
-                    sta COLUBK
+                    ;lda #$d0
+                    ;sta COLUBK
                     
                     lda #%01110000           ; mask left and right border
                     sta PF0
@@ -767,6 +851,31 @@ EndGameInit
                     rts
 
 
+;--------------------------------------------------------------------------------------------------
+
+DetectSystemType
+ZP_DetectNTSC_PAL = $80 + RESERVED_ZP
+
+                    ldy #ZP_REQUIRED_FOR_DETECT_ROUTINE-1
+.add2                lda DetectNTSC_PAL,y
+                    sta ZP_DetectNTSC_PAL,y
+                    dey
+                    bpl .add2
+
+                    jmp ZP_DetectNTSC_PAL
+
+DetectNTSC_PAL
+                    ldx #0
+                    ldy #0
+detector            dey
+                    bne detector
+                    dex
+                    bne detector
+                    rts
+
+ZP_REQUIRED_FOR_DETECT_ROUTINE = * - DetectNTSC_PAL
+
+;--------------------------------------------------------------------------------------------------
 
 
 ; ALIGN 256
@@ -1038,6 +1147,7 @@ GameCalc            SUBROUTINE
                     sta HMOVE
                     sta WSYNC
                     sta HMCLR
+
                     lda #$b0
                     sta HMP0
                     lda #$80
@@ -1138,8 +1248,8 @@ DrawScreen          SUBROUTINE
 
 ContDrawScreen
 
-                    stx GRP0
-                    stx GRP1
+;                    stx GRP0
+;                    stx GRP1
 
 
                     ldx #2
@@ -1181,26 +1291,25 @@ SetActiveItem       SUBROUTINE
     START_BANK 1
 
     TEXT_COLOUR HTXT_COL
-
-    sta     WSYNC
     
     KERNEL_EVEN 0, HEADER_COL, HTXT_COL, P,l,u,s,C,a,r,t,OpenRound,Plus,CloseRound,1,2,3,4,5,6,7,8,9,A,B,Blank,1, 3,Slash,2,7,Wifi,Wifi, Account,Account
     HEADER_BOTTOM
 
 
     KERNEL_EVEN 1, BACK_COL, TXT_COL, N,o,v,e,m,b,e,r,Blank,M,o,v,e,m,y,e,r,Blank,Blank,i,o,n,Blank,s,h,o,u,l,d,Blank,Blank,Blank,Blank
-    NORMAL_BOTTOM
+    NORMAL_BOTTOM 2
 
-    NORMAL_TOP %00101100
+    NORMAL_TOP 2, %00101010
     KERNEL_EVEN 2, BACK_COL, TXT_COL, I,N,T,Blank,I,M,T,Blank,Blank,Blank,A,N,N,O,T,A,T,I,O,N,Blank,e,v,i,n,g,Blank,t,h,e,Blank,Blank
-    NORMAL_BOTTOM
+    NORMAL_BOTTOM 3
 
-    NORMAL_TOP %00111100
+    NORMAL_TOP 3, %00111010
     KERNEL_EVEN 3, BACK_COL, TXT_COL, A,N,G,R,Y,Blank,N,O,T,Blank,A,X,Y,O,T,A,T,I,O,M,Blank,Blank,o,n,Blank,t,h,e,Blank,Blank,Blank,Blank
-    NORMAL_BOTTOM
+    NORMAL_BOTTOM 4
 
-    NORMAL_TOP %01001100
+    NORMAL_TOP 4, %01001010
     KERNEL_EVEN 4, BACK_COL, TXT_COL,  A,M,G,R,Y,Blank,M,O,T,Blank,r,e,t,u,r,n,i,n,g,Blank,h,i,m,Blank,s,a,f,e,l,y,Blank,Blank
+    NORMAL_BOTTOM 5
 
     END_BANK 1
 
@@ -1211,27 +1320,27 @@ SetActiveItem       SUBROUTINE
 
     START_BANK 2
 
-    NORMAL_BOTTOM
+ ;   NORMAL_BOTTOM
 
-    NORMAL_TOP %01011100
+    NORMAL_TOP 5, %01011010
     KERNEL_EVEN 5, BACK_COL, TXT_COL, t,o,Blank,t,h,e,Blank,E,a,r,t,h,Period,Quote,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank
-    NORMAL_BOTTOM
+    NORMAL_BOTTOM 6
 
-    NORMAL_TOP %01101100
+    NORMAL_TOP 6, %01101010
     KERNEL_EVEN 6, BACK_COL, TXT_COL, Blank,Blank,Minus,Blank,J,o,h,n,Blank,F,Period,Blank,K,e,n,n,e,d,y,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank
-    NORMAL_BOTTOM
+    NORMAL_BOTTOM 7
 
-    NORMAL_TOP %01111100
+    NORMAL_TOP 7, %01111010
     KERNEL_EVEN 7, BACK_COL, TXT_COL, a,b,c,d,e,f,Blank,Blank,Blank,A,B,C,D,E,F,Blank,Blank,Blank,Blank,0,1,Blank,Blank,Blank,Blank,Exclamation,Quote,Hash,Dollar,Percent,At,Blank
-    NORMAL_BOTTOM
+    NORMAL_BOTTOM 8
 
-    NORMAL_TOP %10001100
+    NORMAL_TOP 8, %10001010
     KERNEL_EVEN 8, BACK_COL, TXT_COL, g,h,i,j,k,l,m,Blank,Blank,G,H,I,J,K,L,M,Blank,Blank,9,Blank,Blank,2,Blank,Blank,Blank,Ampersand,Apostrophe,OpenRound,CloseRound,Asterisk,OpenCurly,CloseCurly
-    NORMAL_BOTTOM
+    NORMAL_BOTTOM 9
 
-    NORMAL_TOP %10011100
+    NORMAL_TOP 9, %10011010
     KERNEL_EVEN 9, BACK_COL, TXT_COL,  n,o,p,q,r,s,t,Blank,Blank,N,O,P,Q,R,S,T,Blank,8,Blank,Blank,Blank,Blank,3,Blank,Blank,Plus,Minus,Comma,Period,Slash,BackSlash,Tilde
-    NORMAL_BOTTOM
+    NORMAL_BOTTOM 10
 
     END_BANK 2
 
@@ -1242,25 +1351,38 @@ SetActiveItem       SUBROUTINE
 
     START_BANK 3
 
-    NORMAL_TOP %10101100
+    NORMAL_TOP 10, %10101010
     KERNEL_EVEN 10, BACK_COL, TXT_COL, u,v,w,x,y,z,Blank,Blank,Blank,U,V,W,X,Y,Z,Blank,Blank,Blank,7,Blank,Blank,4,Blank,Blank,Blank,Colon,SemiColon,Less,Equal,Greater,Question,Blank
-    NORMAL_BOTTOM
 
-    NORMAL_TOP %10111100
+    IF NUM_MENU_ENTRIES > 10
+    NORMAL_BOTTOM 11
+    NORMAL_TOP 11, %10111010
     KERNEL_EVEN 11, BACK_COL, TXT_COL, Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,6,5,Blank,Blank,Blank,Blank,OpenSquare,CloseSquare,Accent,UnderScore,Grave,Blank,Blank
-    NORMAL_BOTTOM
+    ENDIF
 
-    NORMAL_TOP %11001100
+    IF NUM_MENU_ENTRIES > 11
+    NORMAL_BOTTOM 12
+    NORMAL_TOP 12, %11001010
     KERNEL_EVEN 12, BACK_COL, TXT_COL, T,h,e,Blank,f,o,l,l,o,w,i,n,g,Blank,a,r,e,Blank,B,O,N,U,S,Blank,l,i,n,e,s,Exclamation,Blank,Blank
-    NORMAL_BOTTOM
+    ENDIF
 
-    NORMAL_TOP %11011100
+    IF NUM_MENU_ENTRIES > 12
+    NORMAL_BOTTOM 13
+    NORMAL_TOP 13, %11011010
     KERNEL_EVEN 13, BACK_COL, TXT_COL, O,u,r,s,Blank,i,s,Blank,n,o,t,Blank,t,o,Blank,r,e,a,s,o,n,Blank,w,h,y,SemiColon,Blank,Blank,Blank,Blank,Blank,Blank
-    NORMAL_BOTTOM
+    ENDIF
 
-    NORMAL_TOP %11101100
+    IF NUM_MENU_ENTRIES > 13
+    NORMAL_BOTTOM 14
+    NORMAL_TOP 14, %11101010
     KERNEL_EVEN 14, BACK_COL, TXT_COL, Period,Period,Period,o,u,r,s,Blank,i,s,Blank,b,u,t,Blank,t,o,Blank,d,o,Blank,o,r,Blank,d,i,e,Period,Blank,Blank,Blank,Blank
-    NORMAL_BOTTOM
+    ENDIF
+
+    REPEAT LINE_SPACING
+        sta WSYNC
+    REPEND
+    lda #0
+    sta COLUBK
 
     jmp ExitKernel
 
@@ -1272,27 +1394,25 @@ SetActiveItem       SUBROUTINE
 ;-------------------------------------------------------------------------------
 
     START_BANK 4
-
     TEXT_COLOUR HTXT_COL
-
-    sta     WSYNC
     
     KERNEL_ODD 0, HEADER_COL, HTXT_COL, P,l,u,s,C,a,r,t,OpenRound,Plus,CloseRound,1,2,3,4,5,6,7,8,9,A,B,Blank,1, 3,Slash,2,7,Wifi,Wifi, Account,Account
     HEADER_BOTTOM
 
     KERNEL_ODD 1, BACK_COL, TXT_COL, N,o,v,e,m,b,e,r,Blank,M,o,v,e,m,y,e,r,Blank,Blank,i,o,n,Blank,s,h,o,u,l,d,Blank,Blank,Blank,Blank
-    NORMAL_BOTTOM
+    NORMAL_BOTTOM 2
 
-    NORMAL_TOP %00101100
+    NORMAL_TOP 2, %00101010
     KERNEL_ODD 2, BACK_COL, TXT_COL, I,N,T,Blank,I,M,T,Blank,Blank,Blank,A,N,N,O,T,A,T,I,O,N,Blank,e,v,i,n,g,Blank,t,h,e,Blank,Blank
-    NORMAL_BOTTOM
+    NORMAL_BOTTOM 3
 
-    NORMAL_TOP %00111100
+    NORMAL_TOP 3, %00111010
     KERNEL_ODD 3, BACK_COL, TXT_COL, A,N,G,R,Y,Blank,N,O,T,Blank,A,X,Y,O,T,A,T,I,O,M,Blank,Blank,o,n,Blank,t,h,e,Blank,Blank,Blank,Blank
-    NORMAL_BOTTOM
+    NORMAL_BOTTOM 4
 
-    NORMAL_TOP %01001100
+    NORMAL_TOP 4, %01001010
     KERNEL_ODD 4, BACK_COL, TXT_COL,  A,M,G,R,Y,Blank,M,O,T,Blank,r,e,t,u,r,n,i,n,g,Blank,h,i,m,Blank,s,a,f,e,l,y,Blank,Blank
+    NORMAL_BOTTOM 5
 
     END_BANK 4
 
@@ -1302,27 +1422,27 @@ SetActiveItem       SUBROUTINE
 ;-------------------------------------------------------------------------------
 
     START_BANK 5
-    NORMAL_BOTTOM
 
-    NORMAL_TOP %01011100
+
+    NORMAL_TOP 5, %01011010
     KERNEL_ODD 5, BACK_COL, TXT_COL, t,o,Blank,t,h,e,Blank,E,a,r,t,h,Period,Quote,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank
-    NORMAL_BOTTOM
+    NORMAL_BOTTOM 6
 
-    NORMAL_TOP %01101100
+    NORMAL_TOP 6, %01101010
     KERNEL_ODD 6, BACK_COL, TXT_COL, Blank,Blank,Minus,Blank,J,o,h,n,Blank,F,Period,Blank,K,e,n,n,e,d,y,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank
-    NORMAL_BOTTOM
+    NORMAL_BOTTOM 7
 
-    NORMAL_TOP %01111100
+    NORMAL_TOP 7, %01111010
     KERNEL_ODD 7, BACK_COL, TXT_COL, a,b,c,d,e,f,Blank,Blank,Blank,A,B,C,D,E,F,Blank,Blank,Blank,Blank,0,1,Blank,Blank,Blank,Blank,Exclamation,Quote,Hash,Dollar,Percent,At,Blank
-    NORMAL_BOTTOM
+    NORMAL_BOTTOM 8
 
-    NORMAL_TOP %10001100
+    NORMAL_TOP 8, %10001010
     KERNEL_ODD 8, BACK_COL, TXT_COL, g,h,i,j,k,l,m,Blank,Blank,G,H,I,J,K,L,M,Blank,Blank,9,Blank,Blank,2,Blank,Blank,Blank,Ampersand,Apostrophe,OpenRound,CloseRound,Asterisk,OpenCurly,CloseCurly
-    NORMAL_BOTTOM
+    NORMAL_BOTTOM 9
 
-    NORMAL_TOP %10011100
+    NORMAL_TOP 9, %10011010
     KERNEL_ODD 9, BACK_COL, TXT_COL,  n,o,p,q,r,s,t,Blank,Blank,N,O,P,Q,R,S,T,Blank,8,Blank,Blank,Blank,Blank,3,Blank,Blank,Plus,Minus,Comma,Period,Slash,BackSlash,Tilde
-    NORMAL_BOTTOM
+    NORMAL_BOTTOM 10
 
     END_BANK 5
 
@@ -1333,25 +1453,38 @@ SetActiveItem       SUBROUTINE
     START_BANK 6
 
 
-    NORMAL_TOP %10101100
+    NORMAL_TOP 10, %10101010
     KERNEL_ODD 10, BACK_COL, TXT_COL, u,v,w,x,y,z,Blank,Blank,Blank,U,V,W,X,Y,Z,Blank,Blank,Blank,7,Blank,Blank,4,Blank,Blank,Blank,Colon,SemiColon,Less,Equal,Greater,Question,Blank
-    NORMAL_BOTTOM
 
-    NORMAL_TOP %10111100
+    IF NUM_MENU_ENTRIES > 10
+    NORMAL_BOTTOM 11
+    NORMAL_TOP 11, %10111010
     KERNEL_ODD 11, BACK_COL, TXT_COL, Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,Blank,6,5,Blank,Blank,Blank,Blank,OpenSquare,CloseSquare,Accent,UnderScore,Grave,Blank,Blank
-    NORMAL_BOTTOM
+    ENDIF
 
-    NORMAL_TOP %11001100
+    IF NUM_MENU_ENTRIES > 11
+    NORMAL_BOTTOM 12
+    NORMAL_TOP 12, %11001010
     KERNEL_ODD 12, BACK_COL, TXT_COL, T,h,e,Blank,f,o,l,l,o,w,i,n,g,Blank,a,r,e,Blank,B,O,N,U,S,Blank,l,i,n,e,s,Exclamation,Blank,Blank
-    NORMAL_BOTTOM
+    ENDIF
 
-    NORMAL_TOP %11011100
+    IF NUM_MENU_ENTRIES > 12
+    NORMAL_BOTTOM 13
+    NORMAL_TOP 13, %11011010
     KERNEL_ODD 13, BACK_COL, TXT_COL, O,u,r,s,Blank,i,s,Blank,n,o,t,Blank,t,o,Blank,r,e,a,s,o,n,Blank,w,h,y,SemiColon,Blank,Blank,Blank,Blank,Blank,Blank
-    NORMAL_BOTTOM
+    ENDIF
 
-    NORMAL_TOP %11101100
+    IF NUM_MENU_ENTRIES > 13
+    NORMAL_BOTTOM 14
+    NORMAL_TOP 14, %11101010
     KERNEL_ODD 14, BACK_COL, TXT_COL, Period,Period,Period,o,u,r,s,Blank,i,s,Blank,b,u,t,Blank,t,o,Blank,d,o,Blank,o,r,Blank,d,i,e,Period,Blank,Blank,Blank,Blank
-    NORMAL_BOTTOM
+    ENDIF
+
+    REPEAT LINE_SPACING
+        sta WSYNC
+    REPEND
+    lda #0
+    sta COLUBK
 
     jmp ExitKernel
     END_BANK 6

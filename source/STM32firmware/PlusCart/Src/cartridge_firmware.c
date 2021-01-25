@@ -8,24 +8,27 @@
 #include "font.h"
 #include "global.h"
 
+#define lineCounter 0x82
+#define lineBackColour 0x84
 
 #define PATCH 0
 
 // These are the colours between the top title bar and the rest of the text lines...
 
 #define BACK_COL_NTSC     0x92
-#define BACK_COL_PAL      0xD4
+#define BACK_COL_PAL      0xD2
 
-#define HEADER_BACK_COL_NTSC     0x20
-#define HEADER_BACK_COL_PAL      0x40
+//#define HEADER_BACK_COL_NTSC     0x20
+//#define HEADER_BACK_COL_PAL      0x40
 
 #define t2c(fontType, l, r, s) \
 	(uint8_t)(sharedFont[ convertAsciiToCharnum(fontType, l) * 12 + s ] << 4 | \
 	sharedFont[ convertAsciiToCharnum(fontType, r) * 12 + s ])
 
 
-static char menu_header[CHARS_PER_LINE/* + 2*/]__attribute__((section(".ccmram")));
-static unsigned char menu_status[STATUS_MAX]__attribute__((section(".ccmram")));
+static char menu_header[CHARS_PER_LINE]__attribute__((section(".ccmram#")));
+static char pendingStatusMessage[STATUS_MESSAGE_LENGTH]__attribute__((section(".ccmram#")));
+static unsigned char menu_status[STATUS_MAX]__attribute__((section(".ccmram#")));
 static unsigned const char *firmware_rom = firmware_ntsc_rom;
 
 const uint8_t start_bank[]__attribute__((section(".flash01"))) = {
@@ -34,7 +37,7 @@ const uint8_t start_bank[]__attribute__((section(".flash01"))) = {
 		0xd8,					// cld
 		0x8d, 0xf4, 0xff,		// sta HOTSPOT
 		0x4c, 0x37, 0x12,		// jmp ContDrawScreen
-		0x9d, 0xf5, 0xff// sta $FFF5,x					*** PATCH LOW BYTE OF ADDRESS ***
+		0x9d, 0xf5, 0xff		// sta $FFF5,x					*** PATCH LOW BYTE OF ADDRESS ***
 
 		};
 
@@ -48,7 +51,7 @@ const uint8_t end_bank[] __attribute__((section(".flash01"))) = {
 
 const uint8_t switch_bank[]__attribute__((section(".flash01"))) = {
 
-0x4c, 0x07, 0x10		// jmp SwitchBank
+		0x4c, 0x07, 0x10		// jmp SwitchBank
 
 		};
 
@@ -61,10 +64,14 @@ const uint8_t textline_start_even[]__attribute__((section(".flash01"))) = {
 
 	//		SLEEP 8
 
-		0xea,
-		0xea,
-		0xea,
-		0xea,
+		0xa9, 0,				// lda #0
+		0x85, 0x0B,				// sta REFP0
+		0x85, 0x0C,				// sta REFP1
+
+//		0xea,
+//		0xea,
+//		0xea,
+//		0xea,
 	};
 
 const uint8_t textline_start_odd[]__attribute__((section(".flash01"))) = {
@@ -175,7 +182,7 @@ const uint8_t kernel_b[]__attribute__((section(".flash01"))) = {
 
 const uint8_t header_bottom[]__attribute__((section(".flash01"))) = {
 #define PATCH_HEADER_BOTTOM_BACKGROUND_COLOUR 1
-#define PATCH_HEADER_BOTTOM_TEXT_COLOUR 17
+#define PATCH_HEADER_BOTTOM_BACKGROUND_COLOUR2 15
 
 		0xa9, PATCH,			// lda #PATCHED BACK_COL	(*** PATCHED ***)
 		0x85, 0x02,				// sta WSYNC
@@ -185,7 +192,14 @@ const uint8_t header_bottom[]__attribute__((section(".flash01"))) = {
 		0x85, 0x02,				// sta WSYNC
 		0x85, 0x02,				// sta WSYNC
 		0x85, 0x02,				// sta WSYNC
-		0x85, 0x02,				// sta WSYNC
+
+		0xa5, PATCH,			// lda LineBackColor+1
+		0x85, 0x09,				// sta COLUBK
+};
+
+
+const uint8_t header_bottom2[]__attribute__((section(".flash01"))) = {
+#define PATCH_HEADER_BOTTOM2_TEXT_COLOUR 1
 
 		0xa9, PATCH,			// lda #PATCHED TEXT_COL	(*** PATCHED ***)
 		0x85, 0x06,				// sta COLUP0
@@ -195,7 +209,16 @@ const uint8_t header_bottom[]__attribute__((section(".flash01"))) = {
 		};
 
 const uint8_t normal_bottom[]__attribute__((section(".flash01"))) = {
-	};
+#define PATCH_NORMAL_BOTTOM_LINE 3
+
+		0xe6, lineCounter,		// inc lineCounter
+		0xa5, PATCH,			// lda LineBackColor+{1}
+};
+
+const uint8_t normal_bottom2[]__attribute__((section(".flash01"))) = {
+		0x85, 0x09,				// sta COLUBK
+};
+
 
 const uint8_t wsync[]__attribute__((section(".flash01"))) = { 0x85, 0x02// sta WSYNC
 		};
@@ -206,7 +229,13 @@ const uint8_t text_colour[]__attribute__((section(".flash01"))) = {
 
 		0xa9, 0x00,				// lda #??			 (*** PATCHED ***)
 		0x85, 0x06,				// sta COLUP0
-		0x85, 0x07				// sta COLUP1
+		0x85, 0x07,				// sta COLUP1
+
+		0xa9, 0x01,
+		0x85, lineCounter,		// sta lineCounter
+
+		0x85, 0x02				// sta WSYNC
+
 		};
 
 const uint8_t normal_top[]__attribute__((section(".flash01"))) = {
@@ -215,7 +244,6 @@ const uint8_t normal_top[]__attribute__((section(".flash01"))) = {
 		0xa9, PATCH,			// lda #{1}			(*** PATCHED ***)
 		0x85, 0x06,				// sta COLUP0
 		0x85, 0x07,				// sta COLUP1
-		0x85, 0x02,				// sta WSYNC
 	};
 
 const uint8_t exit_kernel[]__attribute__((section(".flash01"))) = {
@@ -228,11 +256,11 @@ const uint8_t exit_kernel[]__attribute__((section(".flash01"))) = {
 		0x4c, 0x00, 0x10		// jmp $1000
 		};
 
-const uint8_t end_kernel_even[]__attribute__((section(".flash01"))) = {
+//const uint8_t end_kernel_even[]__attribute__((section(".flash01"))) = {
 
-0x86, 0x1b,				// stx GRP0
-		0x86, 0x1c,				// stx GRP1
-		};
+//		0x86, 0x1b,				// stx GRP0
+//		0x86, 0x1c,				// stx GRP1
+//		};
 
 const uint8_t restore_BG_colour[]__attribute__((section(".flash01"))) = {
 #define PATCH_RESTORE_BG 1
@@ -240,15 +268,17 @@ const uint8_t restore_BG_colour[]__attribute__((section(".flash01"))) = {
 		0x85, 0x09,				// sta COLUBK
 		};
 
-const uint8_t end_kernel_odd[]__attribute__((section(".flash01"))) = { 0xa2,
-		0x00				// ldx #0
+const uint8_t end_kernel[]__attribute__((section(".flash01"))) = {
+		0xa2, 0x00,				// ldx #0
+		0x86, 0x1b,				// stx GRP0
+		0x86, 0x1c,				// stx GRP1
 		};
 
 uint8_t *my_font;
 
 uint8_t *bufferp;
 
-inline void add_end_kernel(bool is_even, uint8_t line);
+inline void add_end_kernel();
 inline void add_next_scanline(bool is_a);
 inline void add_start_bank(uint8_t bank_id);
 inline void add_end_bank(uint8_t bank_id);
@@ -256,13 +286,12 @@ inline void add_textline_start(bool even, uint8_t entry, bool isFolder);
 inline void add_kernel_a(uint8_t fontType, uint8_t scanline, uint8_t *text);
 inline void add_kernel_b(uint8_t fontType, uint8_t scanline, uint8_t *text);
 inline void add_header_bottom(uint8_t colour);
-inline void add_normal_bottom();
+inline void add_normal_bottom(uint8_t line);
 inline void add_text_colour(uint8_t colour);
 inline void add_wsync();
 
 inline void add_normal_top(uint8_t colour);
 inline void add_exit_kernel();
-inline void add_restore_BG_colour(uint8_t line);
 
 // for colours see...
 // https://www.randomterrain.com/atari-2600-memories-tia-color-charts.html
@@ -285,19 +314,19 @@ inline void add_restore_BG_colour(uint8_t line);
 // E			YELLOW		WHITE
 // F			ORANGE		WHITE
 
-uint8_t textColour[2][12] = {
+const uint8_t textColour[2][12] = {
 
 {	// NTSC...
 
 		// see MENU_ENTRY_Type
 
-				0xC8,//Leave_Menu,
+				0x0a, //C8,//Leave_Menu,
 				// --> ..
 				// --> (Go Back)
 				// .txt file
 
-				0x2A,//Sub_Menu,
-				0x48, //Cart_File,
+				0x2a, //2A,//Sub_Menu,
+				0x0a, //48, //Cart_File,
 				0x0A, //Input_Field,
 				0x0A, //Keyboard_Char,
 				0x0A, // keyboard row
@@ -306,7 +335,7 @@ uint8_t textColour[2][12] = {
 				0x0A, //Offline_Cart_File,
 				0x0A, //Offline_Sub_Menu,
 
-				0X8C, //Setup_Menu
+				0xCA, //8C, //Setup_Menu
 					  // --> "Setup"
 					  // --> "Set TV Mode"
 					  // --> "Set Font Style"
@@ -315,15 +344,15 @@ uint8_t textColour[2][12] = {
 
 				//0x2A	// header line
 
-				0x46, // Leave SubKeyboard Menu
+				0x0a, //46, // Leave SubKeyboard Menu
 		},
 
 		{	// PAL...
 
 //	0, //Root_Menu = -1,
-				0x5A,//Leave_Menu,
-				0x4A, //Sub_Menu,
-				0x88, //Cart_File,
+				0x0A,//Leave_Menu,
+				0x2A, //4A, //Sub_Menu,
+				0x0a, //68, //Cart_File,
 				0x0A, //Input_Field,
 				0x0A, //Keyboard_Char,
 				0x0A, // keyboard row
@@ -331,11 +360,13 @@ uint8_t textColour[2][12] = {
 				0x0A, //Delete_Keyboard_Char,
 				0x0A, //Offline_Cart_File,
 				0x0A, //Offline_Sub_Menu,
-				0xBC, //Setup_Menu
+
+
+				0x3a, //BC, //Setup_Menu
 
 				//0x0A	// header line
 
-				0x46, // Leave SubKeyboard Menu
+				0x0A, // Leave SubKeyboard Menu
 		},
 
 };
@@ -362,11 +393,11 @@ void add_textline_start(bool even, uint8_t entry, bool isFolder) {
 
 	if (even) {
 		memcpy(bufferp, textline_start_even, sizeof(textline_start_even));
-		bufferp[PATCH_EVEN_LINE_BACKCOL] = (uint8_t)( 0x83 + entry);
+		bufferp[PATCH_EVEN_LINE_BACKCOL] = (uint8_t)( lineBackColour + entry);
 		bufferp += sizeof(textline_start_even);
 	} else {
 		memcpy(bufferp, textline_start_odd, sizeof(textline_start_odd));
-		bufferp[PATCH_LINE_BACKCOL] = (uint8_t)(0x83 + entry);
+		bufferp[PATCH_LINE_BACKCOL] = (uint8_t)(lineBackColour + entry);
 		bufferp += sizeof(textline_start_odd);
 	}
 }
@@ -413,29 +444,9 @@ void add_kernel_b(uint8_t fontType, uint8_t scanline, uint8_t *text) {
 	bufferp += sizeof(kernel_b);
 }
 
-void add_end_kernel(bool is_even, uint8_t line) {
-
-	//add_restore_BG_colour(line);
-
-	if (!is_even) {
-		memcpy(bufferp, end_kernel_odd, sizeof(end_kernel_odd));
-		bufferp += sizeof(end_kernel_odd);
-	}
-	memcpy(bufferp, end_kernel_even, sizeof(end_kernel_even));
-	bufferp += sizeof(end_kernel_even);
-}
-
-void add_restore_BG_colour(uint8_t line) {
-	memcpy(bufferp, restore_BG_colour, sizeof(restore_BG_colour)); // hacked/hardwired colour until can use the array...
-
-	bufferp[PATCH_RESTORE_BG] =
-			user_settings.tv_mode == TV_MODE_NTSC ?
-			BACK_COL_NTSC :
-													BACK_COL_PAL;
-//    if (line > 0)
-//    	bufferp[PATCH_RESTORE_BG] += 2;
-
-	bufferp += sizeof(restore_BG_colour);
+void add_end_kernel() {
+	memcpy(bufferp, end_kernel, sizeof(end_kernel));
+	bufferp += sizeof(end_kernel);
 }
 
 void add_next_scanline(bool is_a) {
@@ -450,21 +461,46 @@ void add_next_scanline(bool is_a) {
 
 void add_header_bottom(uint8_t colour) {
 	memcpy(bufferp, header_bottom, sizeof(header_bottom));
-	bufferp[PATCH_HEADER_BOTTOM_BACKGROUND_COLOUR] =
-			user_settings.tv_mode == TV_MODE_NTSC ? BACK_COL_NTSC : BACK_COL_PAL;
-	bufferp[PATCH_HEADER_BOTTOM_TEXT_COLOUR] = colour;
+	bufferp[PATCH_HEADER_BOTTOM_BACKGROUND_COLOUR] = user_settings.tv_mode == TV_MODE_NTSC ? BACK_COL_NTSC : BACK_COL_PAL;
+	bufferp[PATCH_HEADER_BOTTOM_BACKGROUND_COLOUR2] = lineBackColour + 1;
 	bufferp += sizeof(header_bottom);
+
+	for (uint8_t line = 0; line < user_settings.line_spacing; line++)
+		add_wsync();
+
+	if (user_settings.font_style == 0)
+		add_wsync();
+
+
+	memcpy(bufferp, header_bottom2, sizeof(header_bottom2));
+	bufferp[PATCH_HEADER_BOTTOM2_TEXT_COLOUR] = colour;
+	bufferp += sizeof(header_bottom2);
 }
 
-void add_normal_bottom() {
+void add_normal_bottom(uint8_t line) {
+
 	memcpy(bufferp, normal_bottom, sizeof(normal_bottom));
+	bufferp[PATCH_NORMAL_BOTTOM_LINE] = (uint8_t) (lineBackColour + line + 1);
 	bufferp += sizeof(normal_bottom);
+
+	if (!user_settings.font_style && user_settings.line_spacing)
+		add_wsync();
+
+	for (uint8_t linex = 0; linex < user_settings.line_spacing; linex++)
+		add_wsync();
+
+	memcpy(bufferp, normal_bottom2, sizeof(normal_bottom2));
+	bufferp += sizeof(normal_bottom2);
 }
 
 void add_normal_top(uint8_t colour) {
 	memcpy(bufferp, normal_top, sizeof(normal_top));
 	bufferp[PATCH_NORMAL_TOP_TEXT_COLOUR] = colour;
 	bufferp += sizeof(normal_top);
+
+	int8_t line = user_settings.font_style ? -1 : 0;
+	do add_wsync();
+	while (++line < user_settings.line_spacing);
 }
 
 void add_text_colour(uint8_t colour) {
@@ -480,44 +516,88 @@ void add_wsync() {
 
 void add_exit_kernel() {
 
-	// Set HEADER font colour
-	add_text_colour(0x0C);			//white in PAL/NTSC
+	for (uint8_t line = 0; line < user_settings.line_spacing; line++)
+		add_wsync();
 
 	memcpy(bufferp, exit_kernel, sizeof(exit_kernel));
 	bufferp += sizeof(exit_kernel);
 }
 
+char cvtToNum(char *p) {
+
+	const char *digits = "0123456789ABCDEF";
+	return (char)(strchr(digits, *p) - digits);
+
+
+/*	char num = 0;
+	if (*p >= '0' && *p <= '9')
+		num = (char)(*p - '0');
+	else if (*p >= 'A' && *p <= 'F')
+		num = (char)(*p - 'A' + 10);
+	else if (*p >= 'a' && *p <= 'f')
+		num = *p - 'a' + 10;
+	return num;
+	*/
+}
+
+
 void createMenuForAtari(
 		MENU_ENTRY *menu_entries,
 		uint8_t page_id,
 		int num_menu_entries,
-		bool paging_required,
 		bool is_connected,
 		uint8_t *plus_store_status) {
+
 
 	// create 7 banks of bytecode for the ATARI to execute.
 
 	uint8_t menu_string[CHARS_PER_LINE];
 	uint8_t bank = 1, sc, entry, odd_even;
 	size_t str_len;
-	uint8_t max_page = (uint8_t)((num_menu_entries - 1) / NUM_MENU_ITEMS_PER_PAGE);
-	uint8_t items_on_last_page = (uint8_t)((num_menu_entries % NUM_MENU_ITEMS_PER_PAGE) ?
-					(num_menu_entries % NUM_MENU_ITEMS_PER_PAGE) : NUM_MENU_ITEMS_PER_PAGE);
-	uint8_t items_on_act_page = (uint8_t)((page_id < max_page) ? NUM_MENU_ITEMS_PER_PAGE : items_on_last_page);
+	uint8_t max_page = (uint8_t)((num_menu_entries - 1) / numMenuItemsPerPage[user_settings.line_spacing]);
+	uint8_t items_on_last_page = (uint8_t)((num_menu_entries % numMenuItemsPerPage[user_settings.line_spacing]) ?
+					(num_menu_entries % numMenuItemsPerPage[user_settings.line_spacing]) : numMenuItemsPerPage[user_settings.line_spacing]);
+	uint8_t items_on_act_page = (uint8_t)((page_id < max_page) ? numMenuItemsPerPage[user_settings.line_spacing] : items_on_last_page);
 
 	bufferp = buffer;
 	memset(buffer, 0xff, 28 * 1024);
 
-	unsigned int offset = (unsigned int)(NUM_MENU_ITEMS_PER_PAGE * page_id);
+	unsigned int offset = (unsigned int)(numMenuItemsPerPage[user_settings.line_spacing] * page_id);
 
 	set_menu_status_byte(STATUS_CurPage, page_id);
 	set_menu_status_byte(STATUS_MaxPage, max_page);
 	set_menu_status_byte(STATUS_ItemsOnActPage, items_on_act_page);
 
+	memset(menu_header, ' ', sizeof(menu_header)/sizeof(char));
+
 	// Display paging information
 
+	uint8_t i = CHARS_PER_LINE - 1;
+
+	// Account icon
+	if (*plus_store_status == '1') {
+		menu_header[i--] = CHAR_R_Account;
+		menu_header[i--] = CHAR_L_Account;
+	} else {
+		menu_header[i--] = CHAR_R_NoAccount;
+		menu_header[i--] = CHAR_L_NoAccount;
+	}
+
+	// Wifi icon
+	if (is_connected) {
+		menu_header[i--] = CHAR_R_Wifi;
+		menu_header[i--] = CHAR_L_Wifi;
+	} else {
+		menu_header[i--] = CHAR_R_NoWifi;
+		menu_header[i--] = CHAR_L_NoWifi;
+	}
+
+	// Page info
 	if (max_page > 0) {
-		uint8_t i = STATUS_MESSAGE_LENGTH - 1;
+
+		uint8_t pagePos = i;
+		i--;
+
 		max_page++;
 		while (max_page != 0) {
 			menu_header[i--] = (char)((max_page % 10) + '0');
@@ -530,29 +610,49 @@ void createMenuForAtari(
 			menu_header[i--] = (char)((page_id % 10) + '0');
 			page_id = page_id / 10;
 		}
-		if (i % 2 == 0)
-			menu_header[i--] = ' ';
+
+		// if the position would cause character glitching in 2-char page, then shift everything left
+
+		if (i % 2 == 0) {
+			for (uint8_t j = 8; j > 0; j--)
+				menu_header[pagePos - j] = menu_header[pagePos - j + 1];
+			i--;
+		}
+
 		menu_header[i--] = CHAR_R_Page;
-		menu_header[i] = CHAR_L_Page;
+		menu_header[i--] = CHAR_L_Page;
+
+
 	}
 
-	if (is_connected == true) {
-		menu_header[CHARS_PER_LINE - 1 - 3] = CHAR_L_Wifi;
-		menu_header[CHARS_PER_LINE - 1 - 2] = CHAR_R_Wifi;
-	} else {
-		menu_header[CHARS_PER_LINE - 1 - 3] = CHAR_L_NoWifi; //CHAR_L_NoWifi;
-		menu_header[CHARS_PER_LINE - 1 - 2] = CHAR_R_NoWifi; //CHAR_R_NoWifi;
-	}
-	if (plus_store_status[0] == '1') {
-		menu_header[CHARS_PER_LINE - 1 - 1] = CHAR_L_Account;
-		menu_header[CHARS_PER_LINE - 1 - 0] = CHAR_R_Account;
-	} else {
-		menu_header[CHARS_PER_LINE - 1 - 1] = CHAR_L_NoAccount;
-		menu_header[CHARS_PER_LINE - 1 - 0] = CHAR_R_NoAccount;
+	// "..." truncated status message
+	// first, remove %XX encodings for visuals
+
+	char *vp = pendingStatusMessage;
+	for (char *p = pendingStatusMessage; *p; p++)
+		if (*p == '%') {
+			*vp++ = (char) (cvtToNum(p+1) * 16 + cvtToNum(p+2));
+			p += 2;
+		}
+		else
+			*vp++ = *p;
+	*vp = 0;
+
+	// now truncate path string to last visible n characters
+	// put an "..." at the front of long status lines, and shift start point...
+
+	vp = pendingStatusMessage;
+
+	if (strlen(pendingStatusMessage) > i) {
+		vp = pendingStatusMessage + strlen(pendingStatusMessage) - i;
+		*vp = CHAR_PERIODPERIOD;
+		*(vp+1) = CHAR_PERIODPERIOD2;
 	}
 
+	strncpy(menu_header, vp, i);
 
 	uint8_t colourSet = user_settings.tv_mode == TV_MODE_NTSC ? 0 : 1;
+
 
 	// Start of menu page generation
 
@@ -560,22 +660,14 @@ void createMenuForAtari(
 
 	for (odd_even = 0; odd_even < 2; odd_even++) {
 
-		for (entry = 0; entry <= NUM_MENU_ITEMS_PER_PAGE; entry++) {
+		for (entry = 0; entry <= numMenuItemsPerPage[user_settings.line_spacing]; entry++) {
 			bool is_kernel_a = bank < 4, isFolder = false;
 			unsigned int list_entry = entry + offset;
 
-			//menu_entries[list_entry].font = user_settings.font_style;
-
-			if (entry == 0) {		// header line
+			if (!entry) {		// header line
 
 				add_text_colour(0x0A);
-				add_wsync();
-
 				memcpy(menu_string, menu_header, CHARS_PER_LINE);
-
-				// If you want a different font for header line, set it here
-				// menu_entries[list_entry].font = user_settings.font_style; // <-- OR, font # hardwire
-
 				isFolder = true;
 
 			} else {
@@ -608,34 +700,29 @@ void createMenuForAtari(
 
 				is_kernel_a = !is_kernel_a;
 			}
-			add_end_kernel(is_kernel_a, entry);
-
-			if (entry == 0) {
-				add_header_bottom(textColour[colourSet][(int) (menu_entries[list_entry + 1].type)]);
-
-			} else {
 
 
-				if (entry == 4 || entry == 9 || entry == NUM_MENU_ITEMS_PER_PAGE) {
-					if (entry > 4) {
-						add_normal_bottom(entry);
-						if (entry == NUM_MENU_ITEMS_PER_PAGE) {
-							add_exit_kernel();
-						}
-					}
-					add_end_bank(bank);
-					bank++;
+			add_end_kernel();
 
-					add_start_bank(bank);
-					if (entry == 4) {
-						add_normal_bottom(entry);
-					}
+			if (!entry)
+				add_header_bottom(textColour[colourSet][menu_entries[list_entry].type]);
 
-				} else
+			else {
+
+				if (entry < numMenuItemsPerPage[user_settings.line_spacing])
 					add_normal_bottom(entry);
 
-				if (entry != NUM_MENU_ITEMS_PER_PAGE)
-					add_normal_top(textColour[colourSet][(int)(menu_entries[list_entry+1].type)]);
+				if (entry == 4 || entry == 9 || entry == numMenuItemsPerPage[user_settings.line_spacing]) {
+
+					if (entry == numMenuItemsPerPage[user_settings.line_spacing])
+						add_exit_kernel();
+
+					add_end_bank(bank++);
+					add_start_bank(bank);
+				}
+
+				if (entry != numMenuItemsPerPage[user_settings.line_spacing])
+					add_normal_top(textColour[colourSet][menu_entries[list_entry + 1].type]);
 
 			}
 		}
@@ -644,9 +731,8 @@ void createMenuForAtari(
 }
 
 void set_menu_status_msg(const char *message) {
-	size_t msg_len = strlen(message);
-	memset(menu_header, ' ', CHARS_PER_LINE);
-	strncpy(menu_header, message, msg_len > STATUS_MESSAGE_LENGTH ? STATUS_MESSAGE_LENGTH : msg_len);
+	//memset(pendingStatusMessage, 0, sizeof(pendingStatusMessage)/sizeof(char));
+	strncpy(pendingStatusMessage, message, sizeof(pendingStatusMessage)/sizeof(char) - 1);
 }
 
 void set_menu_status_byte(enum eStatus_bytes_id byte_id, uint8_t status_byte) {
@@ -682,7 +768,7 @@ int emulate_firmware_cartridge() {
 	uint8_t data = 0, data_prev = 0;
 	unsigned const char *bankPtr = &firmware_rom[0];
 
-	while (1) {
+	while (true) {
 		while ((addr = ADDR_IN) != addr_prev)
 			addr_prev = addr;
 
@@ -710,7 +796,7 @@ int emulate_firmware_cartridge() {
 					else if (addr == CART_CMD_HOTSPOT) {// atari 2600 has send an command
 						while (ADDR_IN == addr) {
 							data_prev = data;
-							data = DATA_IN;
+							data = DATA_IN_BYTE;
 						}
 						addr = data_prev;
 						break;
@@ -742,8 +828,7 @@ int emulate_firmware_cartridge() {
 			}
 
 			SET_DATA_MODE_OUT
-			while (ADDR_IN == addr)
-				;
+			while (ADDR_IN == addr);
 			SET_DATA_MODE_IN
 		}
 	}
