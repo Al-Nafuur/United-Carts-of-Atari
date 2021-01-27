@@ -574,6 +574,13 @@ void createMenuForAtari(
 
 	uint8_t i = CHARS_PER_LINE - 1;
 
+/*
+ * potential "user count" goes here
+ * menu_header[i--] = '3';
+	menu_header[i--] = '2';
+
+*/
+
 	// Account icon
 	if (*plus_store_status == '1') {
 		menu_header[i--] = CHAR_R_Account;
