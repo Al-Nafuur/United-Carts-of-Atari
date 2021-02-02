@@ -36,18 +36,21 @@ const uint8_t start_bank[]__attribute__((section(".flash01"))) = {
 
 		0xd8,					// cld
 		0x8d, 0xf4, 0xff,		// sta HOTSPOT
-		0x4c, 0x37, 0x12,		// jmp ContDrawScreen
-		0x9d, 0xf5, 0xff		// sta $FFF5,x					*** PATCH LOW BYTE OF ADDRESS ***
+		0x4c, 0x62, 0x12,		// jmp ContDrawScreen
+		0x8d, 0xf5, 0xff		// sta $FFF5,x					*** PATCH LOW BYTE OF ADDRESS ***
 
 		};
 
 const uint8_t end_bank[] __attribute__((section(".flash01"))) = {
 
 		0x8d, 0xf4, 0xff,		// sta HOTSPOT
-		0x4c, 0x43, 0x10,		// jmp $1043					???
+		0x4c, 0x6B, 0x10,		// jmp DoStart					???
 
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0a, 0x10, 0x0a, 0x10	// ??
-	};
+		0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,			// hotspots
+
+		0x0a, 0x10,				// .word FirstStart
+		0x0a, 0x10,				// .word FirstStart
+};
 
 const uint8_t switch_bank[]__attribute__((section(".flash01"))) = {
 
@@ -75,20 +78,43 @@ const uint8_t textline_start_even[]__attribute__((section(".flash01"))) = {
 	};
 
 const uint8_t textline_start_odd[]__attribute__((section(".flash01"))) = {
-#define PATCH_LINE_BACKCOL 3
+//#define PATCH_LINE_BACKCOL 3
 
 		0x85, 0x2a,				// sta HMOVE
-		0xa5, PATCH,			// lda PATCH  ($83+entry)		(*** PATCHED ***)
-		0x85, 0x09,				// sta COLUBK
+		0x85, 0x10,				// sta RESP0
 
-		0x04, 0x00,				// nop 0			SLEEP 7
+//		0xa5, PATCH,			// lda PATCH  ($83+entry)		(*** PATCHED ***)
+//		0x85, 0x09,				// sta COLUBK
+
+//		0x04, 0x00,				// nop 0			SLEEP 7
+
+		// SLEEP 10
+
 		0xea,					// nop
 		0xea,					// nop
+		0xea,					// nop
+		0xea,					// nop
+		0xea					// nop
 	};
 
-const uint8_t next_scanline_a[]__attribute__((section(".flash01"))) = {
 
-		0x85, 0x2a,				// sta HMOVE
+const uint8_t mac_kernel_a_both[]__attribute__((section(".flash01"))) = {
+
+		// SLEEP 14
+
+		0xea,					// nop
+		0xea,					// nop
+		0xea,					// nop
+		0xea,					// nop
+		0xea,					// nop
+		0xea,					// nop
+		0xea					// nop
+	};
+
+
+const uint8_t mac_kernel_a[]__attribute__((section(".flash01"))) = {
+
+		//0x85, 0x2a,				// sta HMOVE
 
 		0x04, 0x00,				// nop 0			SLEEP 13
 		0xea,					// nop
@@ -98,10 +124,13 @@ const uint8_t next_scanline_a[]__attribute__((section(".flash01"))) = {
 		0xea					// nop
 	};
 
-const uint8_t next_scanline_b[]__attribute__((section(".flash01"))) = {
+const uint8_t mac_kernel_b_both[]__attribute__((section(".flash01"))) = {
 
-		0xea,					// nop				SLEEP 14
-		0xea,					// nop
+		0x85, 0x2a,				// sta HMOVE
+		0x85, 0x10,				// sta RESP0
+
+		// sleep 10
+
 		0xea,					// nop
 		0xea,					// nop
 		0xea,					// nop
@@ -176,8 +205,8 @@ const uint8_t kernel_b[]__attribute__((section(".flash01"))) = {
 		0x85, 0x1b,				// sta GRP0
 		0xa2, 0x00,				// ldx #0
 		0x86, 0x21,				// stx HMP1
-		0x8d, 0x2a, 0x00,		// sta HMOVE
-		0x85, 0x10				// sta RESP0
+		0x8d, 0x2a, 0x00,		// sta.w HMOVE
+		0x8d, 0x10, 0x00		// sta.w RESP0
 		};
 
 const uint8_t header_bottom[]__attribute__((section(".flash01"))) = {
@@ -253,7 +282,7 @@ const uint8_t exit_kernel[]__attribute__((section(".flash01"))) = {
 		0xa9, 0x00,				// lda #0
 		0x85, 0x09,				// sta COLUBK
 
-		0x4c, 0x00, 0x10		// jmp $1000
+		0x4c, 0x00, 0x10		// jmp ExitKernel
 		};
 
 //const uint8_t end_kernel_even[]__attribute__((section(".flash01"))) = {
@@ -279,7 +308,8 @@ uint8_t *my_font;
 uint8_t *bufferp;
 
 inline void add_end_kernel();
-inline void add_next_scanline(bool is_a);
+inline void add_prefix_a(bool both);
+inline void add_prefix_b();
 inline void add_start_bank(uint8_t bank_id);
 inline void add_end_bank(uint8_t bank_id);
 inline void add_textline_start(bool even, uint8_t entry, bool isFolder);
@@ -385,7 +415,7 @@ void add_start_bank(uint8_t bank_id) {
 void add_end_bank(uint8_t bank_id) {
 	uint16_t next_bank = (uint16_t) (0x1000U * bank_id);
 	memcpy(bufferp, switch_bank, sizeof(switch_bank));
-	bufferp = &buffer[next_bank - 0x12];
+	bufferp = &buffer[next_bank - sizeof(end_bank)];
 	memcpy(bufferp, end_bank, sizeof(end_bank));
 }
 
@@ -393,17 +423,21 @@ void add_textline_start(bool even, uint8_t entry, bool isFolder) {
 
 	if (even) {
 		memcpy(bufferp, textline_start_even, sizeof(textline_start_even));
-		bufferp[PATCH_EVEN_LINE_BACKCOL] = (uint8_t)( lineBackColour + entry);
+//		bufferp[PATCH_EVEN_LINE_BACKCOL] = (uint8_t)( lineBackColour + entry);
 		bufferp += sizeof(textline_start_even);
 	} else {
 		memcpy(bufferp, textline_start_odd, sizeof(textline_start_odd));
-		bufferp[PATCH_LINE_BACKCOL] = (uint8_t)(lineBackColour + entry);
+//		bufferp[PATCH_LINE_BACKCOL] = (uint8_t)(lineBackColour + entry);
 		bufferp += sizeof(textline_start_odd);
 	}
 }
 
 //displays: 00--00--11--11--11----00--00--00
 void add_kernel_a(uint8_t fontType, uint8_t scanline, uint8_t *text) {
+
+
+
+
 
 //    add_text_colour(0x0A);
 //    add_wsync();
@@ -449,15 +483,22 @@ void add_end_kernel() {
 	bufferp += sizeof(end_kernel);
 }
 
-void add_next_scanline(bool is_a) {
-	if (is_a) {
-		memcpy(bufferp, next_scanline_a, sizeof(next_scanline_a));
-		bufferp += sizeof(next_scanline_a);
+void add_prefix_a(bool both) {
+	if (both) {
+		memcpy(bufferp, mac_kernel_a_both, sizeof(mac_kernel_a_both));
+		bufferp += sizeof(mac_kernel_a_both);
 	} else {
-		memcpy(bufferp, next_scanline_b, sizeof(next_scanline_b));
-		bufferp += sizeof(next_scanline_b);
+		memcpy(bufferp, mac_kernel_a, sizeof(mac_kernel_a));
+		bufferp += sizeof(mac_kernel_a);
 	}
 }
+
+void add_prefix_b() {
+	memcpy(bufferp, mac_kernel_b_both, sizeof(mac_kernel_b_both));
+	bufferp += sizeof(mac_kernel_b_both);
+}
+
+
 
 void add_header_bottom(uint8_t colour) {
 	memcpy(bufferp, header_bottom, sizeof(header_bottom));
@@ -552,7 +593,7 @@ void createMenuForAtari(
 	// create 7 banks of bytecode for the ATARI to execute.
 
 	uint8_t menu_string[CHARS_PER_LINE];
-	uint8_t bank = 1, sc, entry, odd_even;
+	uint8_t sc, entry, odd_even;
 	size_t str_len;
 	uint8_t max_page = (uint8_t)((num_menu_entries - 1) / numMenuItemsPerPage[user_settings.line_spacing]);
 	uint8_t items_on_last_page = (uint8_t)((num_menu_entries % numMenuItemsPerPage[user_settings.line_spacing]) ?
@@ -663,31 +704,35 @@ void createMenuForAtari(
 
 	// Start of menu page generation
 
+	uint8_t bank = 1;
 	add_start_bank(bank);
-
 	for (odd_even = 0; odd_even < 2; odd_even++) {
 
 		for (entry = 0; entry <= numMenuItemsPerPage[user_settings.line_spacing]; entry++) {
-			bool is_kernel_a = bank < 4, isFolder = false;
+			//bool is_kernel_a = bank < 4, isFolder = false;
 			unsigned int list_entry = entry + offset;
+
+//			if (entry == 0 || entry == 5 || entry == 10)
+//				add_start_bank(++bank);
 
 			if (!entry) {		// header line
 
 				add_text_colour(0x0A);
 				memcpy(menu_string, menu_header, CHARS_PER_LINE);
-				isFolder = true;
+				//isFolder = true;
 
 			} else {
 
 				list_entry--;
+				add_normal_top(textColour[colourSet][menu_entries[list_entry].type]);
 
 				memset(menu_string, ' ', CHARS_PER_LINE);
 
 				if (list_entry < num_menu_entries) {
 					str_len = strlen(menu_entries[list_entry].entryname);
 					memcpy(menu_string, menu_entries[list_entry].entryname, str_len);
-					isFolder = (menu_entries[list_entry].type != Offline_Cart_File
-							&& menu_entries[list_entry].type != Cart_File);
+					//isFolder = (menu_entries[list_entry].type != Offline_Cart_File
+					//		&& menu_entries[list_entry].type != Cart_File);
 				}
 			}
 
@@ -695,42 +740,41 @@ void createMenuForAtari(
 				if (menu_string[i] < ' ' || menu_string[i] >= CHAR_MAX)
 					menu_string[i] = ' ';
 
-			add_textline_start(is_kernel_a, entry, isFolder);
 			for (sc = 0; sc < CHAR_HEIGHT; sc++) {
 
-				is_kernel_a ?
-					add_kernel_a(menu_entries[list_entry].font, sc, menu_string) :
+				if ((odd_even + sc) & 1) {
+					// ABABAB...
+					// add_textline_start(is_kernel_a, entry, isFolder);
+					add_prefix_b();
 					add_kernel_b(menu_entries[list_entry].font, sc, menu_string);
 
-				if (sc < CHAR_HEIGHT - 1)
-					add_next_scanline(is_kernel_a);
+				} else {
+					// BABABA...
+					// add_textline_start(is_kernel_a, entry, isFolder);
+					add_prefix_a(sc==0);
+					add_kernel_a(menu_entries[list_entry].font, sc, menu_string);
+				}
 
-				is_kernel_a = !is_kernel_a;
+//				is_kernel_a = !is_kernel_a;
 			}
 
 
 			add_end_kernel();
 
-			if (!entry)
+			if (entry == 0)
 				add_header_bottom(textColour[colourSet][menu_entries[list_entry].type]);
 
 			else {
 
 				if (entry < numMenuItemsPerPage[user_settings.line_spacing])
 					add_normal_bottom(entry);
+				else
+					add_exit_kernel();
 
 				if (entry == 4 || entry == 9 || entry == numMenuItemsPerPage[user_settings.line_spacing]) {
-
-					if (entry == numMenuItemsPerPage[user_settings.line_spacing])
-						add_exit_kernel();
-
 					add_end_bank(bank++);
 					add_start_bank(bank);
 				}
-
-				if (entry != numMenuItemsPerPage[user_settings.line_spacing])
-					add_normal_top(textColour[colourSet][menu_entries[list_entry + 1].type]);
-
 			}
 		}
 	}

@@ -9,9 +9,9 @@
 VERSION     = $0000
 BASE_ADR    = $1000
 
-NTSC        = 1
+NTSC        = 0
 PAL60       = 0
-PAL50       = 0
+PAL50       = 1
 
 ILLEGAL     = 1
 DEBUG       = 0
@@ -295,7 +295,7 @@ PatchA7_{1} = . + 1
 
   MAC KERNEL_A
 ; displays: 00--00--11--11--11----00--00--00--00
-    SLEEP   14
+    SLEEP   13
     _KERNEL_A {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}
   ENDM
 
@@ -332,15 +332,17 @@ PatchB7_{1} = . + 1
     ldx     #$00                ;2              also clear value for next kernel
     stx     HMP1                ;3      @69
     sta.w   HMOVE               ;4      @73
-    sta     RESP0               ;3      @00
+    sta.w   RESP0               ;3      @00
   ENDM
 
-  MAC KERNEL_B_BOTH
+ MAC KERNEL_B_BOTH
 
     sta     HMOVE               ;3      @03
     ;lda     LineBackColor+{1}; #{3}                ;2
     ;sta     COLUBK              ;3      @08
-    SLEEP 7+6
+;   SLEEP 7+6
+    sta      RESP0              ;3      @06
+    SLEEP 10
     _KERNEL_B {1}_{2}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}
   ENDM
 
@@ -348,10 +350,11 @@ PatchB7_{1} = . + 1
     MAC KERNEL_B
         ; displays: --00--00--11--11--1100--00--00--
         sta HMOVE               ;3      @03
-        SLEEP 13
+;       SLEEP 13
+    sta RESP0               ;3      @06
+    SLEEP 10
         _KERNEL_B {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}
     ENDM
-
     ;The following macros are not required by the PlusCart 6507 code, they just show how the macros above have to be used
 
     MAC KERNEL_AXC_BOTH ; {index}, {line}, {bk-color}, {txt-color}, {32 x chars...}
@@ -1148,7 +1151,8 @@ GameCalc            SUBROUTINE
                     sta WSYNC
                     sta HMCLR
 
-                    lda #$b0
+;                    lda #$b0
+                    lda #$C0
                     sta HMP0
                     lda #$80
                     sta HMP1
