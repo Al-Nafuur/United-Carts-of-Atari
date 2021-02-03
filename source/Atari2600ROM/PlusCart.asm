@@ -100,7 +100,7 @@ FONT = FONT_{1}
     ;USEFONT Trichotomic_12  ; << change as needed
 
 ;... or...
-FONT = 0
+FONT = 3
 
 ;===============================================================================
 ; C O N S T A N T S
@@ -836,7 +836,7 @@ GameInit
                     ;lda #$d0
                     ;sta COLUBK
                     
-                    lda #%01110000           ; mask left and right border
+                    lda #%00110000           ; mask left and right border
                     sta PF0
                     
                     lda #%00110001

@@ -31,6 +31,21 @@ static char pendingStatusMessage[STATUS_MESSAGE_LENGTH]__attribute__((section(".
 static unsigned char menu_status[STATUS_MAX]__attribute__((section(".ccmram#")));
 static unsigned const char *firmware_rom = firmware_ntsc_rom;
 
+inline void add_zeroSprites();
+inline void add_prefix_a(bool both);
+inline void add_prefix_b();
+inline void add_start_bank(uint8_t bank_id);
+inline void add_end_bank(uint8_t bank_id);
+inline void add_kernel_a(uint8_t fontType, uint8_t scanline, uint8_t *text);
+inline void add_kernel_b(uint8_t fontType, uint8_t scanline, uint8_t *text);
+inline void add_header_bottom();
+inline void add_normal_bottom(uint8_t line);
+inline void add_text_colour(uint8_t colour);
+inline void add_wsync();
+
+inline void add_normal_top(uint8_t colour);
+inline void add_exit_kernel();
+
 const uint8_t start_bank[]__attribute__((section(".flash01"))) = {
 #define PATCH_START_BANK 8
 
@@ -43,100 +58,52 @@ const uint8_t start_bank[]__attribute__((section(".flash01"))) = {
 
 const uint8_t end_bank[] __attribute__((section(".flash01"))) = {
 
-		0x8d, 0xf4, 0xff,		// sta HOTSPOT
-		0x4c, 0x6B, 0x10,		// jmp DoStart					???
+	0x8d, 0xf4, 0xff,		// sta HOTSPOT
+	0x4c, 0x6B, 0x10,		// jmp DoStart					???
 
-		0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,			// hotspots
+	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,			// hotspots
 
-		0x0a, 0x10,				// .word FirstStart
-		0x0a, 0x10,				// .word FirstStart
+	0x0a, 0x10,				// .word FirstStart
+	0x0a, 0x10,				// .word FirstStart
 };
 
 const uint8_t switch_bank[]__attribute__((section(".flash01"))) = {
-
-		0x4c, 0x07, 0x10		// jmp SwitchBank
-
-		};
-
-
-const uint8_t textline_start_even[]__attribute__((section(".flash01"))) = {
-#define PATCH_EVEN_LINE_BACKCOL 1
-
-		0xa5, PATCH,			// lda PATCH  ($83+entry)		(*** PATCHED ***)
-		0x85, 0x09,				// sta COLUBK
-
-	//		SLEEP 8
-
-		0xa9, 0,				// lda #0
-		0x85, 0x0B,				// sta REFP0
-		0x85, 0x0C,				// sta REFP1
-
-//		0xea,
-//		0xea,
-//		0xea,
-//		0xea,
-	};
-
-const uint8_t textline_start_odd[]__attribute__((section(".flash01"))) = {
-//#define PATCH_LINE_BACKCOL 3
-
-		0x85, 0x2a,				// sta HMOVE
-		0x85, 0x10,				// sta RESP0
-
-//		0xa5, PATCH,			// lda PATCH  ($83+entry)		(*** PATCHED ***)
-//		0x85, 0x09,				// sta COLUBK
-
-//		0x04, 0x00,				// nop 0			SLEEP 7
-
-		// SLEEP 10
-
-		0xea,					// nop
-		0xea,					// nop
-		0xea,					// nop
-		0xea,					// nop
-		0xea					// nop
-	};
-
+	0x4c, 0x07, 0x10		// jmp SwitchBank
+};
 
 const uint8_t mac_kernel_a_both[]__attribute__((section(".flash01"))) = {
-
-		// SLEEP 14
-
-		0xea,					// nop
-		0xea,					// nop
-		0xea,					// nop
-		0xea,					// nop
-		0xea,					// nop
-		0xea,					// nop
-		0xea					// nop
-	};
+	0xea,					// nop
+	0xea,					// nop
+	0xea,					// nop
+	0xea,					// nop
+	0xea,					// nop
+	0xea,					// nop
+	0xea					// nop
+};
 
 
 const uint8_t mac_kernel_a[]__attribute__((section(".flash01"))) = {
-
-		//0x85, 0x2a,				// sta HMOVE
-
-		0x04, 0x00,				// nop 0			SLEEP 13
-		0xea,					// nop
-		0xea,					// nop
-		0xea,					// nop
-		0xea,					// nop
-		0xea					// nop
-	};
+	0x04, 0x00,				// nop 0			SLEEP 13
+	0xea,					// nop
+	0xea,					// nop
+	0xea,					// nop
+	0xea,					// nop
+	0xea					// nop
+};
 
 const uint8_t mac_kernel_b_both[]__attribute__((section(".flash01"))) = {
 
-		0x85, 0x2a,				// sta HMOVE
-		0x85, 0x10,				// sta RESP0
+	0x85, 0x2a,				// sta HMOVE
+	0x85, 0x10,				// sta RESP0
 
-		// sleep 10
+	// sleep 10
 
-		0xea,					// nop
-		0xea,					// nop
-		0xea,					// nop
-		0xea,					// nop
-		0xea					// nop
-	};
+	0xea,					// nop
+	0xea,					// nop
+	0xea,					// nop
+	0xea,					// nop
+	0xea					// nop
+};
 
 const uint8_t kernel_a[]__attribute__((section(".flash01"))) = {
 
@@ -210,37 +177,28 @@ const uint8_t kernel_b[]__attribute__((section(".flash01"))) = {
 		};
 
 const uint8_t header_bottom[]__attribute__((section(".flash01"))) = {
-#define PATCH_HEADER_BOTTOM_BACKGROUND_COLOUR 1
-#define PATCH_HEADER_BOTTOM_BACKGROUND_COLOUR2 15
+#define PATCH_HEADER_BOTTOM_BACKGROUND_COLOUR2 11
 
-		0xa9, PATCH,			// lda #PATCHED BACK_COL	(*** PATCHED ***)
-		0x85, 0x02,				// sta WSYNC
-		0x85, 0x09,				// sta COLUBK
+		0xa9, 0x00,				// lda #0
+		0x85, 0x1b,				// sta GRP0
+		0x85, 0x1c,				// sta GRP1
 
-		0x85, 0x02,				// sta WSYNC
-		0x85, 0x02,				// sta WSYNC
 		0x85, 0x02,				// sta WSYNC
 		0x85, 0x02,				// sta WSYNC
 
-		0xa5, PATCH,			// lda LineBackColor+1
+		0xa9, PATCH,			// lda *** PATCHED ***
 		0x85, 0x09,				// sta COLUBK
 };
 
 
-const uint8_t header_bottom2[]__attribute__((section(".flash01"))) = {
-#define PATCH_HEADER_BOTTOM2_TEXT_COLOUR 1
-
-		0xa9, PATCH,			// lda #PATCHED TEXT_COL	(*** PATCHED ***)
-		0x85, 0x06,				// sta COLUP0
-		0x85, 0x07,				// sta COLUP1
-
-		0x85, 0x02				// sta WSYNC
-		};
-
 const uint8_t normal_bottom[]__attribute__((section(".flash01"))) = {
-#define PATCH_NORMAL_BOTTOM_LINE 3
+#define PATCH_NORMAL_BOTTOM_LINE 7
 
-		0xe6, lineCounter,		// inc lineCounter
+		0xa9, 0x00,				// lda #0
+		0x85, 0x1b,				// sta GRP0
+		0x85, 0x1c,				// sta GRP1
+
+//		0xe6, lineCounter,		// inc lineCounter
 		0xa5, PATCH,			// lda LineBackColor+{1}
 };
 
@@ -249,79 +207,49 @@ const uint8_t normal_bottom2[]__attribute__((section(".flash01"))) = {
 };
 
 
-const uint8_t wsync[]__attribute__((section(".flash01"))) = { 0x85, 0x02// sta WSYNC
-		};
+const uint8_t wsync[]__attribute__((section(".flash01"))) = {
+	0x85, 0x02// sta WSYNC
+};
 
 const uint8_t text_colour[]__attribute__((section(".flash01"))) = {
-
 #define PATCH_TEXT_COLOUR 1
 
-		0xa9, 0x00,				// lda #??			 (*** PATCHED ***)
-		0x85, 0x06,				// sta COLUP0
-		0x85, 0x07,				// sta COLUP1
+	0xa9, 0x00,				// lda #??			 (*** PATCHED ***)
+	0x85, 0x06,				// sta COLUP0
+	0x85, 0x07,				// sta COLUP1
 
-		0xa9, 0x01,
-		0x85, lineCounter,		// sta lineCounter
+//	0xa9, 0x01,
+//	0x85, lineCounter,		// sta lineCounter
 
-		0x85, 0x02				// sta WSYNC
-
-		};
+	0x85, 0x02				// sta WSYNC
+};
 
 const uint8_t normal_top[]__attribute__((section(".flash01"))) = {
 #define PATCH_NORMAL_TOP_TEXT_COLOUR 1
 
-		0xa9, PATCH,			// lda #{1}			(*** PATCHED ***)
-		0x85, 0x06,				// sta COLUP0
-		0x85, 0x07,				// sta COLUP1
-	};
+	0xa9, PATCH,			// lda #{1}			(*** PATCHED ***)
+	0x85, 0x06,				// sta COLUP0
+	0x85, 0x07,				// sta COLUP1
+};
 
 const uint8_t exit_kernel[]__attribute__((section(".flash01"))) = {
-
+#define PATCH_EXIT_BG 1
 // bottom of screen, switch BG to black after bottom of last menu line
 
-		0xa9, 0x00,				// lda #0
-		0x85, 0x09,				// sta COLUBK
+	0xa9, PATCH,			// lda #??
+	0x85, 0x09,				// sta COLUBK
+	0x4c, 0x00, 0x10		// jmp ExitKernel
+};
 
-		0x4c, 0x00, 0x10		// jmp ExitKernel
-		};
-
-//const uint8_t end_kernel_even[]__attribute__((section(".flash01"))) = {
-
-//		0x86, 0x1b,				// stx GRP0
-//		0x86, 0x1c,				// stx GRP1
-//		};
-
-const uint8_t restore_BG_colour[]__attribute__((section(".flash01"))) = {
-#define PATCH_RESTORE_BG 1
-		0xa9, PATCH,			// lda #??				(*** PATCHED ***)
-		0x85, 0x09,				// sta COLUBK
-		};
-
-const uint8_t end_kernel[]__attribute__((section(".flash01"))) = {
-		0xa2, 0x00,				// ldx #0
-		0x86, 0x1b,				// stx GRP0
-		0x86, 0x1c,				// stx GRP1
-		};
-
-uint8_t *my_font;
+const uint8_t zeroSprites[]__attribute__((section(".flash01"))) = {
+	0xa2, 0x00,				// ldx #0
+	0x86, 0x1b,				// stx GRP0
+	0x86, 0x1c,				// stx GRP1
+};
 
 uint8_t *bufferp;
 
-inline void add_end_kernel();
-inline void add_prefix_a(bool both);
-inline void add_prefix_b();
-inline void add_start_bank(uint8_t bank_id);
-inline void add_end_bank(uint8_t bank_id);
-inline void add_textline_start(bool even, uint8_t entry, bool isFolder);
-inline void add_kernel_a(uint8_t fontType, uint8_t scanline, uint8_t *text);
-inline void add_kernel_b(uint8_t fontType, uint8_t scanline, uint8_t *text);
-inline void add_header_bottom(uint8_t colour);
-inline void add_normal_bottom(uint8_t line);
-inline void add_text_colour(uint8_t colour);
-inline void add_wsync();
 
-inline void add_normal_top(uint8_t colour);
-inline void add_exit_kernel();
 
 // for colours see...
 // https://www.randomterrain.com/atari-2600-memories-tia-color-charts.html
@@ -405,6 +333,12 @@ const uint8_t textColour[2][12] = {
  * Functions to append to the buffer the const "templates"
  * and fill in the dynamic values
  */
+
+void add_wsync() {
+	memcpy(bufferp, wsync, sizeof(wsync));
+	bufferp += sizeof(wsync);
+}
+
 void add_start_bank(uint8_t bank_id) {
 	bufferp = &buffer[(bank_id - 1) * 0x1000];
 	memcpy(bufferp, start_bank, sizeof(start_bank));
@@ -419,28 +353,8 @@ void add_end_bank(uint8_t bank_id) {
 	memcpy(bufferp, end_bank, sizeof(end_bank));
 }
 
-void add_textline_start(bool even, uint8_t entry, bool isFolder) {
-
-	if (even) {
-		memcpy(bufferp, textline_start_even, sizeof(textline_start_even));
-//		bufferp[PATCH_EVEN_LINE_BACKCOL] = (uint8_t)( lineBackColour + entry);
-		bufferp += sizeof(textline_start_even);
-	} else {
-		memcpy(bufferp, textline_start_odd, sizeof(textline_start_odd));
-//		bufferp[PATCH_LINE_BACKCOL] = (uint8_t)(lineBackColour + entry);
-		bufferp += sizeof(textline_start_odd);
-	}
-}
-
 //displays: 00--00--11--11--11----00--00--00
 void add_kernel_a(uint8_t fontType, uint8_t scanline, uint8_t *text) {
-
-
-
-
-
-//    add_text_colour(0x0A);
-//    add_wsync();
 
 	memcpy(bufferp, kernel_a, sizeof(kernel_a));
 
@@ -478,9 +392,9 @@ void add_kernel_b(uint8_t fontType, uint8_t scanline, uint8_t *text) {
 	bufferp += sizeof(kernel_b);
 }
 
-void add_end_kernel() {
-	memcpy(bufferp, end_kernel, sizeof(end_kernel));
-	bufferp += sizeof(end_kernel);
+void add_zeroSprites() {
+	memcpy(bufferp, zeroSprites, sizeof(zeroSprites));
+	bufferp += sizeof(zeroSprites);
 }
 
 void add_prefix_a(bool both) {
@@ -498,24 +412,50 @@ void add_prefix_b() {
 	bufferp += sizeof(mac_kernel_b_both);
 }
 
+void addSpaceLines(int extra) {
 
+	int lines = extra;
+	switch (user_settings.line_spacing) {
+	case 0:		//lines++;
+		break;
+	case 1:		lines++;
+		break;
+	case 2:		lines += 2;
+		break;
+	default:
+		break;
+	};
+	for (uint8_t line = 0; line < lines; line++)
+		add_wsync();
+}
 
-void add_header_bottom(uint8_t colour) {
+void add_header_bottom() {
 	memcpy(bufferp, header_bottom, sizeof(header_bottom));
-	bufferp[PATCH_HEADER_BOTTOM_BACKGROUND_COLOUR] = user_settings.tv_mode == TV_MODE_NTSC ? BACK_COL_NTSC : BACK_COL_PAL;
-	bufferp[PATCH_HEADER_BOTTOM_BACKGROUND_COLOUR2] = lineBackColour + 1;
+	bufferp[PATCH_HEADER_BOTTOM_BACKGROUND_COLOUR2] = user_settings.tv_mode == TV_MODE_NTSC ? BACK_COL_NTSC : BACK_COL_PAL;
+//	bufferp[PATCH_HEADER_BOTTOM_BACKGROUND_COLOUR2] = lineBackColour + 1;
 	bufferp += sizeof(header_bottom);
 
-	for (uint8_t line = 0; line < user_settings.line_spacing; line++)
-		add_wsync();
+	int extra = 0;
+	switch (user_settings.line_spacing) {
+	case 0:
+		extra = 2;
+		break;
+	case 1:
+		extra = 3;
+		break;
+	case 2:
+		extra = 4;
+		break;
+	default:
+		break;
+	};
 
-	if (user_settings.font_style == 0)
-		add_wsync();
 
+	addSpaceLines(extra);
 
-	memcpy(bufferp, header_bottom2, sizeof(header_bottom2));
-	bufferp[PATCH_HEADER_BOTTOM2_TEXT_COLOUR] = colour;
-	bufferp += sizeof(header_bottom2);
+//	memcpy(bufferp, header_bottom2, sizeof(header_bottom2));
+//	bufferp[PATCH_HEADER_BOTTOM2_TEXT_COLOUR] = (uint8_t)lineBackColour;
+//	bufferp += sizeof(header_bottom2);
 }
 
 void add_normal_bottom(uint8_t line) {
@@ -524,11 +464,11 @@ void add_normal_bottom(uint8_t line) {
 	bufferp[PATCH_NORMAL_BOTTOM_LINE] = (uint8_t) (lineBackColour + line + 1);
 	bufferp += sizeof(normal_bottom);
 
-	if (!user_settings.font_style && user_settings.line_spacing)
-		add_wsync();
+	int extra = 0;
+	if (user_settings.font_style == 0 && user_settings.line_spacing == 1)
+		extra++;
 
-	for (uint8_t linex = 0; linex < user_settings.line_spacing; linex++)
-		add_wsync();
+	addSpaceLines(extra);
 
 	memcpy(bufferp, normal_bottom2, sizeof(normal_bottom2));
 	bufferp += sizeof(normal_bottom2);
@@ -539,9 +479,18 @@ void add_normal_top(uint8_t colour) {
 	bufferp[PATCH_NORMAL_TOP_TEXT_COLOUR] = colour;
 	bufferp += sizeof(normal_top);
 
-	int8_t line = user_settings.font_style ? -1 : 0;
-	do add_wsync();
-	while (++line < user_settings.line_spacing);
+//	add_wsync();
+
+	int extra = 1;
+	if (user_settings.font_style == 0 && user_settings.line_spacing == 1)
+		extra--;
+
+
+	addSpaceLines(extra);
+
+//	int8_t line = user_settings.font_style ? -1 : 0;
+//	do add_wsync();
+//	while (++line < user_settings.line_spacing);
 }
 
 void add_text_colour(uint8_t colour) {
@@ -550,35 +499,23 @@ void add_text_colour(uint8_t colour) {
 	bufferp += sizeof(text_colour);
 }
 
-void add_wsync() {
-	memcpy(bufferp, wsync, sizeof(wsync));
-	bufferp += sizeof(wsync);
-}
 
 void add_exit_kernel() {
 
-	for (uint8_t line = 0; line < user_settings.line_spacing; line++)
-		add_wsync();
+	memcpy(bufferp, zeroSprites, sizeof(zeroSprites));
+	bufferp += sizeof(zeroSprites);
+
+	addSpaceLines(0);
 
 	memcpy(bufferp, exit_kernel, sizeof(exit_kernel));
+	bufferp[PATCH_EXIT_BG] = user_settings.tv_mode == TV_MODE_NTSC ? BACK_COL_NTSC : BACK_COL_PAL;
 	bufferp += sizeof(exit_kernel);
 }
 
-char cvtToNum(char *p) {
 
+char cvtToNum(char *p) {
 	const char *digits = "0123456789ABCDEF";
 	return (char)(strchr(digits, *p) - digits);
-
-
-/*	char num = 0;
-	if (*p >= '0' && *p <= '9')
-		num = (char)(*p - '0');
-	else if (*p >= 'A' && *p <= 'F')
-		num = (char)(*p - 'A' + 10);
-	else if (*p >= 'a' && *p <= 'f')
-		num = *p - 'a' + 10;
-	return num;
-	*/
 }
 
 
@@ -614,13 +551,6 @@ void createMenuForAtari(
 	// Display paging information
 
 	uint8_t i = CHARS_PER_LINE - 1;
-
-/*
- * potential "user count" goes here
- * menu_header[i--] = '3';
-	menu_header[i--] = '2';
-
-*/
 
 	// Account icon
 	if (*plus_store_status == '1') {
@@ -712,9 +642,6 @@ void createMenuForAtari(
 			//bool is_kernel_a = bank < 4, isFolder = false;
 			unsigned int list_entry = entry + offset;
 
-//			if (entry == 0 || entry == 5 || entry == 10)
-//				add_start_bank(++bank);
-
 			if (!entry) {		// header line
 
 				add_text_colour(0x0A);
@@ -744,25 +671,22 @@ void createMenuForAtari(
 
 				if ((odd_even + sc) & 1) {
 					// ABABAB...
-					// add_textline_start(is_kernel_a, entry, isFolder);
 					add_prefix_b();
 					add_kernel_b(menu_entries[list_entry].font, sc, menu_string);
 
 				} else {
 					// BABABA...
-					// add_textline_start(is_kernel_a, entry, isFolder);
 					add_prefix_a(sc==0);
 					add_kernel_a(menu_entries[list_entry].font, sc, menu_string);
 				}
-
-//				is_kernel_a = !is_kernel_a;
 			}
 
+//			add_zeroSprites();
 
-			add_end_kernel();
-
-			if (entry == 0)
-				add_header_bottom(textColour[colourSet][menu_entries[list_entry].type]);
+			if (entry == 0) {
+				add_header_bottom();
+				add_normal_bottom(0);
+			}
 
 			else {
 
