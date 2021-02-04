@@ -9,9 +9,9 @@
 VERSION     = $0000
 BASE_ADR    = $1000
 
-NTSC        = 0
+NTSC        = 1
 PAL60       = 0
-PAL50       = 1
+PAL50       = 0
 
 ILLEGAL     = 1
 DEBUG       = 0
@@ -836,7 +836,7 @@ GameInit
                     ;lda #$d0
                     ;sta COLUBK
                     
-                    lda #%00110000           ; mask left and right border
+                    lda #%01110000           ; mask left and right border
                     sta PF0
                     
                     lda #%00110001

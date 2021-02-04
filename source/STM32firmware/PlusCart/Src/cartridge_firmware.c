@@ -46,6 +46,7 @@ inline void add_wsync();
 inline void add_normal_top(uint8_t colour);
 inline void add_exit_kernel();
 
+
 const uint8_t start_bank[]__attribute__((section(".flash01"))) = {
 #define PATCH_START_BANK 8
 
@@ -56,54 +57,61 @@ const uint8_t start_bank[]__attribute__((section(".flash01"))) = {
 
 		};
 
+
 const uint8_t end_bank[] __attribute__((section(".flash01"))) = {
 
-	0x8d, 0xf4, 0xff,		// sta HOTSPOT
-	0x4c, 0x6B, 0x10,		// jmp DoStart					???
+		0x8d, 0xf4, 0xff,		// sta HOTSPOT
+		0x4c, 0x6B, 0x10,		// jmp DoStart					???
 
-	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,			// hotspots
+		0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,			// hotspots
 
-	0x0a, 0x10,				// .word FirstStart
-	0x0a, 0x10,				// .word FirstStart
-};
+		0x0a, 0x10,				// .word FirstStart
+		0x0a, 0x10,				// .word FirstStart
+	};
+
 
 const uint8_t switch_bank[]__attribute__((section(".flash01"))) = {
-	0x4c, 0x07, 0x10		// jmp SwitchBank
-};
+
+		0x4c, 0x07, 0x10		// jmp SwitchBank
+	};
+
 
 const uint8_t mac_kernel_a_both[]__attribute__((section(".flash01"))) = {
-	0xea,					// nop
-	0xea,					// nop
-	0xea,					// nop
-	0xea,					// nop
-	0xea,					// nop
-	0xea,					// nop
-	0xea					// nop
-};
+
+		0xea,					// nop
+		0xea,					// nop
+		0xea,					// nop
+		0xea,					// nop
+		0xea,					// nop
+		0xea,					// nop
+		0xea					// nop
+	};
 
 
 const uint8_t mac_kernel_a[]__attribute__((section(".flash01"))) = {
-	0x04, 0x00,				// nop 0			SLEEP 13
-	0xea,					// nop
-	0xea,					// nop
-	0xea,					// nop
-	0xea,					// nop
-	0xea					// nop
-};
+		0x04, 0x00,				// nop 0			SLEEP 13
+		0xea,					// nop
+		0xea,					// nop
+		0xea,					// nop
+		0xea,					// nop
+		0xea					// nop
+	};
+
 
 const uint8_t mac_kernel_b_both[]__attribute__((section(".flash01"))) = {
 
-	0x85, 0x2a,				// sta HMOVE
-	0x85, 0x10,				// sta RESP0
+		0x85, 0x2a,				// sta HMOVE
+		0x85, 0x10,				// sta RESP0
 
-	// sleep 10
+		// sleep 10
 
-	0xea,					// nop
-	0xea,					// nop
-	0xea,					// nop
-	0xea,					// nop
-	0xea					// nop
-};
+		0xea,					// nop
+		0xea,					// nop
+		0xea,					// nop
+		0xea,					// nop
+		0xea					// nop
+	};
+
 
 const uint8_t kernel_a[]__attribute__((section(".flash01"))) = {
 
@@ -139,7 +147,8 @@ const uint8_t kernel_a[]__attribute__((section(".flash01"))) = {
 		0x86, 0x21,				// stx HMP1
 		0xea,					// nop
 		0x85, 0x10				// sta RESP0
-		};
+	};
+
 
 const uint8_t kernel_b[]__attribute__((section(".flash01"))) = {
 
@@ -174,7 +183,8 @@ const uint8_t kernel_b[]__attribute__((section(".flash01"))) = {
 		0x86, 0x21,				// stx HMP1
 		0x8d, 0x2a, 0x00,		// sta.w HMOVE
 		0x8d, 0x10, 0x00		// sta.w RESP0
-		};
+	};
+
 
 const uint8_t header_bottom[]__attribute__((section(".flash01"))) = {
 #define PATCH_HEADER_BOTTOM_BACKGROUND_COLOUR2 11
@@ -188,64 +198,67 @@ const uint8_t header_bottom[]__attribute__((section(".flash01"))) = {
 
 		0xa9, PATCH,			// lda *** PATCHED ***
 		0x85, 0x09,				// sta COLUBK
-};
+	};
 
 
 const uint8_t normal_bottom[]__attribute__((section(".flash01"))) = {
-#define PATCH_NORMAL_BOTTOM_LINE 7
+#define PATCH_NORMAL_BOTTOM_LINE 9
 
 		0xa9, 0x00,				// lda #0
 		0x85, 0x1b,				// sta GRP0
 		0x85, 0x1c,				// sta GRP1
 
-//		0xe6, lineCounter,		// inc lineCounter
+		0xe6, lineCounter,		// inc lineCounter
 		0xa5, PATCH,			// lda LineBackColor+{1}
-};
+	};
+
 
 const uint8_t normal_bottom2[]__attribute__((section(".flash01"))) = {
+
 		0x85, 0x09,				// sta COLUBK
-};
+	};
 
 
 const uint8_t wsync[]__attribute__((section(".flash01"))) = {
-	0x85, 0x02// sta WSYNC
-};
+
+		0x85, 0x02// sta WSYNC
+	};
 
 const uint8_t text_colour[]__attribute__((section(".flash01"))) = {
 #define PATCH_TEXT_COLOUR 1
 
-	0xa9, 0x00,				// lda #??			 (*** PATCHED ***)
-	0x85, 0x06,				// sta COLUP0
-	0x85, 0x07,				// sta COLUP1
+		0xa9, 0x00,				// lda #??			 (*** PATCHED ***)
+		0x85, 0x06,				// sta COLUP0
+		0x85, 0x07,				// sta COLUP1
 
-//	0xa9, 0x01,
-//	0x85, lineCounter,		// sta lineCounter
+		0xa9, 0x00,
+		0x85, lineCounter,		// sta lineCounter
 
-	0x85, 0x02				// sta WSYNC
-};
+		0x85, 0x02				// sta WSYNC
+	};
 
 const uint8_t normal_top[]__attribute__((section(".flash01"))) = {
 #define PATCH_NORMAL_TOP_TEXT_COLOUR 1
 
-	0xa9, PATCH,			// lda #{1}			(*** PATCHED ***)
-	0x85, 0x06,				// sta COLUP0
-	0x85, 0x07,				// sta COLUP1
-};
+		0xa9, PATCH,			// lda #{1}			(*** PATCHED ***)
+		0x85, 0x06,				// sta COLUP0
+		0x85, 0x07,				// sta COLUP1
+	};
 
 const uint8_t exit_kernel[]__attribute__((section(".flash01"))) = {
 #define PATCH_EXIT_BG 1
 // bottom of screen, switch BG to black after bottom of last menu line
 
-	0xa9, PATCH,			// lda #??
-	0x85, 0x09,				// sta COLUBK
-	0x4c, 0x00, 0x10		// jmp ExitKernel
-};
+		0xa9, PATCH,			// lda #??
+		0x85, 0x09,				// sta COLUBK
+		0x4c, 0x00, 0x10		// jmp ExitKernel
+	};
 
 const uint8_t zeroSprites[]__attribute__((section(".flash01"))) = {
-	0xa2, 0x00,				// ldx #0
-	0x86, 0x1b,				// stx GRP0
-	0x86, 0x1c,				// stx GRP1
-};
+		0xa2, 0x00,				// ldx #0
+		0x86, 0x1b,				// stx GRP0
+		0x86, 0x1c,				// stx GRP1
+	};
 
 uint8_t *bufferp;
 
@@ -479,18 +492,11 @@ void add_normal_top(uint8_t colour) {
 	bufferp[PATCH_NORMAL_TOP_TEXT_COLOUR] = colour;
 	bufferp += sizeof(normal_top);
 
-//	add_wsync();
-
 	int extra = 1;
 	if (user_settings.font_style == 0 && user_settings.line_spacing == 1)
 		extra--;
 
-
 	addSpaceLines(extra);
-
-//	int8_t line = user_settings.font_style ? -1 : 0;
-//	do add_wsync();
-//	while (++line < user_settings.line_spacing);
 }
 
 void add_text_colour(uint8_t colour) {
@@ -670,12 +676,12 @@ void createMenuForAtari(
 			for (sc = 0; sc < CHAR_HEIGHT; sc++) {
 
 				if ((odd_even + sc) & 1) {
-					// ABABAB...
+					// BABABA...
 					add_prefix_b();
 					add_kernel_b(menu_entries[list_entry].font, sc, menu_string);
 
 				} else {
-					// BABABA...
+					// ABABAB...
 					add_prefix_a(sc==0);
 					add_kernel_a(menu_entries[list_entry].font, sc, menu_string);
 				}
