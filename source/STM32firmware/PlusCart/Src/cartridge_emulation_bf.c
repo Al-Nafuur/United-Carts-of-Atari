@@ -37,7 +37,7 @@ void emulate_bfsc_cartridge(const char* filename, uint32_t image_size, uint8_t* 
 
             if (address < 0x80) {
                 while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-    			data = data_prev;
+    			data = data_prev DATA_IN_SHIFT;
 
                 ram[address] = (uint8_t) data;
             } else {
@@ -45,7 +45,7 @@ void emulate_bfsc_cartridge(const char* filename, uint32_t image_size, uint8_t* 
 
                 data = (address < 0x0100) ? ram[address & 0x7f] : bank[address];
 
-                DATA_OUT = ((uint16_t)data);
+                DATA_OUT = ((uint16_t)data)DATA_OUT_SHIFT;
     			SET_DATA_MODE_OUT
     			// wait for address bus to change
     			while (ADDR_IN == addr) ;
@@ -55,11 +55,11 @@ void emulate_bfsc_cartridge(const char* filename, uint32_t image_size, uint8_t* 
         }else{
             if(addr == SWCHB){
         		while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-        		if( !(data_prev & 0x1) && joy_status)
+        		if( !((data_prev DATA_IN_SHIFT) & 0x1) && joy_status)
         			break;
             }else if(addr == SWCHA){
         		while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-        		joy_status = !(data_prev & 0x80);
+        		joy_status = !((data_prev DATA_IN_SHIFT) & 0x80);
             }
         }
 
@@ -95,7 +95,7 @@ void emulate_bf_cartridge(const char* filename, uint32_t image_size, uint8_t* bu
 
             if (address >= 0x0f80 && address <= 0x0fbf) bank = layout->banks[address - 0x0f80];
 
-            DATA_OUT = ((uint16_t)bank[address]);
+            DATA_OUT = ((uint16_t)bank[address])DATA_OUT_SHIFT;
             SET_DATA_MODE_OUT
             // wait for address bus to change
             while (ADDR_IN == addr) ;
@@ -103,11 +103,11 @@ void emulate_bf_cartridge(const char* filename, uint32_t image_size, uint8_t* bu
         }else{
             if(addr == SWCHB){
         		while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-        		if( !(data_prev & 0x1) && joy_status)
+        		if( !((data_prev DATA_IN_SHIFT) & 0x1) && joy_status)
         			break;
             }else if(addr == SWCHA){
         		while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-        		joy_status = !(data_prev & 0x80);
+        		joy_status = !((data_prev DATA_IN_SHIFT) & 0x80);
             }
         }
     }

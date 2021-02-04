@@ -1,7 +1,9 @@
 #include <string.h>
 #include <stdlib.h>
-
+#include "global.h"
+#if USE_WIFI
 #include "esp8266.h"
+#endif
 #include "flash.h"
 #include "cartridge_firmware.h"
 
@@ -97,6 +99,7 @@ void flash_set_eeprom_user_settings(USER_SETTINGS user_settings){
     HAL_FLASH_Lock();
 }
 
+#if USE_WIFI
 /* write to flash with multiple HTTP range requests */
 uint32_t flash_download(char *filename, uint32_t filesize, uint32_t http_range_start, bool append){
 
@@ -223,7 +226,7 @@ uint32_t flash_download(char *filename, uint32_t filesize, uint32_t http_range_s
 	}
 	return (uint32_t)( DOWNLOAD_AREA_START_ADDRESS + 128U * 1024U * (uint32_t)( start_sector - 5) );
 }
-
+#endif
 
 /* write (firmware) to flash from buffer */
 void flash_firmware_update(uint32_t filesize){
@@ -341,10 +344,11 @@ bool flash_has_downloaded_roms(){
     return user_settings.first_free_flash_sector > 5;
 }
 
-void flash_file_list( char *path, MENU_ENTRY **dst , int *num_p){
+int flash_file_list( char *path, MENU_ENTRY *dst ){
     uint32_t base_adress = (uint32_t)( DOWNLOAD_AREA_START_ADDRESS), length, r;
     uint8_t pos, c;
 	size_t path_len = strlen(path);
+	int num_p = 0;
     char act_tar_file_path_name[100];
     bool is_dir, is_file;
     char *tmp_path = (char*) calloc((path_len +2) , sizeof(char));
@@ -355,7 +359,7 @@ void flash_file_list( char *path, MENU_ENTRY **dst , int *num_p){
 
     c =  (*(__IO uint8_t*)(base_adress));
 
-    while(c != 0xff && *num_p < NUM_MENU_ITEMS){ // NUM_MENU_ITEMS and c < 127 ? Ascii ?
+    while(c != 0xff && num_p < NUM_MENU_ITEMS){ // NUM_MENU_ITEMS and c < 127 ? Ascii ?
         pos = 0;
         length = get_filesize(base_adress);
         is_dir = ((*(__IO uint8_t*)(base_adress + 156)) == '5');
@@ -374,14 +378,14 @@ void flash_file_list( char *path, MENU_ENTRY **dst , int *num_p){
             if(strncmp(tmp_path, act_tar_file_path_name, path_len ) == 0 ){
             	char *act_tar_filename = &act_tar_file_path_name[ path_len ];
             	if( !( strchr( act_tar_filename, '/') ) ){
-            		strncpy((*dst)->entryname, act_tar_filename, 33);
-                    (*dst)->type = is_dir?Offline_Sub_Menu:Offline_Cart_File;
-                    (*dst)->flash_base_address = base_adress;
+            		strncpy(dst->entryname, act_tar_filename, 33);
+                    dst->type = is_dir?Offline_Sub_Menu:Offline_Cart_File;
+                    dst->flash_base_address = base_adress;
 
-                    (*dst)->filesize = length;
+                    dst->filesize = length;
 
-                    (*dst)++;
-                    (*num_p)++;
+                    dst++;
+                    num_p++;
             	}
             }
         }
@@ -397,6 +401,7 @@ void flash_file_list( char *path, MENU_ENTRY **dst , int *num_p){
     }
 
     free(tmp_path);
+    return num_p;
 
 }
 

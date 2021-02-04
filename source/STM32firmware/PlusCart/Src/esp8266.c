@@ -15,7 +15,9 @@
  * C library for interfacing the ESP8266 WiFi transceiver module (esp-01)
  * with a STM32F4 micro controller. Should be used with the HAL Library.
  */
+#include "global.h"
 
+#if USE_WIFI
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -801,3 +803,4 @@ void read_esp8266_at_version(){
     esp8266_at_version[i] = '\0';
     wait_response(200); // read rest of message
 }
+#endif

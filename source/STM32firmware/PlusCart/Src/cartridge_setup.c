@@ -4,7 +4,9 @@
  *  Created on: 05.07.2020
  *      Author: stubig
  */
+#if USE_WIFI
 #include "esp8266.h"
+#endif
 #include "flash.h"
 
 #include "cartridge_setup.h"
@@ -80,8 +82,21 @@ bool setup_cartridge_image(const char* filename, uint32_t image_size, uint8_t* b
     	uint32_t bytes_read;
     	uint8_t ccm_banks = (uint8_t) (banks - RAM_BANKS);
     	uint32_t ccm_size = ccm_banks * 4096U;
-    	if(d->type == Cart_File )
+    	if(d->type == Cart_File ){
+#if USE_WIFI
     		bytes_read = esp8266_PlusStore_API_file_request( CCM_RAM, (char*) filename, CCM_IMAGE_OFFSET, ccm_size );
+#else
+    		bytes_read = 0; // d->type == Cart_File and no WiFi ???
+#endif
+    	}
+    	else if(d->type == SD_Cart_File ){
+#if USE_SD_CARD
+    		bytes_read = 0; // toDo read from SD-Card to CCM_RAM
+#else
+    		bytes_read = 0; // d->type == SD_Cart_File and no SD-Card ???
+#endif
+
+    	}
     	else
     		bytes_read = flash_file_request( CCM_RAM, d->flash_base_address, CCM_IMAGE_OFFSET, ccm_size );
 
@@ -93,10 +108,24 @@ bool setup_cartridge_image(const char* filename, uint32_t image_size, uint8_t* b
     if(banks > (RAM_BANKS + CCM_BANKS) ){
         uint32_t flash_part_address;
     	if(d->type == Cart_File ){
+#if USE_WIFI
     		flash_part_address = flash_download((char*)filename, FLASH_IMAGE_SIZE, FLASH_IMAGE_OFFSET, true);
+#else
+    		flash_part_address = 0; // d->type == Cart_File and no WiFi ???
+#endif
+    	}else if(d->type == SD_Cart_File ){
+#if USE_SD_CARD
+    		flash_part_address = 0; // todo read from SD-Card to flash
+#else
+    		flash_part_address = 0; // d->type == SD_Cart_File and no SD-Card ???
+#endif
     	}else{
     		flash_part_address = d->flash_base_address + FLASH_IMAGE_OFFSET;
     	}
+
+    	if(flash_part_address == 0)
+    		return false;
+
         for (uint8_t i = 0; i < FLASH_BANKS; i++) layout->banks[RAM_BANKS + CCM_BANKS + i] = (uint8_t *)(flash_part_address + i * 4096U);
     }
 
