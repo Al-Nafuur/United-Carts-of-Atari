@@ -415,7 +415,7 @@ MENU_ENTRY* generateSetupMenu(MENU_ENTRY *dst) {
 MENU_ENTRY* generateSystemInfo(MENU_ENTRY *dst) {
 #if MENU_TYPE == PLUSCART
 	make_menu_entry(&dst, "PlusCart Device ID", Leave_Menu);
-#else if MENU_TYPE == UNOCART
+#elif MENU_TYPE == UNOCART
 	make_menu_entry(&dst, "UnoCart Device ID", Leave_Menu);
 #endif
 
@@ -1064,11 +1064,6 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 {
 
 	CART_TYPE cart_type = { base_type_None, false, false, false, false };
-#if USE_SD_CARD
-	FATFS FatFs;
-	FIL fil;
-	FRESULT read_result;
-#endif
 
 	strcat(curPath, "/");
 	append_entry_to_path(d);
@@ -1081,10 +1076,9 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
     		return cart_type;
     }
     if(d->type == SD_Cart_File ){
-#if USE_SD_CARD
-		if (f_mount(&FatFs, "", 1) != FR_OK)
+#if ! USE_SD_CARD
+   		return cart_type;
 #endif
-    		return cart_type;
     }
 
     // select type by file extension?
@@ -1111,19 +1105,14 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 
 
 	uint32_t bytes_read, bytes_to_read = d->filesize > (BUFFER_SIZE * 1024)?(BUFFER_SIZE * 1024):d->filesize;
-	uint8_t tail[16], bytes_read_tail;
+	uint8_t tail[16], bytes_read_tail=0;
 	if(d->type == Cart_File ){
 #if USE_WIFI
 		bytes_read = esp8266_PlusStore_API_file_request( buffer, curPath, 0, bytes_to_read );
 #endif
 	}else if(d->type == SD_Cart_File ){
 #if USE_SD_CARD
-		if (f_open(&fil, &curPath[sizeof(MENU_TEXT_SD_CARD_CONTENT)], FA_READ) != FR_OK)
-			goto unmount;
-		read_result = f_read(&fil, buffer, bytes_to_read, &bytes_read);
-		if (read_result != FR_OK) {
-			bytes_read = 0;
-		}
+		bytes_read = sd_card_file_request(buffer, curPath, 0, bytes_to_read);
 #endif
 	}else{
 		bytes_read = flash_file_request( buffer, d->flash_base_address, 0, bytes_to_read );
@@ -1141,13 +1130,7 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 #endif
 		}else if(d->type == SD_Cart_File ){
 #if USE_SD_CARD
-			// read tail
-			if (f_lseek(&fil, d->filesize - 16) == FR_OK) {
-				read_result = f_read(&fil, tail, 16, &bytes_read_tail);
-				if (read_result != FR_OK ) {
-					bytes_read_tail = 0;
-				}
-			}
+			bytes_read_tail = (uint8_t)sd_card_file_request( tail, curPath, (d->filesize - 16), 16 );
 #endif
 		}else{
 			bytes_read_tail = (uint8_t)flash_file_request( tail, d->flash_base_address, (d->filesize - 16), 16 );
@@ -1276,16 +1259,6 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 	}
 
 	close:
-#if USE_SD_CARD
-    if(d->type == SD_Cart_File )
-		f_close(&fil);
-#endif
-
-#if USE_SD_CARD
-	unmount:
-    if(d->type == SD_Cart_File )
-		f_mount(0, "", 1);
-#endif
 
 	if (cart_type.base_type != base_type_None)
 		cart_size_bytes = d->filesize;

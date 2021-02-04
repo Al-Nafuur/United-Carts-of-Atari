@@ -60,7 +60,6 @@ int sd_card_file_list( char *path, MENU_ENTRY *dst ){
     int counter = 0;
 	FATFS FatFs;
 
-    HAL_Delay(1000); // do we really need this ?
     if ( f_mount(&FatFs, "", 1) == FR_OK) {
             DIR dir;
             if ( f_opendir(&dir, path) == FR_OK) {
@@ -84,6 +83,27 @@ int sd_card_file_list( char *path, MENU_ENTRY *dst ){
     }
     return counter;
 }
+
+uint32_t sd_card_file_request(uint8_t *ext_buffer, char *path, uint32_t start_pos, uint32_t length ){
+	UINT bytes_read = 0;
+	FATFS FatFs;
+	FIL fil;
+	FRESULT read_result;
+	if (f_mount(&FatFs, "", 1) == FR_OK){
+		if (f_open(&fil, &path[sizeof(MENU_TEXT_SD_CARD_CONTENT)], FA_READ) == FR_OK){
+			if (start_pos == 0 || f_lseek(&fil, start_pos) == FR_OK) {
+				read_result = f_read(&fil, ext_buffer, length, &bytes_read);
+				if (read_result != FR_OK) {
+					bytes_read = 0;
+				}
+			}
+			f_close(&fil);
+		}
+		f_mount(0, "", 1);
+	}
+	return (uint32_t) bytes_read;
+}
+
 /* USER CODE END Application */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
