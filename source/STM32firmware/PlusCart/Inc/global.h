@@ -61,7 +61,8 @@
 #define MENU_TEXT_SPACING_SPARSE            "  Sparse"
 
 #define MENU_TEXT_PRIVATE_KEY               "Private Key"
-#define MENU_TEXT_FIRMWARE_UPDATE           "** Update Firmware **"
+#define MENU_TEXT_FIRMWARE_UPDATE           "** WiFi Firmware Update **"
+#define MENU_TEXT_SD_FIRMWARE_UPDATE        "** SD-Card Firmware Update **"
 #define MENU_TEXT_OFFLINE_ROM_UPDATE        "Download Offline ROMs"
 #define MENU_TEXT_PLUS_CONNECT              "PlusStore Connect"
 #define MENU_TEXT_PLUS_REMOVE               "PlusStore Disconnect"
@@ -84,8 +85,9 @@
 
 #define SIZEOF_WIFI_SELECT_BASE_PATH        sizeof(MENU_TEXT_SETUP) + sizeof(MENU_TEXT_WIFI_SETUP) + sizeof(MENU_TEXT_WIFI_SELECT)
 
-
+#if USE_WIFI
 extern UART_HandleTypeDef huart1;
+#endif
 extern char http_request_header[];
 extern char stm32_udid[];
 

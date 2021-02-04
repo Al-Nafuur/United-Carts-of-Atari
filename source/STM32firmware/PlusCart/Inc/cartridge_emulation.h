@@ -34,6 +34,7 @@ enum Transmission_State{
 		int content_length_pos = header_length - 5; \
 		enum Transmission_State huart_state = No_Transmission; \
 
+#if USE_WIFI
 #define process_transmission() \
         switch(huart_state){ \
           case Send_Start: { \
@@ -123,6 +124,9 @@ enum Transmission_State{
           default: \
             break; \
         }
+#else
+#define process_transmission()
+#endif
 
 void exit_cartridge(uint16_t , uint16_t );
 

@@ -2,7 +2,9 @@
 #include <stdint.h>
 #include <string.h>
 
+#if USE_WIFI
 #include "esp8266.h"
+#endif
 
 #include "cartridge_io.h"
 #include "cartridge_emulation.h"
@@ -69,7 +71,11 @@ static void setup_multiload_map(uint8_t *multiload_map, uint32_t multiload_count
 	memset(multiload_map, 0, 0xff);
 	for ( i = 0; i < multiload_count; i++) {
 		start = ((i + 1) * 8448 - 251); // - 256 + 5 -> multiload_id
+#if USE_WIFI
 		esp8266_PlusStore_API_file_request( &multiload_id, (char*) cartridge_path, start, 1 );
+#endif
+#if USE_SD_CARD
+#endif
 		multiload_map[multiload_id] = (uint8_t) i;
 	}
 }
@@ -101,7 +107,11 @@ static void read_multiload(uint8_t *buffer, const char* cartridge_path, uint8_t 
 	uint32_t start = physical_index * 8448U;
 	uint16_t size = (uint16_t) ((image_size < 8448U)?image_size:8448U);
 
+#if USE_WIFI
 	esp8266_PlusStore_API_file_request( buffer, (char*) cartridge_path, start, size );
+#endif
+#if USE_SD_CARD
+#endif
 
 	if(image_size < 8448){
 		memcpy(&buffer[ 8448 - 256 ], ourDefaultHeader, 0x100);
@@ -167,7 +177,7 @@ void emulate_ar_cartridge(const char* cartridge_path, unsigned int image_size, u
 			else
 				value_out = addr < 0x1800 ? bank0[addr & 0x07ff] : bank1[addr & 0x07ff];
 
-			DATA_OUT = ((uint16_t)value_out);
+			DATA_OUT = ((uint16_t)value_out) DATA_OUT_SHIFT;
 			SET_DATA_MODE_OUT;
 
 			if (addr == 0x1ff9 && bank1 == rom && last_address <= 0xff) {
@@ -175,7 +185,7 @@ void emulate_ar_cartridge(const char* cartridge_path, unsigned int image_size, u
 
 				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
 
-				load_multiload(ram, rom, multiload_map[data_prev & 0xff], cartridge_path, multiload_buffer, image_size);
+				load_multiload(ram, rom, multiload_map[(data_prev DATA_IN_SHIFT) & 0xff], cartridge_path, multiload_buffer, image_size);
 
 			}
 			else if ((addr & 0x0f00) == 0 && (transition_count > 5 || !write_ram_enabled)) {
@@ -238,11 +248,11 @@ void emulate_ar_cartridge(const char* cartridge_path, unsigned int image_size, u
 			last_address = addr;
             if(addr == SWCHB){
         		while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-        		if( !(data_prev & 0x1) && joy_status)
+        		if( !((data_prev DATA_IN_SHIFT) & 0x1) && joy_status)
         			break;
             }else if(addr == SWCHA){
         		while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-        		joy_status = !(data_prev & 0x80);
+        		joy_status = !((data_prev DATA_IN_SHIFT) & 0x80);
             }else{
         		while (ADDR_IN == addr);
             }

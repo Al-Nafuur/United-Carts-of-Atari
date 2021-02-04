@@ -71,7 +71,11 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define SD_CS_Pin GPIO_PIN_5
+#define SD_CS_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
+
+#define SD_SPI_HANDLE hspi2
 
 #define BUFFER_SIZE				96   // kilobytes
 #define CCM_RAM_SIZE            64   // kilobytes
@@ -121,7 +125,6 @@ enum e_status_message {
 };
 
 /* USER CODE END Private defines */
-
 
 #ifdef __cplusplus
 }

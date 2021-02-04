@@ -28,7 +28,7 @@ void emulate_SB_cartridge( const char* filename, uint32_t image_size, uint8_t* b
 		// got a stable address
 		if (addr & 0x1000)
 		{ // A12 high
-			DATA_OUT = ((uint16_t)bank[addr & 0xFFF]);
+			DATA_OUT = ((uint16_t)bank[addr & 0xFFF])DATA_OUT_SHIFT;
 			SET_DATA_MODE_OUT
 			// wait for address bus to change
 			while (ADDR_IN == addr) ;
@@ -39,11 +39,11 @@ void emulate_SB_cartridge( const char* filename, uint32_t image_size, uint8_t* b
 			while (ADDR_IN == addr) ;
 	    }else if(addr == SWCHB){
 			while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-			if( !(data_prev & 0x1) && joy_status)
+			if( !((data_prev DATA_IN_SHIFT) & 0x1) && joy_status)
 				break;
 	    }else if(addr == SWCHA){
 			while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-			joy_status = !(data_prev & 0x80);
+			joy_status = !((data_prev DATA_IN_SHIFT) & 0x80);
 	    }
 
 	}
