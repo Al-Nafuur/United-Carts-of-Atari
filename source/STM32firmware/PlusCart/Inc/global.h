@@ -20,7 +20,7 @@
 
 // End of hardware and periphery
 
-#define VERSION                   "2.0.0a"
+#define VERSION                   "2.0.0b"
 #define PLUSSTORE_API_HOST        "pluscart.firmaplus.de"
 
 #define CHARS_PER_LINE					32
