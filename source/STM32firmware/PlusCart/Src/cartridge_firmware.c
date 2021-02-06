@@ -1,12 +1,18 @@
 #include <string.h>
 
+#include "global.h"
 #include "cartridge_firmware.h"
 
+#if MENU_TYPE == UNOCART
+#include "firmware_uno_pal_rom.h"
+#include "firmware_uno_pal60_rom.h"
+#include "firmware_uno_ntsc_rom.h"
+#else
 #include "firmware_pal_rom.h"
 #include "firmware_pal60_rom.h"
 #include "firmware_ntsc_rom.h"
+#endif
 #include "font.h"
-#include "global.h"
 
 #define lineCounter 0x82
 #define lineBackColour 0x84
