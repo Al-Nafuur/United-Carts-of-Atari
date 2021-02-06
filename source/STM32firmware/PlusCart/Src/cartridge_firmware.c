@@ -771,7 +771,7 @@ bool comms_enabled = false;
 int emulate_firmware_cartridge() {
 	__disable_irq();	// Disable interrupts
 	uint16_t addr, addr_prev = 0;
-	uint8_t data = 0, data_prev = 0;
+	uint16_t data = 0, data_prev = 0;
 	unsigned const char *bankPtr = &firmware_rom[0];
 
 	while (true) {
