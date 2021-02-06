@@ -43,7 +43,7 @@ COLOR       = 3         ; color scheme
 
 PLUSACTIVE = $D8      ; <-- $D8 for running on PlusCart, anything else for Stella
 
-SPINNER = 0             ; 0 = spins, 1 = blinks
+SPINNER = 1             ; 0 = spining PlusCart logo, 1 = flashing UnoCart SD logo
 
     ; MODIFY "MAGNIFY" TO CHANGE SIZE OF PLUSLOGO!!
     ; Adjusts the vertical height of the logo (# lines per pixel)
@@ -963,10 +963,10 @@ PlusLogoAnimation
 
     IF SPINNER = 1
 
-    .byte 0, %00000000,%00111000,%01010100,%01111100,%01010100,%00111000,%00000000
-    .byte 0, %00000000,%00000000,%00111000,%00111000,%00111000,%00000000,%00000000
-    .byte 0, %00000000,%00000000,%00000000,%00010000,%00000000,%00000000,%00000000
-    .byte 0, %00000000,%01000100,%10010010,%10111010,%10010010,%01000100,%00000000 ; static 
+    .byte 0, %00000000,%00000000,%00000000,%00011000,%00000000,%00000000,%00000000
+    .byte 0, %00000000,%00000000,%00011000,%00111100,%00011000,%00000000,%00000000
+    .byte 0, %00000000,%01001100,%00101010,%01101010,%01001010,%00101100,%00000000
+    .byte 0, %11001100,%00101010,%00101001,%01001001,%10001001,%10001010,%01101100 ; static
 
     ENDIF
 
