@@ -40,7 +40,7 @@ extern FIL USERFile; /* File object for USER */
 void MX_FATFS_Init(void);
 
 /* USER CODE BEGIN Prototypes */
-
+int sd_card_file_size(char * );
 int sd_card_file_list( char *, MENU_ENTRY *dst );
 uint32_t sd_card_file_request( uint8_t *, char *, uint32_t, uint32_t );
 
