@@ -929,7 +929,6 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 	else if (d->type == Menu_Action){
 
 		if (strstr(curPath, MENU_TEXT_FIRMWARE_UPDATE) == curPath) {
-
 #if USE_WIFI
 			strcpy(curPath, "&u=1");
 			uint32_t bytes_read = esp8266_PlusStore_API_file_request( buffer, curPath, 0, 0x4000 );
@@ -947,7 +946,20 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			}
 		}
 		else if (strstr(curPath, MENU_TEXT_SD_FIRMWARE_UPDATE) == curPath) {
-//
+#if USE_SD_CARD
+			uint32_t bytes_read = sd_card_file_request( buffer, MENU_TEXT_SD_CARD_CONTENT"/firmware.bin", 0, 0x4000 );
+			bytes_read += sd_card_file_request( &buffer[0x4000], MENU_TEXT_SD_CARD_CONTENT"/firmware.bin", 0x8000, (d->filesize - 0x8000) );
+#else
+			uint32_t bytes_read = 0;
+#endif
+
+			if(bytes_read == d->filesize - 0x4000 ){
+				__disable_irq();
+				HAL_FLASH_Unlock();
+				flash_firmware_update(d->filesize);
+			}else{
+				menuStatusMessage = download_failed;
+			}
 		}
 		else if (strstr(curPath, MENU_TEXT_WIFI_RECONNECT) == curPath)
 			loadStore = true;
@@ -964,7 +976,21 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 
 	// Test we should load store and if connected to AP
     if(	loadStore || strlen(curPath) == 0 ){
-    	if (d->type == Offline_Sub_Menu || strstr(curPath, MENU_TEXT_OFFLINE_ROMS) == curPath) {
+    	if(strlen(curPath) == 0){
+#if USE_SD_CARD
+    		// check for firmware.bin file in SD root
+    		int firmware_file_size = sd_card_file_size("firmware.bin");
+    		if(firmware_file_size > 0){
+    			dst->filesize = (uint32_t)firmware_file_size;
+    			strcpy(dst->entryname, MENU_TEXT_SD_FIRMWARE_UPDATE);
+        		dst->type = Menu_Action;
+        		dst->font = user_settings.font_style;
+                dst++;
+                num_menu_entries++;
+    		}
+#endif
+    	}
+    	else if (d->type == Offline_Sub_Menu || strstr(curPath, MENU_TEXT_OFFLINE_ROMS) == curPath) {
     		make_menu_entry(&dst, "..", Leave_Menu);
     		num_menu_entries += flash_file_list(&curPath[sizeof(MENU_TEXT_OFFLINE_ROMS) - 1], dst);
     	}
@@ -1789,10 +1815,12 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOE_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(SD_CS_GPIO_Port, SD_CS_Pin, GPIO_PIN_RESET);
 
+#if HARDWARE_TYPE == PLUSCART
   /*Configure GPIO pins : PC0 PC1 PC2 PC3
                            PC4 PC5 PC6 PC7 */
   GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3
@@ -1800,7 +1828,15 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-
+#elif HARDWARE_TYPE == UNOCART
+  /*Configure GPIO pins : PE8 PE9 PE10 PE11
+                           PE12 PE13 PE14 PE15 */
+  GPIO_InitStruct.Pin = GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_11
+                          |GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+#endif
   /*Configure GPIO pins : PD8 PD9 PD10 PD11
                            PD12 PD13 PD14 PD15
                            PD0 PD1 PD2 PD3
