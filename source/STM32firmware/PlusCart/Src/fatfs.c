@@ -25,10 +25,12 @@ FIL USERFile;       /* File object for USER */
 
 /* USER CODE BEGIN Variables */
 #include <string.h>
+#include <stdbool.h>
 
 FILINFO fno;
 
-int entry_compare(const void* p1, const void* p2);
+bool is_text_file(char *);
+bool is_valid_file(char *);
 
 /* USER CODE END Variables */
 
@@ -56,6 +58,26 @@ DWORD get_fattime(void)
 
 /* USER CODE BEGIN Application */
 
+bool is_text_file(char * filename){
+	return false;
+}
+
+bool is_valid_file(char * filename){
+	return true;
+}
+
+int sd_card_file_size(char * path){
+	FATFS FatFs;
+	int file_size = -1;
+
+    if ( f_mount(&FatFs, "", 1) == FR_OK) {
+    	if( f_stat(path, &fno) == FR_OK)
+    		file_size = (int)fno.fsize;
+    	f_mount(0, "", 1);
+    }
+	return file_size;
+}
+
 int sd_card_file_list( char *path, MENU_ENTRY *dst ){
     int counter = 0;
 	FATFS FatFs;
@@ -69,8 +91,13 @@ int sd_card_file_list( char *path, MENU_ENTRY *dst ){
                             if (fno.fattrib & (AM_HID | AM_SYS))
                                     continue;
                             dst->type = fno.fattrib & AM_DIR ? SD_Sub_Menu : SD_Cart_File;
-                            // if (dst->type == SD_Cart_File && !is_valid_file(fno.fname))
-                            //      continue;
+                            if (dst->type == SD_Cart_File ){
+                            	if(is_text_file(fno.fname)){
+                            		dst->type = SD_Cart_File;
+                            	}else if(!is_valid_file(fno.fname)){
+                            		continue;
+                            	}
+                            }
                             // copy file record
                             dst->filesize = (uint32_t) fno.fsize;
                             strncpy(dst->entryname, fno.fname, 32);
@@ -78,6 +105,13 @@ int sd_card_file_list( char *path, MENU_ENTRY *dst ){
                             counter++;
                     }
                     f_closedir(&dir);
+/*            }else if(is_text_file(path) ){
+            	FIL fil;
+            	if(f_open(&fil, path, FA_READ) == FR_OK){
+
+        			f_close(&fil);
+            	}
+ */
             }
             f_mount(0, "", 1);
     }
