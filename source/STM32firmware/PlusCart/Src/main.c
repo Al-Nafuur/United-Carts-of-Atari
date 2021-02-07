@@ -238,7 +238,7 @@ char *get_filename_ext(char *filename) {
 	return (dot + 1);
 }
 
-inline void make_menu_entry_font( MENU_ENTRY **dst, const char *name, int type, uint8_t font) {
+/*inline*/ void make_menu_entry_font( MENU_ENTRY **dst, const char *name, int type, uint8_t font) {
 	(*dst)->type = type;
 	strcpy((*dst)->entryname, name);
 	(*dst)->filesize = 0U;
@@ -1453,6 +1453,9 @@ int main(void)
 
 				inputActive = MODE_SHOW_PATH;
 				*input_field = 0;
+			}
+
+			else if (d->type == Leave_SubKeyboard_Menu) {
 			}
 
 			else if (d->type == Delete_Keyboard_Char) {
