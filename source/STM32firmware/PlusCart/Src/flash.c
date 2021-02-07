@@ -344,11 +344,10 @@ bool flash_has_downloaded_roms(){
     return user_settings.first_free_flash_sector > 5;
 }
 
-int flash_file_list( char *path, MENU_ENTRY *dst ){
+void flash_file_list( char *path, MENU_ENTRY **dst, int *num_menu_entries ){
     uint32_t base_adress = (uint32_t)( DOWNLOAD_AREA_START_ADDRESS), length, r;
     uint8_t pos, c;
 	size_t path_len = strlen(path);
-	int num_p = 0;
     char act_tar_file_path_name[100];
     bool is_dir, is_file;
     char *tmp_path = (char*) calloc((path_len +2) , sizeof(char));
@@ -359,7 +358,7 @@ int flash_file_list( char *path, MENU_ENTRY *dst ){
 
     c =  (*(__IO uint8_t*)(base_adress));
 
-    while(c != 0xff && num_p < NUM_MENU_ITEMS){ // NUM_MENU_ITEMS and c < 127 ? Ascii ?
+    while(c != 0xff && (*num_menu_entries) < NUM_MENU_ITEMS){ // NUM_MENU_ITEMS and c < 127 ? Ascii ?
         pos = 0;
         length = get_filesize(base_adress);
         is_dir = ((*(__IO uint8_t*)(base_adress + 156)) == '5');
@@ -378,14 +377,14 @@ int flash_file_list( char *path, MENU_ENTRY *dst ){
             if(strncmp(tmp_path, act_tar_file_path_name, path_len ) == 0 ){
             	char *act_tar_filename = &act_tar_file_path_name[ path_len ];
             	if( !( strchr( act_tar_filename, '/') ) ){
-            		strncpy(dst->entryname, act_tar_filename, 33);
-                    dst->type = is_dir?Offline_Sub_Menu:Offline_Cart_File;
-                    dst->flash_base_address = base_adress;
+            		strncpy((*dst)->entryname, act_tar_filename, 33);
+            		(*dst)->type = is_dir?Offline_Sub_Menu:Offline_Cart_File;
+            		(*dst)->flash_base_address = base_adress;
 
-                    dst->filesize = length;
+            		(*dst)->filesize = length;
 
-                    dst++;
-                    num_p++;
+            		(*dst)++;
+                    (*num_menu_entries)++;
             	}
             }
         }
@@ -401,8 +400,6 @@ int flash_file_list( char *path, MENU_ENTRY *dst ){
     }
 
     free(tmp_path);
-    return num_p;
-
 }
 
 uint32_t flash_check_offline_roms_size( ){

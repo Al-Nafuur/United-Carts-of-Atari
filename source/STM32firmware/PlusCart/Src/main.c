@@ -508,6 +508,7 @@ int entry_compare(const void* p1, const void* p2){
 enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 	bool loadStore = false; // ToDo rename to loadPath (could be SD, flash or WiFi path)
 	num_menu_entries = 0;
+	uint8_t c;
 	enum e_status_message menuStatusMessage = none;
 
 	char *menuFontNames[] = {
@@ -990,72 +991,23 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
     		}
 #endif
     	}
-    	else if (d->type == Offline_Sub_Menu || strstr(curPath, MENU_TEXT_OFFLINE_ROMS) == curPath) {
+
+    	if (d->type == Offline_Sub_Menu || strstr(curPath, MENU_TEXT_OFFLINE_ROMS) == curPath) {
     		make_menu_entry(&dst, "..", Leave_Menu);
-    		num_menu_entries += flash_file_list(&curPath[sizeof(MENU_TEXT_OFFLINE_ROMS) - 1], dst);
+    		flash_file_list(&curPath[sizeof(MENU_TEXT_OFFLINE_ROMS) - 1], &dst, &num_menu_entries);
     	}
 
 #if USE_SD_CARD
     	else if(d->type == SD_Sub_Menu || strstr(curPath, MENU_TEXT_SD_CARD_CONTENT) == curPath){
     		make_menu_entry(&dst, "..", Leave_Menu);
-    		num_menu_entries += sd_card_file_list(&curPath[sizeof(MENU_TEXT_SD_CARD_CONTENT) - 1], dst );
+    		sd_card_file_list(&curPath[sizeof(MENU_TEXT_SD_CARD_CONTENT) - 1], &dst, &num_menu_entries );
             qsort((MENU_ENTRY *)&menu_entries[0], num_menu_entries, sizeof(MENU_ENTRY), entry_compare);
     	}
 #endif
 
 #if USE_WIFI
     	else if(esp8266_is_connected() == true){
-			int count = 0;
-			bool is_entry_row;
-			uint8_t pos = 0, c;
-			if( esp8266_PlusStore_API_connect() == false){
-				return esp_timeout;
-			}
-			esp8266_PlusStore_API_prepare_request_header(curPath, false, false);
-
-        	esp8266_print(http_request_header);
-            uint16_t bytes_read = 0, content_length = esp8266_skip_http_response_header();
-        	while(bytes_read < content_length){
-        		if(HAL_UART_Receive(&huart1, &c, 1, 15000 ) != HAL_OK){
-        			break;
-        		}
-        		if(bytes_read < 2){
-        			if(bytes_read < 1)
-        				plus_store_status[bytes_read] = (uint8_t)c;
-
-        		}else if(num_menu_entries < NUM_MENU_ITEMS){
-                    if(count == 0){ // first char defines if its an entry row
-                    	is_entry_row = (c >= '0' && c <= '9' ); // First char is entry.type '0' to '9'
-                        if(is_entry_row){
-                        	dst->type = c - 48;
-                        }
-                    }else if( is_entry_row ){
-                    	if(count == 1){
-                            dst->filesize = 0U;
-                            pos = 0;
-                    	}else if( count < 8 ){ // get the filesize
-                   			dst->filesize = dst->filesize * 10 + (uint8_t)( c - '0' );
-                    	}else if( count > 8 && count < 41 && c != '\n'){ // filename/dirname should begin at index 9
-                    		dst->entryname[pos] = c;
-                    		pos++;
-                    	}
-                    }
-                    if (c == '\n'){
-                    	if(is_entry_row){
-                    		dst->entryname[pos] = '\0';
-                    		dst->font = user_settings.font_style;
-                            dst++;
-                            num_menu_entries++;
-                    	}
-                        count = 0;
-                    }else{
-                        count++;
-                    }
-        		}
-        		bytes_read++;
-        	}
-
-        	esp8266_PlusStore_API_end_transmission();
+    		esp8266_file_list(curPath, &dst, &num_menu_entries, plus_store_status);
         }else if(strlen(curPath) == 0){
         	make_menu_entry(&dst, MENU_TEXT_WIFI_RECONNECT, Menu_Action);
     	}
@@ -1424,10 +1376,7 @@ void system_secondary_init(void){
 	    MENU_ENTRY *d = &menu_entries[0];
 	    MENU_ENTRY *dst = (MENU_ENTRY *)&menu_entries[0];
 		curPath[0] = '\0';
-		strcat(curPath, MENU_TEXT_OFFLINE_ROMS);
-		flash_file_list(&curPath[sizeof(MENU_TEXT_OFFLINE_ROMS) - 1], dst);
-
-//		if (strstr(d->entryname, AUTOSTART_FILENAME_PREFIX) == d->entryname) {
+		flash_file_list( curPath, &dst, &num_menu_entries);
 
 		if(strncmp(AUTOSTART_FILENAME_PREFIX, d->entryname, sizeof(AUTOSTART_FILENAME_PREFIX) - 1) == 0 ){
     		CART_TYPE cart_type = identify_cartridge(d);
@@ -1437,7 +1386,6 @@ void system_secondary_init(void){
             }
 		}
 		num_menu_entries = 0;
-		curPath[0] = '\0';
 	}
 	//	check user_settings properties that haven't been in user_setting since v1
 	if( user_settings.line_spacing >= SPACING_MAX )
@@ -1451,11 +1399,10 @@ void system_secondary_init(void){
 
 #if USE_SD_CARD
 	// put SD-Card init here
-//	MX_GPIO_SD_CS_Init();
 	MX_SPI2_Init();
 	MX_FATFS_Init();
 #if ! USE_WIFI
-//	HAL_Delay(1000); //a short delay is important to let the SD card settle
+	HAL_Delay(500); //a short delay is important to let the SD card settle
 #endif
 #endif
 

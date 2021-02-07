@@ -78,31 +78,30 @@ int sd_card_file_size(char * path){
 	return file_size;
 }
 
-int sd_card_file_list( char *path, MENU_ENTRY *dst ){
-    int counter = 0;
+void sd_card_file_list( char *path, MENU_ENTRY **dst, int *num_menu_entries ){
 	FATFS FatFs;
 
     if ( f_mount(&FatFs, "", 1) == FR_OK) {
             DIR dir;
             if ( f_opendir(&dir, path) == FR_OK) {
-                    while ( counter < NUM_MENU_ITEMS) {
+                    while ( (*num_menu_entries) < NUM_MENU_ITEMS) {
                             if (f_readdir(&dir, &fno) != FR_OK || fno.fname[0] == 0)
                                     break;
                             if (fno.fattrib & (AM_HID | AM_SYS))
                                     continue;
-                            dst->type = fno.fattrib & AM_DIR ? SD_Sub_Menu : SD_Cart_File;
-                            if (dst->type == SD_Cart_File ){
+                            (*dst)->type = fno.fattrib & AM_DIR ? SD_Sub_Menu : SD_Cart_File;
+                            if ((*dst)->type == SD_Cart_File ){
                             	if(is_text_file(fno.fname)){
-                            		dst->type = SD_Cart_File;
+                            		(*dst)->type = SD_Sub_Menu; // text files are "fake" directories
                             	}else if(!is_valid_file(fno.fname)){
                             		continue;
                             	}
                             }
                             // copy file record
-                            dst->filesize = (uint32_t) fno.fsize;
-                            strncpy(dst->entryname, fno.fname, 32);
-                            dst++;
-                            counter++;
+                            (*dst)->filesize = (uint32_t) fno.fsize;
+                            strncpy((*dst)->entryname, fno.fname, 32);
+                            (*dst)++;
+                            (*num_menu_entries)++;
                     }
                     f_closedir(&dir);
 /*            }else if(is_text_file(path) ){
@@ -115,7 +114,6 @@ int sd_card_file_list( char *path, MENU_ENTRY *dst ){
             }
             f_mount(0, "", 1);
     }
-    return counter;
 }
 
 uint32_t sd_card_file_request(uint8_t *ext_buffer, char *path, uint32_t start_pos, uint32_t length ){

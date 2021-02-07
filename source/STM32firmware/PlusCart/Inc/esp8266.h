@@ -72,6 +72,8 @@ void esp8266_update(void) __attribute__((section(".flash01")));
 
 /** Function prototypes **/
 
+void esp8266_file_list(char *, MENU_ENTRY **, int *, uint8_t *);
+
 bool esp8266_PlusStore_API_connect(void) __attribute__((section(".flash01")));
 void esp8266_PlusStore_API_prepare_request_header(char *, bool, bool ) __attribute__((section(".flash01")));
 void esp8266_PlusStore_API_end_transmission(void) __attribute__((section(".flash01")));
