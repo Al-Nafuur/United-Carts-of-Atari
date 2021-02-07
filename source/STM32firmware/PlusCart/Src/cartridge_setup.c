@@ -4,6 +4,8 @@
  *  Created on: 05.07.2020
  *      Author: stubig
  */
+
+#include "global.h"
 #if USE_WIFI
 #include "esp8266.h"
 #endif

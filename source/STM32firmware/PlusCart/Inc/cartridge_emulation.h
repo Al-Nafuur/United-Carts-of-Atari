@@ -1,9 +1,9 @@
 #ifndef CARTRIDGE_EMULATION_H
 #define CARTRIDGE_EMULATION_H
 
-
 #include <stdint.h>
 #include <stdbool.h>
+#include "global.h"
 
 #define RESET_ADDR addr = addr_prev = 0xffff;
 #define CCM_RAM ((uint8_t*)0x10000000)
