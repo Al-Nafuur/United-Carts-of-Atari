@@ -2,10 +2,10 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "global.h"
 #if USE_WIFI
 #include "esp8266.h"
 #endif
-
 #include "cartridge_io.h"
 #include "cartridge_emulation.h"
 #include "cartridge_emulation_ar.h"
