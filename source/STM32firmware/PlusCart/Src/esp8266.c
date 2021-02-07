@@ -46,6 +46,60 @@ void close_tcp_link(char link_id) __attribute__((section(".flash01")));
 
 char tmp_uart_buffer[50];
 
+
+void esp8266_file_list( char *path, MENU_ENTRY **dst, int *num_menu_entries, uint8_t *plus_store_status){
+	int char_counter = 0;
+	bool is_entry_row;
+	uint8_t pos = 0, c;
+	if( esp8266_PlusStore_API_connect() ){
+		esp8266_PlusStore_API_prepare_request_header(path, false, false);
+
+		esp8266_print(http_request_header);
+		uint16_t bytes_read = 0, content_length = esp8266_skip_http_response_header();
+		while(bytes_read < content_length){
+			if(HAL_UART_Receive(&huart1, &c, 1, 15000 ) != HAL_OK){
+				break;
+			}
+			if(bytes_read < 2){
+				if(bytes_read < 1)
+					plus_store_status[bytes_read] = (uint8_t)c;
+
+			}else if((*num_menu_entries) < NUM_MENU_ITEMS){
+				if(char_counter == 0){ // first char defines if its an entry row
+					is_entry_row = (c >= '0' && c <= '9' ); // First char is entry.type '0' to '9'
+					if(is_entry_row){
+						(*dst)->type = c - 48;
+					}
+				}else if( is_entry_row ){
+					if(char_counter == 1){
+						(*dst)->filesize = 0U;
+						pos = 0;
+					}else if( char_counter < 8 ){ // get the filesize
+						(*dst)->filesize = (*dst)->filesize * 10 + (uint8_t)( c - '0' );
+					}else if( char_counter > 8 && char_counter < 41 && c != '\n'){ // filename/dirname should begin at index 9
+						(*dst)->entryname[pos] = c;
+						pos++;
+					}
+				}
+				if (c == '\n'){
+					if(is_entry_row){
+						(*dst)->entryname[pos] = '\0';
+						(*dst)->font = user_settings.font_style;
+						(*dst)++;
+						(*num_menu_entries)++;
+					}
+					char_counter = 0;
+				}else{
+					char_counter++;
+				}
+			}
+			bytes_read++;
+		}
+
+		esp8266_PlusStore_API_end_transmission();
+	}
+}
+
 bool esp8266_PlusStore_API_connect(){
 	uint8_t c;
 	while(HAL_UART_Receive(&huart1, &c, 1, 10 ) == HAL_OK);// first read old messages..
