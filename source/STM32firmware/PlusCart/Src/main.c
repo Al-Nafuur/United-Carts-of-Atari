@@ -1610,7 +1610,6 @@ int main(void)
 			set_menu_status_msg(input_field);
 			set_menu_status_byte(STATUS_PageType, (uint8_t) Keyboard);
 		}
-<<<<<<< HEAD
 
 	    else {
 
@@ -1620,17 +1619,6 @@ int main(void)
 	    	if(act_page > (num_menu_entries / numMenuItemsPerPage[user_settings.line_spacing]) )
 	    		act_page = 0;
 
-=======
-
-	    else {
-
-	    	if (menuStatusMessage >= STATUS_ROOT)
-	    		set_menu_status_msg(status_message[menuStatusMessage]);
-
-	    	if(act_page > (num_menu_entries / numMenuItemsPerPage[user_settings.line_spacing]) )
-	    		act_page = 0;
-
->>>>>>> f28b8da2ecd57b03b15bc5d1d8cd999f1c39e869
 	    	set_menu_status_byte(STATUS_PageType, (uint8_t) Directory);
 	    }
 	#if USE_WIFI
