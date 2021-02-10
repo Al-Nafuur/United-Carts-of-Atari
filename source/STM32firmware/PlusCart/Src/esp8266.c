@@ -17,13 +17,14 @@
  */
 #include "global.h"
 
-#if USE_WIFI
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include "stm32_udid.h"
 #include "esp8266_AT_WifiManager.h"
 #include "esp8266.h"
+
+extern UART_HandleTypeDef huart1;
 
 /* private functions */
 void get_boundary_http_header(char *) __attribute__((section(".flash01")));
@@ -212,7 +213,7 @@ int esp8266_PlusROM_API_connect(unsigned int size){
     http_request_header[0] = '\0';
 	strcat(http_request_header, (char *)"AT+CIPSTART=\"TCP\",\"");
     strcat(http_request_header, (char *)&buffer[offset]);
-    strcat(http_request_header, (char *)"\",80\r\n");
+    strcat(http_request_header, (char *)"\",80,1\r\n");
 
     esp8266_send_command(http_request_header, PLUSROM_API_CONNECT_TIMEOUT);
 
@@ -857,4 +858,3 @@ void read_esp8266_at_version(){
     esp8266_at_version[i] = '\0';
     wait_response(200); // read rest of message
 }
-#endif

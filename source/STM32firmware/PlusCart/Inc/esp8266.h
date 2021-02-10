@@ -6,7 +6,6 @@
 
 #include "global.h"
 
-#if USE_WIFI
 #ifndef ESP8266_H
 #define	ESP8266_H
 
@@ -111,4 +110,3 @@ void read_esp8266_at_version(void) __attribute__((section(".flash01")));
 #endif
 
 #endif	/* ESP8266_H */
-#endif
