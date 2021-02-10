@@ -139,9 +139,12 @@ void esp8266_PlusStore_API_prepare_request_header(char *path, bool prepare_range
     http_request_header[header_len] = '\0';
 
     if(STM32F4_FLASH_SIZE > 512U)
-        strcat(http_request_header, ",1");
+        strcat(http_request_header, ",1, ");
     else
-        strcat(http_request_header, ",0");
+        strcat(http_request_header, ",0, ");
+
+    itoa(( HARDWARE_TYPE - 1 + (( MENU_TYPE - 1 ) << 1 ) + ( USE_SD_CARD << 2) + ( USE_WIFI << 3 )),
+    		(char *)&http_request_header[(header_len+3)], 16);									// 0 - F
 
     strcat(http_request_header, API_ATCMD_5);
 
