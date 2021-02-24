@@ -48,22 +48,33 @@ void close_tcp_link(char link_id) __attribute__((section(".flash01")));
 char tmp_uart_buffer[50];
 
 
-void esp8266_file_list( char *path, MENU_ENTRY **dst, int *num_menu_entries, uint8_t *plus_store_status){
-	int char_counter = 0;
-	bool is_entry_row;
+int esp8266_file_list( char *path, MENU_ENTRY **dst, int *num_menu_entries, uint8_t *plus_store_status, char * status_message){
+	int char_counter = 0, trim_path = 0;
+	bool is_entry_row, is_status_row;
 	uint8_t pos = 0, c;
 	if( esp8266_PlusStore_API_connect() ){
-		esp8266_PlusStore_API_prepare_request_header(path, false, false);
+		esp8266_PlusStore_API_prepare_request_header(path, false);
 
 		esp8266_print(http_request_header);
 		uint16_t bytes_read = 0, content_length = esp8266_skip_http_response_header();
+		is_status_row = true;
 		while(bytes_read < content_length){
 			if(HAL_UART_Receive(&huart1, &c, 1, 15000 ) != HAL_OK){
 				break;
 			}
-			if(bytes_read < 2){
-				if(bytes_read < 1)
+			if(is_status_row){
+				if (c == '\n'){
+					is_status_row = false;
+					status_message[pos] = '\0';
+					pos = 0;
+				}else if(bytes_read < 1){
 					plus_store_status[bytes_read] = (uint8_t)c;
+				}else if(bytes_read < 2){
+					trim_path = c - '0';
+				}else{
+					status_message[pos++] = c;
+				}
+
 
 			}else if((*num_menu_entries) < NUM_MENU_ITEMS){
 				if(char_counter == 0){ // first char defines if its an entry row
@@ -99,6 +110,7 @@ void esp8266_file_list( char *path, MENU_ENTRY **dst, int *num_menu_entries, uin
 
 		esp8266_PlusStore_API_end_transmission();
 	}
+	return trim_path;
 }
 
 bool esp8266_PlusStore_API_connect(){
@@ -112,13 +124,11 @@ bool esp8266_PlusStore_API_connect(){
     return false;
 }
 
-void esp8266_PlusStore_API_prepare_request_header(char *path, bool prepare_range_request, bool basic_uri_encode){
+void esp8266_PlusStore_API_prepare_request_header(char *path, bool prepare_range_request){
 
-	if(basic_uri_encode){
-		for (char* p = path; (p = strchr(p, ' ')); ++p) {
-			*p = '+';
-		}
-	}
+	// ' ' --> '+' last check no space in http GET request!
+	for (char* p = path; (p = strchr(p, ' ')); *p++ = '+');
+
 
     http_request_header[0] = '\0';
 
@@ -164,7 +174,7 @@ uint32_t esp8266_PlusStore_API_range_request(char *path, http_range range, uint8
 	uint16_t expected_size =  (uint16_t) ( range.stop + 1 - range.start );
 	uint8_t c;
 
-	esp8266_PlusStore_API_prepare_request_header(path, true, false);
+	esp8266_PlusStore_API_prepare_request_header(path, true);
 
     sprintf(http_request_header, "%s%lu-%lu", http_request_header, range.start, range.stop);
     strcat(http_request_header, (char *)"\r\n\r\n");
@@ -362,7 +372,7 @@ bool esp8266_wifi_list(MENU_ENTRY **dst, int *num_menu_entries){
             if(count == 0){ // first char defines if its an entry row with SSID or Header Row
             	is_entry_row = (c == '+' ) ? 1 : 0;
             	if(is_entry_row){
-                    (*dst)->type = Setup_Menu;
+                    (*dst)->type = Input_Field;
                     (*dst)->filesize = 0U;
                     memset((*dst)->entryname, 30 , 32);
                     (*dst)->entryname[32] = '\0';
@@ -532,7 +542,7 @@ uint8_t process_http_headline(){
         	strncat(cur_path, p_array[0].value, (127 - sizeof(URLENCODE_MENU_TEXT_SETUP "/" URLENCODE_MENU_TEXT_PLUS_CONNECT "/") ) );
         	strcat(cur_path, "/Enter");
 
-			esp8266_PlusStore_API_prepare_request_header(cur_path, false, false );
+			esp8266_PlusStore_API_prepare_request_header(cur_path, false );
 			connect_tcp_link(send_link_id);
 			init_send_tcp_link(send_link_id, (uint16_t)strlen(http_request_header));
 			esp8266_print(http_request_header);

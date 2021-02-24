@@ -119,7 +119,7 @@ uint32_t flash_download(char *filename, uint32_t filesize, uint32_t http_range_s
     uint32_t count, http_range_end = http_range_start + MAX_RANGE_SIZE - 1;
 	uint32_t Address = DOWNLOAD_AREA_START_ADDRESS + 128U * 1024U * (uint8_t)( start_sector - 5);
 
-	esp8266_PlusStore_API_prepare_request_header((char *)filename, true, false );
+	esp8266_PlusStore_API_prepare_request_header((char *)filename, true );
 	strcat(http_request_header, (char *)"     0- 32767\r\n\r\n");
 	http_range_param_pos = strlen((char *)http_request_header) - 5;
 
