@@ -83,8 +83,8 @@ void Error_Handler(void);
 
 
 enum e_status_message {
-	none = -2,
-	keyboard_input,
+	STATUS_NONE = -2,
+	STATUS_MESSAGE_STRING,
 	STATUS_ROOT,
 	select_wifi_network,
 	wifi_not_connected,
@@ -92,12 +92,7 @@ enum e_status_message {
 	esp_timeout,
 	insert_password,
 	plus_connect,
-	plus_connected,
-	plus_created,
-	plus_connect_failed,
-	plus_removed,
-	private_key,
-	private_key_saved,
+	STATUS_YOUR_MESSAGE,
 	offline_roms_deleted,
 	not_enough_menory,
 	romtype_ACE_unsupported,
