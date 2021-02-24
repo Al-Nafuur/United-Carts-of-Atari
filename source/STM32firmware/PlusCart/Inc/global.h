@@ -14,13 +14,13 @@
  * Define hardware and periphery
  */
 #define HARDWARE_TYPE             PLUSCART
-#define MENU_TYPE                 UNOCART
-#define USE_SD_CARD				  TRUE
-#define USE_WIFI                  FALSE
+#define MENU_TYPE                 PLUSCART
+#define USE_SD_CARD				  FALSE
+#define USE_WIFI                  TRUE
 
 // End of hardware and periphery
 
-#define VERSION                   "2.0.0b"
+#define VERSION                   "2.0.8"
 #define PLUSSTORE_API_HOST        "pluscart.firmaplus.de"
 
 #define CHARS_PER_LINE					32
