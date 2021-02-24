@@ -43,7 +43,7 @@ COLOR       = 3         ; color scheme
 
 PLUSACTIVE = $D8      ; <-- $D8 for running on PlusCart, anything else for Stella
 
-SPINNER = 1             ; 0 = spining PlusCart logo, 1 = flashing UnoCart SD logo
+SPINNER = 0             ; 0 = spining PlusCart logo, 1 = flashing UnoCart SD logo
 
     ; MODIFY "MAGNIFY" TO CHANGE SIZE OF PLUSLOGO!!
     ; Adjusts the vertical height of the logo (# lines per pixel)
@@ -747,7 +747,7 @@ _x1	; check up
 
                     dec CurItem
 
-.debounce           lda #10
+.debounce           lda #7
                     sta StickDelayCount
                     bne _x4
 
@@ -845,6 +845,9 @@ GameInit
                     lda #HEADER_COL          ; set HEADER_COL for first textline in RAM
                     sta LineBackColor
                     
+                    lda #1
+                    sta StickDelayCount
+
                     lda CurItem
                     cmp ItemsOnActPage
                     bcc EndGameInit
