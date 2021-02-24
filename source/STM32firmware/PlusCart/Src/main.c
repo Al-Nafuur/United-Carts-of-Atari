@@ -140,12 +140,7 @@ const char *status_message[]__attribute__((section(".flash01#"))) = {
 	"Request timeout",
 	"Enter WiFi Password",
 	"Enter email or username",
-	"Connected, email sent",
-	"User created, email sent",
-	"PlusStore connect failed",
-	"Disconnected from PlusStore",
-	"Enter Secret-Key",
-	"Secret-Key saved",
+	"Your Chat Message",
 	"Offline ROMs erased",
 	"ROM file too big!",
 	"ACE is not supported",
@@ -368,14 +363,14 @@ void make_keyboard(MENU_ENTRY **dst, enum keyboardType selector){
 	make_menu_entry(dst, MENU_TEXT_GO_BACK, Leave_Menu);
 
 	for (const char **kbRow = keyboards[selector]; *kbRow; kbRow++)
-		make_menu_entry(dst, *kbRow, Setup_Menu);
+		make_menu_entry(dst, *kbRow, Keyboard_Row);
 
 	if (selector != KEYBOARD_LOWERCASE)
-		make_menu_entry(dst, MENU_TEXT_LOWERCASE, Setup_Menu);
+		make_menu_entry(dst, MENU_TEXT_LOWERCASE, Keyboard_Row);
 	if (selector != KEYBOARD_UPPERCASE)
-		make_menu_entry(dst, MENU_TEXT_UPPERCASE, Setup_Menu);
+		make_menu_entry(dst, MENU_TEXT_UPPERCASE, Keyboard_Row);
 	if (selector != KEYBOARD_SYMBOLS)
-		make_menu_entry(dst, MENU_TEXT_SYMBOLS, Setup_Menu);
+		make_menu_entry(dst, MENU_TEXT_SYMBOLS, Keyboard_Row);
 
 	if (*input_field)
 		make_menu_entry(dst, MENU_TEXT_DELETE_CHAR, Delete_Keyboard_Char);
@@ -508,8 +503,7 @@ int entry_compare(const void* p1, const void* p2){
 enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 	bool loadStore = false; // ToDo rename to loadPath (could be SD, flash or WiFi path)
 	num_menu_entries = 0;
-	uint8_t c;
-	enum e_status_message menuStatusMessage = none;
+	enum e_status_message menuStatusMessage = STATUS_NONE;
 
 	char *menuFontNames[] = {
 			// same ordering as font IDs
@@ -537,7 +531,27 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 		// and this caters for the trailing slash in the setup string (if present)
 //	char *mtsap = mts + sizeof(MENU_TEXT_APPEARANCE);
 
-	if(strstr(curPath, MENU_TEXT_SETUP) == curPath) {
+	if (d->type == Input_Field || d->type == Keyboard_Char || d->type == Keyboard_Row ||
+			d->type == Delete_Keyboard_Char || d->type == Leave_SubKeyboard_Menu ){
+		// toDo  Input_Field to Leave_SubKeyboard_Menu consecutive!
+		int new_status = 1;
+		if (strstr(curPath, MENU_TEXT_SEARCH_FOR_ROM) == curPath){
+		    new_status = STATUS_SEARCH_DETAILS;
+		}else{  // All Setup menu stuff here!
+			char *mts = curPath + sizeof(MENU_TEXT_SETUP);   // does a +1 because of MENU_TEXT_SETUP trailing 0
+		    if(strstr(mts, MENU_TEXT_PLUS_CONNECT) == mts)
+		        new_status = plus_connect;
+		    else if(strstr(mts, MENU_TEXT_WIFI_SETUP) == mts)
+		        new_status = insert_password;
+		    else
+		        new_status = STATUS_YOUR_MESSAGE;
+		}
+		if (d->type == Input_Field)
+			*input_field = 0;
+
+		menuStatusMessage = generateKeyboard(&dst, d, menuStatusMessage, new_status);
+	}
+	else if(strstr(curPath, MENU_TEXT_SETUP) == curPath) {
 		char *mts = curPath + sizeof(MENU_TEXT_SETUP);   // does a +1 because of MENU_TEXT_SETUP trailing 0
 
 		if (!strcmp(curPath, MENU_TEXT_SETUP)){
@@ -608,10 +622,6 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 					    	}
 							curPath[0] = '\0';
 						}
-
-						else
-							menuStatusMessage = generateKeyboard(&dst, d, menuStatusMessage, insert_password);
-
 					}
 
 					else {
@@ -648,75 +658,6 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 					menuStatusMessage = buildMenuFromPath(d);
 				}
 			}
-		}
-		else if (strstr(mts, MENU_TEXT_PLUS_CONNECT) == mts) {
-
-			if(d->type == Menu_Action){ // if actual Entry is of type Menu_Action -> Connect user
-
-				if( esp8266_PlusStore_API_connect() == false)
-					return esp_timeout;
-
-				esp8266_PlusStore_API_prepare_request_header(curPath, false, true );
-	        	esp8266_print(http_request_header);
-	        	esp8266_skip_http_response_header();
-	        	while(HAL_UART_Receive(&huart1, &c, 1, 100 ) == HAL_OK){}
-
-	        	switch (c) {
-				case '0':
-	        		menuStatusMessage = plus_connect_failed;
-	        		break;
-				case '1':
-	        		menuStatusMessage = plus_created;
-	        		break;
-				default:
-	        		menuStatusMessage = plus_connected;
-	        		break;
-	        	}
-
-
-	        	esp8266_PlusStore_API_end_transmission();
-
-	        	*curPath = 0;
-			}
-
-			else{
-
-				menuStatusMessage = generateKeyboard(&dst, d, menuStatusMessage, plus_connect);
-				//TODO:
-//				switch (inputActive) {
-//				case MODE_SHOW_INSTRUCTION:
-//					menuStatusMessage = plus_connect;
-//					inputActive = MODE_SHOW_INPUT;
-//					break;
-//				case MODE_SHOW_INPUT:
-//					menuStatusMessage = keyboard_input;
-//					break;
-//				case MODE_SHOW_PATH:
-//					break;
-//				default:
-//					break;
-//				}
-
-				//if (inputActive /*strlen(input_field)*/)
-				//	menuStatusMessage = keyboard_input;
-			}
-		}
-		else if (strstr(mts, MENU_TEXT_PLUS_REMOVE) == mts) {
-
-			if( esp8266_PlusStore_API_connect() == false)
-				return esp_timeout;
-
-			esp8266_PlusStore_API_prepare_request_header(curPath, false, true );
-        	esp8266_print(http_request_header);
-
-            esp8266_skip_http_response_header();
-        	while(HAL_UART_Receive(&huart1, &c, 1, 100 ) == HAL_OK){}
-
-        	menuStatusMessage = (c == '0') ? plus_connect_failed : plus_removed;
-
-        	esp8266_PlusStore_API_end_transmission();
-
-        	*curPath = 0;
 		}
 #endif
 		// Display
@@ -877,53 +818,9 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
     		num_menu_entries = 0;
         	*curPath = 0;
 		}
-/*
-		else if (strstr(mts, MENU_TEXT_PRIVATE_KEY) == mts) {
-
-			if(d->type == Menu_Action) { // if actual Entry is of type Menu_Action -> Save Private key
-				menuStatusMessage = private_key_saved;
-	        	*curPath = 0;
-			}
-
-			else {
-
-				if (!strcmp(mts, MENU_TEXT_PRIVATE_KEY ))
-					menuStatusMessage = private_key;		//????  what have i broken that this compare would have worked
-
-				menuStatusMessage = generateKeyboard(&dst, d, menuStatusMessage, private_key);
-			}
-		}
-*/
 		else{
 			// unknown entry must be from PlusStore API, so load from store.
 			loadStore = true;
-		}
-	}
-
-	else if (strstr(curPath, MENU_TEXT_SEARCH_FOR_ROM) == curPath) {
-
-		if(d->type == Menu_Action){
-			// Cart with SD and WiFi will search on both..
-#if USE_SD_CARD
-			loadStore = false;
-			make_menu_entry(&dst, "SD Search not Implemented", Leave_Menu);
-#endif
-#if USE_WIFI
-			// Send search to API
-			for (char* p = curPath; (p = strchr(p, ' ')); *p++ = '+');			// ' ' --> '+'
-			loadStore = true;
-			menuStatusMessage = STATUS_CHOOSE_ROM;
-#endif
-		}
-		else {
-
-			// Temporary HACK.  We want to clear the input_field on first-run
-			// Use of "inputActive" does not work... :(
-
-			if (strstr(input_field, "Search ROM"))
-				*input_field = 0;
-
-			menuStatusMessage = generateKeyboard(&dst, d, menuStatusMessage, STATUS_SEARCH_DETAILS);
 		}
 	}
 
@@ -945,6 +842,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			}else{
 				menuStatusMessage = download_failed;
 			}
+			*curPath = 0;
 		}
 		else if (strstr(curPath, MENU_TEXT_SD_FIRMWARE_UPDATE) == curPath) {
 #if USE_SD_CARD
@@ -961,11 +859,23 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			}else{
 				menuStatusMessage = download_failed;
 			}
+			*curPath = 0;
 		}
-		else if (strstr(curPath, MENU_TEXT_WIFI_RECONNECT) == curPath)
+#if USE_SD_CARD
+		else if (strstr(curPath, MENU_TEXT_SEARCH_FOR_ROM) == curPath) {
+			// Cart with SD and WiFi will search only here (SD) !
+			loadStore = false;
+			make_menu_entry(&dst, "SD Search not Implemented", Leave_Menu);
+		}
+#endif
+		else if (strstr(curPath, MENU_TEXT_WIFI_RECONNECT) == curPath){
 			loadStore = true;
-
-		*curPath = 0;
+			*curPath = 0;
+		}else{
+#if USE_WIFI
+			loadStore = true;
+#endif
+		}
 
 	}
 
@@ -977,6 +887,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 
 	// Test we should load store and if connected to AP
     if(	loadStore || strlen(curPath) == 0 ){
+    	int trim_path = 0;
     	if(strlen(curPath) == 0){
 #if USE_SD_CARD
     		// check for firmware.bin file in SD root
@@ -1007,15 +918,22 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 
 #if USE_WIFI
     	else if(esp8266_is_connected() == true){
-    		esp8266_file_list(curPath, &dst, &num_menu_entries, plus_store_status);
+    		*input_field = 0;
+    		trim_path = esp8266_file_list(curPath, &dst, &num_menu_entries, plus_store_status, input_field);
+    		if(*input_field)
+    			menuStatusMessage = STATUS_MESSAGE_STRING;
         }else if(strlen(curPath) == 0){
         	make_menu_entry(&dst, MENU_TEXT_WIFI_RECONNECT, Menu_Action);
     	}
 #endif
+        while (trim_path--){
+        	truncate_curPath();
+        }
+
     }
 
     if(strlen(curPath) == 0){
-    	if(menuStatusMessage == none)
+    	if(menuStatusMessage == STATUS_NONE)
     		menuStatusMessage = STATUS_ROOT;
 
 #if USE_SD_CARD
@@ -1352,7 +1270,7 @@ void emulate_cartridge(CART_TYPE cart_type, MENU_ENTRY *d)
 
 }
 
-void truncate_curPath(/*uint8_t count*/){
+void truncate_curPath(){
 
 	for (int selector = 0; keyboards[selector]; selector++)
 		for (const char **kbRow = keyboards[selector]; *kbRow; kbRow++) {
@@ -1508,7 +1426,7 @@ int main(void)
 				int32_t max_romsize = (((BUFFER_SIZE + CCM_RAM_SIZE) * 1024)
 						+ (flash_sectors - user_settings.first_free_flash_sector ) * 128 * 1024);
 				if (d->filesize > max_romsize)
-					menuStatusMessage /*main_status*/ = not_enough_menory;
+					menuStatusMessage = not_enough_menory;
 
 				else {
 
@@ -1516,16 +1434,16 @@ int main(void)
 					HAL_Delay(200);
 
 					if (cart_type.base_type == base_type_ACE)
-						menuStatusMessage = /*main_status =*/ romtype_ACE_unsupported;
+						menuStatusMessage = romtype_ACE_unsupported;
 
 					else if (cart_type.base_type == base_type_Load_Failed)
-						menuStatusMessage = /*main_status = */rom_download_failed;
+						menuStatusMessage = rom_download_failed;
 
 					else if (cart_type.base_type != base_type_None) {
 
 						emulate_cartridge(cart_type, d);
 						set_menu_status_byte(STATUS_StatusByteReboot, 0);
-						menuStatusMessage = /*main_status = */exit_emulation;
+						menuStatusMessage = exit_emulation;
 
 						if(cart_type.uses_systick){
 							SysTick_Config(SystemCoreClock / 1000U);	// 1KHz
@@ -1559,8 +1477,8 @@ int main(void)
 					*input_field = 0;
 				}
 
-			else if (d->type == Leave_SubKeyboard_Menu) {
-			}
+				else if (d->type == Leave_SubKeyboard_Menu) {
+				}
 
 				else if (d->type == Delete_Keyboard_Char) {
 
@@ -1569,17 +1487,14 @@ int main(void)
 						input_field[--len] = 0;
 						curPath[strlen(curPath) - 1] = 0;
 					}
-					menuStatusMessage = keyboard_input;
 
 				} else {
 
-					if ((d->type != Keyboard_Char && strlen(curPath) > 0)
-							|| !strcmp(MENU_TEXT_SETUP"/"MENU_TEXT_PLUS_CONNECT, curPath)
-							|| !strcmp(MENU_TEXT_SEARCH_FOR_ROM, curPath)) {
+					if (d->type != Keyboard_Char && strlen(curPath) > 0 ) {
 						strcat(curPath, "/");
 					}
 
-					if (!strcmp(d->entryname, MENU_TEXT_SPACE))
+					if (d->type == Keyboard_Char && !strcmp(d->entryname, MENU_TEXT_SPACE))
 						strcpy(d->entryname, " ");
 
 					append_entry_to_path(d);
@@ -1591,9 +1506,10 @@ int main(void)
 						if (strlen(input_field) + strlen(d->entryname) < STATUS_MESSAGE_LENGTH - 1)
 							strcat(input_field, d->entryname);
 
-						menuStatusMessage = keyboard_input;
 					}
-
+					else if (d->type == Input_Field) {
+						strcat(curPath, "/");
+					}
 					else {
 						if (d->type == Menu_Action) {
 							inputActive = MODE_SHOW_PATH;
@@ -1606,7 +1522,7 @@ int main(void)
 		}
 
 
-		if (*input_field) {
+		if (*input_field || menuStatusMessage == STATUS_MESSAGE_STRING) {
 			set_menu_status_msg(input_field);
 			set_menu_status_byte(STATUS_PageType, (uint8_t) Keyboard);
 		}
