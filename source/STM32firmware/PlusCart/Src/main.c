@@ -204,16 +204,7 @@ USER_SETTINGS user_settings;
 char curPath[256] __attribute__ ((section (".noinit")));
 char input_field[STATUS_MESSAGE_LENGTH] __attribute__ ((section (".noinit")));
 
-enum inputMode {
-	MODE_SHOW_INSTRUCTION,
-	MODE_SHOW_INPUT,
-	MODE_SHOW_PATH,
-};
-
-enum inputMode inputActive = MODE_SHOW_PATH;
-
-
-
+int inputActive __attribute__ ((section (".noinit")));
 
 uint8_t plus_store_status[1];
 
@@ -926,8 +917,12 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
         	make_menu_entry(&dst, MENU_TEXT_WIFI_RECONNECT, Menu_Action);
     	}
 #endif
-        while (trim_path--){
-        	truncate_curPath();
+        if(trim_path){
+        	inputActive = 0; // API response trim overrules internal truncate
+        	                 // toDo merge trim_path and inputActive ? centralize truncate_curPath() call ?
+        	while (trim_path--){
+        		truncate_curPath();
+        	}
         }
 
     }
@@ -1399,7 +1394,7 @@ int main(void)
 			d->filesize = 0;
 
 			*input_field = *curPath = 0;
-			inputActive = MODE_SHOW_PATH;
+			inputActive = 0;
 
 			menuStatusMessage = buildMenuFromPath(d);
 		}
@@ -1449,7 +1444,7 @@ int main(void)
 							SysTick_Config(SystemCoreClock / 1000U);	// 1KHz
 						}
 						if (cart_type.uses_ccmram) {
-							truncate_curPath();
+							truncate_curPath(); // ?? twice ?
 							d->type = Sub_Menu;
 							buildMenuFromPath(d);
 						}
@@ -1459,7 +1454,7 @@ int main(void)
 						menuStatusMessage = romtype_unknown;
 				}
 
-				truncate_curPath();
+				truncate_curPath(); // ?? twice ?
 
 			}
 
@@ -1468,12 +1463,11 @@ int main(void)
 				// selection is a directory or Menu_Action, or Keyboard_Char
 				if (d->type == Leave_Menu) {
 
-					if (strstr(curPath, "Search") == curPath)
-						*curPath = 0;
-					else
+					inputActive++;
+					while(inputActive--)
 						truncate_curPath();
 
-					inputActive = MODE_SHOW_PATH;
+					inputActive = 0;
 					*input_field = 0;
 				}
 
@@ -1493,15 +1487,12 @@ int main(void)
 					if (d->type != Keyboard_Char && strlen(curPath) > 0 ) {
 						strcat(curPath, "/");
 					}
-
-					if (d->type == Keyboard_Char && !strcmp(d->entryname, MENU_TEXT_SPACE))
+					else if (d->type == Keyboard_Char && !strcmp(d->entryname, MENU_TEXT_SPACE))
 						strcpy(d->entryname, " ");
 
 					append_entry_to_path(d);
 
 					if (d->type == Keyboard_Char) {
-
-						inputActive = MODE_SHOW_INPUT;
 
 						if (strlen(input_field) + strlen(d->entryname) < STATUS_MESSAGE_LENGTH - 1)
 							strcat(input_field, d->entryname);
@@ -1509,10 +1500,12 @@ int main(void)
 					}
 					else if (d->type == Input_Field) {
 						strcat(curPath, "/");
+						inputActive++; // = 1 ???
 					}
 					else {
 						if (d->type == Menu_Action) {
-							inputActive = MODE_SHOW_PATH;
+							if(inputActive)
+								inputActive += 2; // input + "Enter", if input contains path_sep trim will be corrected by API
 							*input_field = 0;
 						}
 					}
