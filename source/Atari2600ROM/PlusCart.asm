@@ -631,7 +631,12 @@ FirstStart
                     pha
                     bne .clearLoop
 
-  	                lda $1FF4                       ; enable comm Area
+                    sta SWCHA                       ; Reset RIOT (may need to be done after exit emulation)
+                    sta SWACNT
+                    sta SWCHB
+                    sta SWBCNT
+
+                    lda $1FF4                       ; enable comm Area
 
 
                     jsr DetectSystemType
@@ -643,7 +648,7 @@ FirstStart
 
 
 _init_blocker       lda SWCHA
-                    bpl _init_blocker               ; why...?
+                    bpl _init_blocker               ; wait for release of joystick-right after exit emulation event
 
 
 MainLoop
