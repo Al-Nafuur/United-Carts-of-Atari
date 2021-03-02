@@ -9,7 +9,7 @@
 
 
 extern FLASH_ProcessTypeDef pFlash;
-const uint8_t * eeprom_pointer;
+
 // reserve eeprom data storage;
 unsigned const char eeprom_data[16384] __attribute__((__section__(".eeprom"), used)) = {[0 ... 16383] = 0xff };
 
@@ -377,7 +377,8 @@ void flash_file_list( char *path, MENU_ENTRY **dst, int *num_menu_entries ){
             if(strncmp(tmp_path, act_tar_file_path_name, path_len ) == 0 ){
             	char *act_tar_filename = &act_tar_file_path_name[ path_len ];
             	if( !( strchr( act_tar_filename, '/') ) ){
-            		strncpy((*dst)->entryname, act_tar_filename, 33);
+            		(*dst)->entryname[0] = '\0';
+            		strncat((*dst)->entryname, act_tar_filename, 32);
             		(*dst)->type = is_dir?Offline_Sub_Menu:Offline_Cart_File;
             		(*dst)->flash_base_address = base_adress;
 
@@ -496,12 +497,13 @@ static uint8_t get_sector(uint32_t Address)
 
 int16_t get_active_eeprom_page(){
     int16_t index = 0;
-    eeprom_pointer = (const uint8_t *)(&eeprom_data[0]);
-    while ( index <  EEPROM_MAX_PAGE_ID &&  (*( uint32_t*)(eeprom_pointer)) == EEPROM_INVALID_PAGE_HEADER ){
+    uint32_t eeprom_pointer = (uint32_t) eeprom_data;
+    while ( index <  EEPROM_MAX_PAGE_ID &&  *(__IO uint32_t *) eeprom_pointer == EEPROM_INVALID_PAGE_HEADER ){
         index++;
         eeprom_pointer += EEPROM_PAGE_SIZE;
     }
-    if((*( uint32_t*)(eeprom_pointer)) != EEPROM_ACTIVE_PAGE_HEADER )
+    //
+    if( *(__IO uint32_t *) eeprom_pointer != EEPROM_ACTIVE_PAGE_HEADER )
         index = -1;
     return index;
 }
@@ -511,12 +513,12 @@ int16_t get_active_eeprom_page_entry(int16_t page_index){
 
 	uint32_t dataIndex = (uint32_t) (page_index * EEPROM_PAGE_SIZE) + EEPROM_PAGE_HEADER_SIZE;
 
-    eeprom_pointer =  &eeprom_data[dataIndex];
-    while( index <  EEPROM_MAX_ENTRY_ID && (*( uint16_t*)(eeprom_pointer)) == EEPROM_INVALID_ENTRY_HEADER ){
+	uint32_t eeprom_pointer =  (uint32_t) &eeprom_data[dataIndex];
+    while( index <  EEPROM_MAX_ENTRY_ID &&  *(__IO uint16_t *) eeprom_pointer == EEPROM_INVALID_ENTRY_HEADER ){
         index++;
         eeprom_pointer += EEPROM_ENTRY_SIZE;
     }
-    if((*( uint16_t*)(eeprom_pointer)) != EEPROM_ACTIVE_ENTRY_HEADER )
+    if( *(__IO uint16_t *) eeprom_pointer != EEPROM_ACTIVE_ENTRY_HEADER )
         index = -1;
     return index;
 }
