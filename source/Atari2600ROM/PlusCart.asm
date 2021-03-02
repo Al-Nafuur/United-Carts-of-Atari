@@ -41,11 +41,11 @@ COLOR       = 3         ; color scheme
 ;@BOO
 ; This enables/disables the check for $D8 without changing wait routine length
 
-PLUSACTIVE = $D8      ; <-- $D8 for running on PlusCart, anything else for Stella
+PLUSACTIVE = $D8      ; <-- $D8 for running on hardware, anything else for Stella
 
 SPINNER = 0             ; 0 = spining PlusCart logo, 1 = flashing UnoCart SD logo
 
-    ; MODIFY "MAGNIFY" TO CHANGE SIZE OF PLUSLOGO!!
+    ; MODIFY "MAGNIFY" TO CHANGE SIZE OF LOGO!!
     ; Adjusts the vertical height of the logo (# lines per pixel)
     ; Screen timing will AUTOMATICALLY ADJUST
 
