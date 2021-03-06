@@ -5,22 +5,7 @@
 #include <stdbool.h>
 #include "stm32f4xx_hal.h"
 
-#define UNOCART  1
-#define PLUSCART 2
-#define TRUE     1
-#define FALSE    0
-
-/*
- * Define hardware and periphery
- */
-#define HARDWARE_TYPE             PLUSCART
-#define MENU_TYPE                 PLUSCART
-#define USE_SD_CARD				  FALSE
-#define USE_WIFI                  TRUE
-
-// End of hardware and periphery
-
-#define VERSION                   "2.0.14"
+//#define VERSION /* VERSION moved to "Project" -> "Properties" -> "C/C++ Build" -> "Build Variables" */
 #define PLUSSTORE_API_HOST        "pluscart.firmaplus.de"
 
 #define CHARS_PER_LINE					32
