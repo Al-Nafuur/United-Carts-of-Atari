@@ -319,7 +319,6 @@ static const char **keyboards[]__attribute__((section(".flash0#"))) = {
 
 enum keyboardType lastKb = KEYBOARD_UPPERCASE;
 
-
 int compVersions ( const char * version1, const char * version2 ) {
     unsigned major1 = 0, minor1 = 0, bugfix1 = 0;
     unsigned major2 = 0, minor2 = 0, bugfix2 = 0;
@@ -387,7 +386,7 @@ MENU_ENTRY* generateSetupMenu(MENU_ENTRY *dst) {
 	make_menu_entry(&dst, MENU_TEXT_WIFI_SETUP, Setup_Menu);
 #endif
 #if USE_SD_CARD
-	make_menu_entry(&dst, "Format SD-Card", Menu_Action);
+	make_menu_entry(&dst, MENU_TEXT_FORMAT_SD_CARD, Menu_Action);
 #endif
 	make_menu_entry(&dst, MENU_TEXT_DISPLAY, Setup_Menu);
 	make_menu_entry(&dst, MENU_TEXT_SYSTEM_INFO, Sub_Menu);
@@ -425,24 +424,11 @@ MENU_ENTRY* generateSystemInfo(MENU_ENTRY *dst) {
 	make_menu_entry(&dst, input_field, Leave_Menu);
 
 #if USE_SD_CARD
-    FATFS FatFs; 	//Fatfs handle
-    //Open the file system
-    if (f_mount(&FatFs, "", 1) == FR_OK) {
-        //Let's get some statistics from the SD card
-        DWORD free_clusters, used_size, total_size;
-        FATFS* getFreeFs;
-        if (f_getfree("", &free_clusters, &getFreeFs) == FR_OK) {
-            //Formula comes from ChaN's documentation
-            total_size = (getFreeFs->n_fatent - 2) * getFreeFs->csize;
-            used_size = total_size - (free_clusters * getFreeFs->csize);
-
-        	sprintf(input_field, "SD-Card Size       %d MiB", (int)(total_size / 2048));
-        	make_menu_entry(&dst, input_field, Leave_Menu);
-        	sprintf(input_field, "SD-Card Used       %d MiB", (int)(used_size / 2048));
-        	make_menu_entry(&dst, input_field, Leave_Menu);
-        }
-		f_mount(0, "", 1);
-    }
+	int * sd_stat = sd_card_statistic();
+   	sprintf(input_field, "SD-Card Size       %d MiB", sd_stat[sd_card_total_size] );
+   	make_menu_entry(&dst, input_field, Leave_Menu);
+   	sprintf(input_field, "SD-Card Used       %d MiB", sd_stat[sd_card_used_size] );
+   	make_menu_entry(&dst, input_field, Leave_Menu);
 #endif
 
 	*input_field = 0;
@@ -562,11 +548,14 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			menuStatusMessage = STATUS_SETUP_SYSTEM_INFO;
 			dst = generateSystemInfo(dst);
 			loadStore = true;
-
 		}
-
-
-
+#if USE_SD_CARD
+		else if (strstr(mts, MENU_TEXT_FORMAT_SD_CARD) == mts) {
+			menuStatusMessage = sd_card_format() ? done : failed;
+			dst = generateSetupMenu(dst);
+			loadStore = true;
+		}
+#endif
 #if USE_WIFI
 		// WiFi Setup
 		else if (strstr(mts, MENU_TEXT_WIFI_SETUP) == mts) {
@@ -856,9 +845,12 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 		}
 #if USE_SD_CARD
 		else if (strstr(curPath, MENU_TEXT_SEARCH_FOR_ROM) == curPath) {
-			// Cart with SD and WiFi will search only here (SD) !
+			// Cart with SD and WiFi will search only here (SD) ! -> maybe use "Search SD ROM" ?
 			loadStore = false;
-			make_menu_entry(&dst, "SD Search not Implemented", Leave_Menu);
+			truncate_curPath(); // delete "/Enter"
+			make_menu_entry(&dst, "..", Leave_Menu);
+			http_request_header[0] = '\0';
+			sd_card_find_file( http_request_header, &curPath[sizeof(MENU_TEXT_SEARCH_FOR_ROM)], &dst, &num_menu_entries );
 		}
 #endif
 		else if (strstr(curPath, MENU_TEXT_WIFI_RECONNECT) == curPath){
@@ -886,6 +878,7 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
     		// check for firmware.bin file in SD root
     		int firmware_file_size = sd_card_file_size("firmware.bin");
     		if(firmware_file_size > 0){
+    			// ToDo make_menu_entry_filesize();
     			dst->filesize = (uint32_t)firmware_file_size;
     			strcpy(dst->entryname, MENU_TEXT_SD_FIRMWARE_UPDATE);
         		dst->type = Menu_Action;
@@ -903,9 +896,8 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 
 #if USE_SD_CARD
     	else if(d->type == SD_Sub_Menu || strstr(curPath, MENU_TEXT_SD_CARD_CONTENT) == curPath){
-    		make_menu_entry(&dst, "..", Leave_Menu);
-    		sd_card_file_list(&curPath[sizeof(MENU_TEXT_SD_CARD_CONTENT) - 1], &dst, &num_menu_entries );
-            qsort((MENU_ENTRY *)&menu_entries[0], num_menu_entries, sizeof(MENU_ENTRY), entry_compare);
+    		if(sd_card_file_list(&curPath[sizeof(MENU_TEXT_SD_CARD_CONTENT) - 1], &dst, &num_menu_entries ))
+    			qsort((MENU_ENTRY *)&menu_entries[0], num_menu_entries, sizeof(MENU_ENTRY), entry_compare);
     	}
 #endif
 

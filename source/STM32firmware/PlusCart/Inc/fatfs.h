@@ -40,10 +40,17 @@ extern FIL USERFile; /* File object for USER */
 void MX_FATFS_Init(void);
 
 /* USER CODE BEGIN Prototypes */
-int sd_card_file_size( char * );
-void sd_card_file_list( char *, MENU_ENTRY **dst, int * );
-uint32_t sd_card_file_request( uint8_t *, char *, uint32_t, uint32_t );
+enum sd_card_stat{
+	sd_card_total_size,
+	sd_card_used_size,
+};
 
+bool sd_card_file_list( char *, MENU_ENTRY **dst, int * );
+uint32_t sd_card_file_request( uint8_t *, char *, uint32_t, uint32_t );
+bool sd_card_find_file( char *, char *, MENU_ENTRY **dst, int * );
+int sd_card_file_size( char * );
+int * sd_card_statistic();
+bool sd_card_format(void);
 /* USER CODE END Prototypes */
 #ifdef __cplusplus
 }

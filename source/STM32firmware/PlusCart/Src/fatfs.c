@@ -31,6 +31,7 @@ FILINFO fno;
 
 bool is_text_file(char *);
 bool is_valid_file(char *);
+FRESULT recusive_search( char *, char *, MENU_ENTRY **dst, int *, FIL * );
 
 /* USER CODE END Variables */
 
@@ -58,63 +59,134 @@ DWORD get_fattime(void)
 
 /* USER CODE BEGIN Application */
 
+/*
+ * Private functions
+ *
+ */
+
 bool is_text_file(char * filename){
-	return false;
+	char *dot = strrchr(filename, '.');
+	if(!dot || dot == filename) return false;
+	dot++;
+	return (strcasecmp(dot, "txt") == 0);
 }
 
 bool is_valid_file(char * filename){
 	return true;
 }
 
-int sd_card_file_size(char * path){
-	FATFS FatFs;
-	int file_size = -1;
+FRESULT recusive_search( char *path, char *pattern, MENU_ENTRY **dst, int *num_menu_entries, FIL* search_results_file){
+    FRESULT res;
+    DIR dir;
+    UINT i;
+	res = f_opendir(&dir, path);                       /* Open the directory */
+	if (res == FR_OK) {
+		for (;;) {
+			res = f_readdir(&dir, &fno);                    /* Read a directory item */
+			if( res != FR_OK || fno.fname[0] == 0 ) break;  /* Break on error or end of dir */
+			if( fno.fattrib & (AM_HID | AM_SYS) ) continue; /* Skip hidden and system file/dir */
+			if( fno.fattrib & AM_DIR ){                     /* It is a directory */
+				i = strlen(path);
+				strcat(path, "/");
+				strcat(path, fno.fname);
+				res = recusive_search(path, pattern, dst, num_menu_entries, search_results_file ); /* Enter the directory */
+				if (res != FR_OK) break;
+				path[i] = 0;
+			}else if( strstr(fno.fname, pattern) != NULL ){                                      /* It is a file. */
+               	if(is_text_file(fno.fname) || !is_valid_file(fno.fname)){
+               		continue;
+               	}
+               	f_puts (path, search_results_file);
+               	f_puts ("/", search_results_file);
+               	f_puts (fno.fname, search_results_file);
+               	f_puts ("\n", search_results_file);
 
-    if ( f_mount(&FatFs, "", 1) == FR_OK) {
-    	if( f_stat(path, &fno) == FR_OK)
-    		file_size = (int)fno.fsize;
-    	f_mount(0, "", 1);
-    }
-	return file_size;
+                (*dst)->type = SD_Cart_File;
+                (*dst)->filesize = (uint32_t) fno.fsize;
+                strncpy((*dst)->entryname, fno.fname, CHARS_PER_LINE);
+                (*dst)++;
+                (*num_menu_entries)++;
+			}
+		}
+		f_closedir(&dir);
+	}
+
+    return res;
 }
 
-void sd_card_file_list( char *path, MENU_ENTRY **dst, int *num_menu_entries ){
-	FATFS FatFs;
+FRESULT open_system_file(FIL* sys_file, char * name, BYTE mode){
+	char path[40] = "/System";
+	if (f_stat(path, &fno) != FR_OK ){
+		 f_mkdir(path);
+		 f_chmod(path, AM_HID, AM_HID);
+	}
+	strcat(path, "/");
+	strncat(path, name, 32);
+	return f_open(sys_file, path, mode);
+}
 
-    if ( f_mount(&FatFs, "", 1) == FR_OK) {
-            DIR dir;
-            if ( f_opendir(&dir, path) == FR_OK) {
-                    while ( (*num_menu_entries) < NUM_MENU_ITEMS) {
-                            if (f_readdir(&dir, &fno) != FR_OK || fno.fname[0] == 0)
-                                    break;
-                            if (fno.fattrib & (AM_HID | AM_SYS))
-                                    continue;
-                            (*dst)->type = fno.fattrib & AM_DIR ? SD_Sub_Menu : SD_Cart_File;
-                            if ((*dst)->type == SD_Cart_File ){
-                            	if(is_text_file(fno.fname)){
-                            		(*dst)->type = SD_Sub_Menu; // text files are "fake" directories
-                            	}else if(!is_valid_file(fno.fname)){
-                            		continue;
-                            	}
-                            }
-                            // copy file record
-                            (*dst)->filesize = (uint32_t) fno.fsize;
-                            strncpy((*dst)->entryname, fno.fname, 32);
-                            (*dst)++;
-                            (*num_menu_entries)++;
-                    }
-                    f_closedir(&dir);
-/*            }else if(is_text_file(path) ){
-            	FIL fil;
-            	if(f_open(&fil, path, FA_READ) == FR_OK){
 
-        			f_close(&fil);
-            	}
+/*
+ *  Public functions
+ *
+ *
  */
-            }
-            f_mount(0, "", 1);
+
+bool sd_card_file_list( char *path, MENU_ENTRY **dst, int *num_menu_entries ){
+	FATFS FatFs;
+	bool list_needs_sorting = true;
+    if ( f_mount(&FatFs, "", 1) == FR_OK) {
+        if(is_text_file(path) ){
+			FIL fil;
+			list_needs_sorting = false;
+			if(f_open(&fil, path, FA_READ) == FR_OK){
+				while(f_gets((*dst)->entryname, CHARS_PER_LINE, &fil) != 0 && (*num_menu_entries) < NUM_MENU_ITEMS){
+						(*dst)->type = Leave_Menu;
+						(*dst)->filesize = 0;
+						(*dst)->font = user_settings.font_style;
+						(*dst)++;
+						(*num_menu_entries)++;
+				}
+				f_close(&fil);
+			}
+        }else{
+    		DIR dir;
+			(*dst)->type = Leave_Menu;
+			(*dst)->filesize = 0;
+			strcpy((*dst)->entryname, "..");
+			(*dst)->font = user_settings.font_style;
+			(*dst)++;
+			(*num_menu_entries)++;
+
+        	if ( f_opendir(&dir, path) == FR_OK) {
+				while ( (*num_menu_entries) < NUM_MENU_ITEMS) {
+						if (f_readdir(&dir, &fno) != FR_OK || fno.fname[0] == 0)
+								break;
+						if (fno.fattrib & (AM_HID | AM_SYS))
+								continue;
+						(*dst)->type = fno.fattrib & AM_DIR ? SD_Sub_Menu : SD_Cart_File;
+						if ((*dst)->type == SD_Cart_File ){
+							if(is_text_file(fno.fname)){
+								(*dst)->type = SD_Sub_Menu; // text files are "fake" directories
+							}else if(!is_valid_file(fno.fname)){
+								continue;
+							}
+						}
+						// copy file record
+						(*dst)->filesize = (uint32_t) fno.fsize;
+						strncpy((*dst)->entryname, fno.fname, CHARS_PER_LINE);
+						(*dst)->font = user_settings.font_style;
+						(*dst)++;
+						(*num_menu_entries)++;
+				}
+				f_closedir(&dir);
+        	}
+		}
+		f_mount(0, "", 1);
     }
+    return list_needs_sorting;
 }
+
 
 uint32_t sd_card_file_request(uint8_t *ext_buffer, char *path, uint32_t start_pos, uint32_t length ){
 	UINT bytes_read = 0;
@@ -135,6 +207,58 @@ uint32_t sd_card_file_request(uint8_t *ext_buffer, char *path, uint32_t start_po
 	}
 	return (uint32_t) bytes_read;
 }
+
+bool sd_card_find_file( char *path, char *pattern, MENU_ENTRY **dst, int *num_menu_entries){
+	FATFS FatFs;
+    FRESULT res = f_mount(&FatFs, "", 1);
+    FIL search_results_file;
+    if (res == FR_OK) {
+    	res = open_system_file(&search_results_file, "Search", (FA_CREATE_ALWAYS | FA_WRITE | FA_READ) );
+    	if(res == FR_OK){
+    		res = recusive_search(path, pattern, dst, num_menu_entries, &search_results_file );
+    		f_close(&search_results_file);
+    	}
+		f_mount(0, "", 1);
+    }
+    return (res == FR_OK);
+}
+
+int sd_card_file_size(char * path){
+	FATFS FatFs;
+	int file_size = -1;
+
+    if ( f_mount(&FatFs, "", 1) == FR_OK) {
+    	if( f_stat(path, &fno) == FR_OK)
+    		file_size = (int)fno.fsize;
+    	f_mount(0, "", 1);
+    }
+	return file_size;
+}
+
+int * sd_card_statistic(){
+    FATFS FatFs;
+	static int response[2] = {0, 0};
+    if (f_mount(&FatFs, "", 1) == FR_OK) {
+        DWORD free_clusters, used_size, total_size;
+        FATFS* getFreeFs;
+        if (f_getfree("", &free_clusters, &getFreeFs) == FR_OK) {
+            // Formula comes from ChaN's documentation
+            total_size = (getFreeFs->n_fatent - 2) * getFreeFs->csize;
+            used_size = total_size - (free_clusters * getFreeFs->csize);
+            response[0] = (int)(total_size / 2048);
+            response[1] = (int)(used_size / 2048);
+        }
+		f_mount(0, "", 1);
+    }
+    return response;
+}
+
+bool sd_card_format(void){
+	BYTE work[512]; /* Work area (larger is better for processing time) */
+	return f_mkfs( "", FM_ANY, 0, work, sizeof work) == FR_OK;
+}
+
+
 
 /* USER CODE END Application */
 

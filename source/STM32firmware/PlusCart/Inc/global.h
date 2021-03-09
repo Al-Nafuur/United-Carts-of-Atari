@@ -40,6 +40,8 @@
 #define MENU_TEXT_FONT_CAPTAIN_MORGAN_SPICE "  Captain Morgan Spice"
 #define MENU_TEXT_FONT_GLACIER_BELLE        "  Glacier Belle"
 
+#define MENU_TEXT_FORMAT_SD_CARD            "Format SD-Card"
+
 #define MENU_TEXT_SPACING_SETUP             "Line Spacing"
 #define MENU_TEXT_SPACING_DENSE             "  Dense"
 #define MENU_TEXT_SPACING_MEDIUM            "  Regular"
