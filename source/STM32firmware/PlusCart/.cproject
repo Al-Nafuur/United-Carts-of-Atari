@@ -413,7 +413,7 @@
                 				
                 <macros>
                     					
-                    <stringMacro name="version" type="VALUE_TEXT" value="2.0.14"/>
+                    <stringMacro name="version" type="VALUE_TEXT" value="2.0.16"/>
                     				
                 </macros>
                 				
