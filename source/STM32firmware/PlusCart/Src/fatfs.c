@@ -25,6 +25,7 @@ FIL USERFile;       /* File object for USER */
 
 /* USER CODE BEGIN Variables */
 #include <string.h>
+#include <ctype.h>
 #include <stdbool.h>
 
 FILINFO fno;
@@ -71,9 +72,41 @@ bool is_text_file(char * filename){
 	return (strcasecmp(dot, "txt") == 0);
 }
 
+int find_last_path_seperator(char * path){
+    int i = (int)strlen(path) - 1;
+    for (; i >= 0 ; i--){
+        if (path[i] == PATH_SEPERATOR) break;
+	}
+    return i;
+}
+
+void basename(char * path, char * filename){
+	int pos = find_last_path_seperator(path) + 1;
+	memset(filename, 0, 33);
+	strncpy(filename, &path[pos], 32);
+}
+
 bool is_valid_file(char * filename){
 	return true;
 }
+
+char * strcasestr(const char *s, const char *find){
+	char c, sc;
+	size_t len;
+	if ((c = *find++) != 0) {
+		c = (char)tolower((unsigned char)c);
+		len = strlen(find);
+		do {
+			do {
+				if ((sc = *s++) == 0)
+					return (NULL);
+			} while ((char)tolower((unsigned char)sc) != c);
+		} while (strncasecmp(s, find, len) != 0);
+		s--;
+	}
+	return ((char *)s);
+}
+
 
 FRESULT recusive_search( char *path, char *pattern, MENU_ENTRY **dst, int *num_menu_entries, FIL* search_results_file){
     FRESULT res;
@@ -92,20 +125,28 @@ FRESULT recusive_search( char *path, char *pattern, MENU_ENTRY **dst, int *num_m
 				res = recusive_search(path, pattern, dst, num_menu_entries, search_results_file ); /* Enter the directory */
 				if (res != FR_OK) break;
 				path[i] = 0;
-			}else if( strstr(fno.fname, pattern) != NULL ){                                      /* It is a file. */
-               	if(is_text_file(fno.fname) || !is_valid_file(fno.fname)){
-               		continue;
-               	}
-               	f_puts (path, search_results_file);
-               	f_puts ("/", search_results_file);
-               	f_puts (fno.fname, search_results_file);
-               	f_puts ("\n", search_results_file);
+			}else{
+				// check if filename contains search string (case insensitive)
+				char * test = strcasestr(fno.fname, pattern);
+				// basically we are looking for a word boundary before the match.
+				if( test && (strlen(test) == strlen(fno.fname) ||
+						  test[-1] < 48 || test[-1] > 122 ||
+						  (test[-1] > 90 && test[-1] < 97) ) ){
+	               	if(is_text_file(fno.fname) || !is_valid_file(fno.fname)){
+	               		continue;
+	               	}
+	               	f_puts (path, search_results_file);
+	               	f_puts ("/", search_results_file);
+	               	f_puts (fno.fname, search_results_file);
+	               	f_puts ("\n", search_results_file);
 
-                (*dst)->type = SD_Cart_File;
-                (*dst)->filesize = (uint32_t) fno.fsize;
-                strncpy((*dst)->entryname, fno.fname, CHARS_PER_LINE);
-                (*dst)++;
-                (*num_menu_entries)++;
+	                (*dst)->type = SD_Cart_File;
+	                (*dst)->filesize = (uint32_t) fno.fsize;
+	                memset((*dst)->entryname, 0, 33);
+	                strncpy((*dst)->entryname, fno.fname, CHARS_PER_LINE);
+	                (*dst)++;
+	                (*num_menu_entries)++;
+				}
 			}
 		}
 		f_closedir(&dir);
@@ -193,8 +234,25 @@ uint32_t sd_card_file_request(uint8_t *ext_buffer, char *path, uint32_t start_po
 	FATFS FatFs;
 	FIL fil;
 	FRESULT read_result;
+	char * sd_file;
 	if (f_mount(&FatFs, "", 1) == FR_OK){
-		if (f_open(&fil, &path[sizeof(MENU_TEXT_SD_CARD_CONTENT)], FA_READ) == FR_OK){
+		if(strstr(path, MENU_TEXT_SD_CARD_CONTENT) == path){
+			sd_file = &path[sizeof(MENU_TEXT_SD_CARD_CONTENT)];
+		}else if(strstr(path, MENU_TEXT_SEARCH_FOR_ROM) == path){
+	    	if(open_system_file(&fil, "Search", (FA_OPEN_EXISTING | FA_READ) ) == FR_OK){
+	    		char filename[33];
+	    		basename(path, filename);
+	    		while( f_gets( path, 255, &fil )){
+	    			int pos = find_last_path_seperator(path) + 1;
+		    		if(strstr(&path[pos], filename) == &path[pos] ){
+		    			sd_file = path;
+		    			break;
+		    		}
+	    		}
+	    		f_close(&fil);
+	    	}
+		}
+		if (sd_file && f_open(&fil, sd_file, FA_READ) == FR_OK){
 			if (start_pos == 0 || f_lseek(&fil, start_pos) == FR_OK) {
 				read_result = f_read(&fil, ext_buffer, length, &bytes_read);
 				if (read_result != FR_OK) {
