@@ -57,9 +57,7 @@ extern "C" {
 
 void flash_firmware_update(uint32_t)__attribute__((section(".data#")));
 
-#if USE_WIFI
 uint32_t flash_download(char *, uint32_t , uint32_t , bool );
-#endif
 
 uint32_t flash_file_request( uint8_t *, uint32_t, uint32_t, uint32_t );
 

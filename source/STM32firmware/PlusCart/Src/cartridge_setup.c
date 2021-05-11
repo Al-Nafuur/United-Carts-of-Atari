@@ -9,6 +9,9 @@
 #if USE_WIFI
 #include "esp8266.h"
 #endif
+#if USE_SD_CARD
+#include "fatfs.h"
+#endif
 #include "flash.h"
 
 #include "cartridge_setup.h"
@@ -93,14 +96,14 @@ bool setup_cartridge_image(const char* filename, uint32_t image_size, uint8_t* b
     	}
     	else if(d->type == SD_Cart_File ){
 #if USE_SD_CARD
-    		bytes_read = 0; // toDo read from SD-Card to CCM_RAM
+    		bytes_read = sd_card_file_request( CCM_RAM, (char*) filename, CCM_IMAGE_OFFSET, ccm_size );
 #else
     		bytes_read = 0; // d->type == SD_Cart_File and no SD-Card ???
 #endif
 
     	}
-    	else
-    		bytes_read = flash_file_request( CCM_RAM, d->flash_base_address, CCM_IMAGE_OFFSET, ccm_size );
+     	else
+   		bytes_read = flash_file_request( CCM_RAM, d->flash_base_address, CCM_IMAGE_OFFSET, ccm_size );
 
         if (bytes_read != ccm_size)	return false;
 

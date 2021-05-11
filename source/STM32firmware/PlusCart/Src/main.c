@@ -1226,7 +1226,7 @@ void emulate_cartridge(CART_TYPE cart_type, MENU_ENTRY *d)
 		emulate_DPC_cartridge((uint32_t)cart_size_bytes);
 
 	else if (cart_type.base_type == base_type_AR)
-		emulate_ar_cartridge(curPath, cart_size_bytes, buffer, user_settings.tv_mode);
+		emulate_ar_cartridge(curPath, cart_size_bytes, buffer, user_settings.tv_mode, d);
 
 	else if (cart_type.base_type == base_type_PP)
 		emulate_pp_cartridge( buffer + 8*1024);

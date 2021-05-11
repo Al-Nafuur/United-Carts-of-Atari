@@ -142,7 +142,7 @@ FRESULT recusive_search( char *path, char *pattern, MENU_ENTRY **dst, int *num_m
 
 	                (*dst)->type = SD_Cart_File;
 	                (*dst)->filesize = (uint32_t) fno.fsize;
-	                memset((*dst)->entryname, 0, 33);
+	                memset((*dst)->entryname, 0, CHARS_PER_LINE+1);
 	                strncpy((*dst)->entryname, fno.fname, CHARS_PER_LINE);
 	                (*dst)++;
 	                (*num_menu_entries)++;
@@ -215,7 +215,10 @@ bool sd_card_file_list( char *path, MENU_ENTRY **dst, int *num_menu_entries ){
 						}
 						// copy file record
 						(*dst)->filesize = (uint32_t) fno.fsize;
-						strncpy((*dst)->entryname, fno.fname, CHARS_PER_LINE);
+						if(strlen(fno.fname ) < CHARS_PER_LINE+1 )
+							strncpy((*dst)->entryname, fno.fname, CHARS_PER_LINE);
+						else
+							strncpy((*dst)->entryname, fno.altname, 14);
 						(*dst)->font = user_settings.font_style;
 						(*dst)++;
 						(*num_menu_entries)++;

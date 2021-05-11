@@ -24,7 +24,7 @@ enum Transmission_State{
 	Receive_Finished
 };
 
-
+#if USE_WIFI
 #define setup_plus_rom_functions() \
 		uint8_t receive_buffer_write_pointer = 0, receive_buffer_read_pointer = 0, content_counter = 0; \
 		uint8_t out_buffer_write_pointer = 0, out_buffer_send_pointer = 0; \
@@ -33,6 +33,18 @@ enum Transmission_State{
 		uint16_t content_len; \
 		int content_length_pos = header_length - 5; \
 		enum Transmission_State huart_state = No_Transmission; \
+
+#else //Todo make setup_plus_rom_functions empty if no WiFi
+#define setup_plus_rom_functions() \
+		uint8_t receive_buffer_write_pointer = 0, receive_buffer_read_pointer = 0, content_counter = 0; \
+		uint8_t out_buffer_write_pointer = 0, out_buffer_send_pointer = 0; \
+		uint8_t receive_buffer[256], out_buffer[256]; \
+		uint8_t prev_c = 0, prev_prev_c = 0, i, c; \
+		uint16_t content_len; \
+		int content_length_pos = header_length - 5; \
+		enum Transmission_State huart_state = No_Transmission; \
+
+#endif
 
 #if USE_WIFI
 #define process_transmission() \
