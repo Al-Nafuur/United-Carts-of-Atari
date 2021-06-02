@@ -41,11 +41,11 @@ COLOR       = 3         ; color scheme
 ;@BOO
 ; This enables/disables the check for $D8 without changing wait routine length
 
-PLUSACTIVE = $D8      ; <-- $D8 for running on PlusCart, anything else for Stella
+PLUSACTIVE = $D8      ; <-- $D8 for running on hardware, anything else for Stella
 
-SPINNER = 0             ; 0 = spins, 1 = blinks
+SPINNER = 0             ; 0 = spining PlusCart logo, 1 = flashing UnoCart SD logo
 
-    ; MODIFY "MAGNIFY" TO CHANGE SIZE OF PLUSLOGO!!
+    ; MODIFY "MAGNIFY" TO CHANGE SIZE OF LOGO!!
     ; Adjusts the vertical height of the logo (# lines per pixel)
     ; Screen timing will AUTOMATICALLY ADJUST
 
@@ -631,7 +631,12 @@ FirstStart
                     pha
                     bne .clearLoop
 
-  	                lda $1FF4                       ; enable comm Area
+                    sta SWCHA                       ; Reset RIOT (may need to be done after exit emulation)
+                    sta SWACNT
+                    sta SWCHB
+                    sta SWBCNT
+
+                    lda $1FF4                       ; enable comm Area
 
 
                     jsr DetectSystemType
@@ -643,7 +648,7 @@ FirstStart
 
 
 _init_blocker       lda SWCHA
-                    bpl _init_blocker               ; why...?
+                    bpl _init_blocker               ; wait for release of joystick-right after exit emulation event
 
 
 MainLoop
@@ -747,7 +752,7 @@ _x1	; check up
 
                     dec CurItem
 
-.debounce           lda #10
+.debounce           lda #7
                     sta StickDelayCount
                     bne _x4
 
@@ -845,6 +850,9 @@ GameInit
                     lda #HEADER_COL          ; set HEADER_COL for first textline in RAM
                     sta LineBackColor
                     
+                    lda #1
+                    sta StickDelayCount
+
                     lda CurItem
                     cmp ItemsOnActPage
                     bcc EndGameInit
@@ -966,10 +974,10 @@ PlusLogoAnimation
 
     IF SPINNER = 1
 
-    .byte 0, %00000000,%00111000,%01010100,%01111100,%01010100,%00111000,%00000000
-    .byte 0, %00000000,%00000000,%00111000,%00111000,%00111000,%00000000,%00000000
-    .byte 0, %00000000,%00000000,%00000000,%00010000,%00000000,%00000000,%00000000
-    .byte 0, %00000000,%01000100,%10010010,%10111010,%10010010,%01000100,%00000000 ; static 
+    .byte 0, %00000000,%00000000,%00000000,%00011000,%00000000,%00000000,%00000000
+    .byte 0, %00000000,%00000000,%00011000,%00111100,%00011000,%00000000,%00000000
+    .byte 0, %00000000,%01001100,%00101010,%01101010,%01001010,%00101100,%00000000
+    .byte 0, %11001100,%00101010,%00101001,%01001001,%10001001,%10001010,%01101100 ; static
 
     ENDIF
 

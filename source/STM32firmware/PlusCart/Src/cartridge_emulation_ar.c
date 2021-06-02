@@ -2,7 +2,14 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "global.h"
+#if USE_WIFI
 #include "esp8266.h"
+#endif
+#if USE_SD_CARD
+#include "fatfs.h"
+#endif
+#include "flash.h"
 
 #include "cartridge_io.h"
 #include "cartridge_emulation.h"
@@ -63,13 +70,23 @@ typedef struct __attribute__((packed)) {
 	uint8_t block_checksum[48];
 } LoadHeader;
 
-static void setup_multiload_map(uint8_t *multiload_map, uint32_t multiload_count, const char* cartridge_path) {
+static void setup_multiload_map(uint8_t *multiload_map, uint32_t multiload_count, const char* cartridge_path, MENU_ENTRY *d) {
 	uint32_t i,start;
 	uint8_t multiload_id;
 	memset(multiload_map, 0, 0xff);
 	for ( i = 0; i < multiload_count; i++) {
 		start = ((i + 1) * 8448 - 251); // - 256 + 5 -> multiload_id
-		esp8266_PlusStore_API_file_request( &multiload_id, (char*) cartridge_path, start, 1 );
+		if(d->type == Cart_File ){
+#if USE_WIFI
+			esp8266_PlusStore_API_file_request( &multiload_id, (char*) cartridge_path, start, 1 );
+#endif
+		}else if(d->type == SD_Cart_File ){
+#if USE_SD_CARD
+			sd_card_file_request( &multiload_id, (char*) cartridge_path, start, 1 );
+#endif
+		}else{
+			flash_file_request( &multiload_id, d->flash_base_address, start, 1 );
+		}
 		multiload_map[multiload_id] = (uint8_t) i;
 	}
 }
@@ -95,13 +112,24 @@ static void setup_rom(uint8_t* rom, int tv_mode) {
 	}
 }
 
-static void read_multiload(uint8_t *buffer, const char* cartridge_path, uint8_t physical_index, unsigned int image_size) {
+static void read_multiload(uint8_t *buffer, const char* cartridge_path, uint8_t physical_index, unsigned int image_size, MENU_ENTRY *d ) {
 	__enable_irq();
 
 	uint32_t start = physical_index * 8448U;
 	uint16_t size = (uint16_t) ((image_size < 8448U)?image_size:8448U);
 
-	esp8266_PlusStore_API_file_request( buffer, (char*) cartridge_path, start, size );
+	if(d->type == Cart_File ){
+#if USE_WIFI
+		esp8266_PlusStore_API_file_request( buffer, (char*) cartridge_path, start, size );
+#endif
+	}
+	else if(d->type == SD_Cart_File ){
+#if USE_SD_CARD
+		sd_card_file_request( buffer, (char*) cartridge_path, start, size );
+#endif
+	}
+ 	else
+		flash_file_request( buffer, d->flash_base_address, start, size );
 
 	if(image_size < 8448){
 		memcpy(&buffer[ 8448 - 256 ], ourDefaultHeader, 0x100);
@@ -110,10 +138,10 @@ static void read_multiload(uint8_t *buffer, const char* cartridge_path, uint8_t 
 	__disable_irq();
 }
 
-static void load_multiload(uint8_t *ram, uint8_t *rom, uint8_t physical_index, const char* cartridge_path, uint8_t *buffer, unsigned int image_size) {
+static void load_multiload(uint8_t *ram, uint8_t *rom, uint8_t physical_index, const char* cartridge_path, uint8_t *buffer, unsigned int image_size, MENU_ENTRY *d ) {
 	LoadHeader *header = (void*)buffer + 8448 - 256;
 
-	read_multiload(buffer, cartridge_path, physical_index, image_size);
+	read_multiload(buffer, cartridge_path, physical_index, image_size, d);
 
 	for (uint8_t i = 0; i < header->block_count; i++) {
 		uint8_t location = header->block_location[i];
@@ -129,7 +157,7 @@ static void load_multiload(uint8_t *ram, uint8_t *rom, uint8_t physical_index, c
 	rom[0x7f3] = header->entry_hi;
 }
 
-void emulate_ar_cartridge(const char* cartridge_path, unsigned int image_size, uint8_t* buffer, int tv_mode) {
+void emulate_ar_cartridge(const char* cartridge_path, unsigned int image_size, uint8_t* buffer, int tv_mode, MENU_ENTRY *d ) {
 	uint8_t *ram = buffer;
 	uint8_t *rom = ram + 0x1800;
 	uint8_t *multiload_map = rom + 0x0800;
@@ -148,7 +176,7 @@ void emulate_ar_cartridge(const char* cartridge_path, unsigned int image_size, u
 	memset(ram, 0, 0x1800);
 
 	setup_rom(rom, tv_mode);
-	setup_multiload_map(multiload_map, multiload_count, cartridge_path);
+	setup_multiload_map(multiload_map, multiload_count, cartridge_path, d);
 
 	if (!reboot_into_cartridge()) return;
 
@@ -167,7 +195,7 @@ void emulate_ar_cartridge(const char* cartridge_path, unsigned int image_size, u
 			else
 				value_out = addr < 0x1800 ? bank0[addr & 0x07ff] : bank1[addr & 0x07ff];
 
-			DATA_OUT = ((uint16_t)value_out);
+			DATA_OUT = ((uint16_t)value_out) DATA_OUT_SHIFT;
 			SET_DATA_MODE_OUT;
 
 			if (addr == 0x1ff9 && bank1 == rom && last_address <= 0xff) {
@@ -175,7 +203,7 @@ void emulate_ar_cartridge(const char* cartridge_path, unsigned int image_size, u
 
 				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
 
-				load_multiload(ram, rom, multiload_map[data_prev & 0xff], cartridge_path, multiload_buffer, image_size);
+				load_multiload(ram, rom, multiload_map[(data_prev DATA_IN_SHIFT) & 0xff], cartridge_path, multiload_buffer, image_size, d);
 
 			}
 			else if ((addr & 0x0f00) == 0 && (transition_count > 5 || !write_ram_enabled)) {
@@ -238,11 +266,11 @@ void emulate_ar_cartridge(const char* cartridge_path, unsigned int image_size, u
 			last_address = addr;
             if(addr == SWCHB){
         		while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-        		if( !(data_prev & 0x1) && joy_status)
+        		if( !((data_prev DATA_IN_SHIFT) & 0x1) && joy_status)
         			break;
             }else if(addr == SWCHA){
         		while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-        		joy_status = !(data_prev & 0x80);
+        		joy_status = !((data_prev DATA_IN_SHIFT) & 0x80);
             }else{
         		while (ADDR_IN == addr);
             }

@@ -270,7 +270,7 @@ HAL_StatusTypeDef HAL_FLASHEx_Erase_IT(FLASH_EraseInitTypeDef *pEraseInit)
     pFlash.VoltageForErase = (uint8_t)pEraseInit->VoltageRange;
 
     /*Erase 1st sector and wait for IT*/
-    FLASH_Erase_Sector(pEraseInit->Sector, (uint8_t)(pEraseInit->VoltageRange));
+    FLASH_Erase_Sector(pEraseInit->Sector, pEraseInit->VoltageRange);
   }
 
   return status;
@@ -312,7 +312,7 @@ HAL_StatusTypeDef HAL_FLASHEx_OBProgram(FLASH_OBProgramInitTypeDef *pOBInit)
   /*Read protection configuration*/
   if((pOBInit->OptionType & OPTIONBYTE_RDP) == OPTIONBYTE_RDP)
   {
-    status = FLASH_OB_RDP_LevelConfig((uint8_t)(pOBInit->RDPLevel));
+    status = FLASH_OB_RDP_LevelConfig(pOBInit->RDPLevel);
   }
 
   /*USER  configuration*/
@@ -326,7 +326,7 @@ HAL_StatusTypeDef HAL_FLASHEx_OBProgram(FLASH_OBProgramInitTypeDef *pOBInit)
   /*BOR Level  configuration*/
   if((pOBInit->OptionType & OPTIONBYTE_BOR) == OPTIONBYTE_BOR)
   {
-    status = FLASH_OB_BOR_LevelConfig((uint8_t)(pOBInit->BORLevel));
+    status = FLASH_OB_BOR_LevelConfig(pOBInit->BORLevel);
   }
 
   /* Process Unlocked */
@@ -1042,7 +1042,7 @@ static HAL_StatusTypeDef FLASH_OB_EnableWRP(uint32_t WRPSector, uint32_t Banks)
 
   if(status == HAL_OK)
   { 
-    *(__IO uint16_t*)OPTCR_BYTE2_ADDRESS &= (uint16_t)(~WRPSector);
+    *(__IO uint16_t*)OPTCR_BYTE2_ADDRESS &= (~WRPSector);  
   }
   
   return status;
@@ -1234,7 +1234,7 @@ static HAL_StatusTypeDef FLASH_OB_BOR_LevelConfig(uint8_t Level)
   assert_param(IS_OB_BOR_LEVEL(Level));
 
   /* Set the BOR Level */
-  *(__IO uint8_t *)OPTCR_BYTE0_ADDRESS &= (uint8_t)(~FLASH_OPTCR_BOR_LEV);
+  *(__IO uint8_t *)OPTCR_BYTE0_ADDRESS &= (~FLASH_OPTCR_BOR_LEV);
   *(__IO uint8_t *)OPTCR_BYTE0_ADDRESS |= Level;
   
   return HAL_OK;

@@ -15,6 +15,7 @@
  * C library for interfacing the ESP8266 WiFi transceiver module (esp-01)
  * with a STM32F4 micro controller. Should be used with the HAL Library.
  */
+#include "global.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -22,6 +23,8 @@
 #include "stm32_udid.h"
 #include "esp8266_AT_WifiManager.h"
 #include "esp8266.h"
+
+extern UART_HandleTypeDef huart1;
 
 /* private functions */
 void get_boundary_http_header(char *) __attribute__((section(".flash01")));
@@ -44,6 +47,72 @@ void close_tcp_link(char link_id) __attribute__((section(".flash01")));
 
 char tmp_uart_buffer[50];
 
+
+int esp8266_file_list( char *path, MENU_ENTRY **dst, int *num_menu_entries, uint8_t *plus_store_status, char * status_message){
+	int char_counter = 0, trim_path = 0;
+	bool is_entry_row, is_status_row;
+	uint8_t pos = 0, c;
+	if( esp8266_PlusStore_API_connect() ){
+		esp8266_PlusStore_API_prepare_request_header(path, false);
+
+		esp8266_print(http_request_header);
+		uint16_t bytes_read = 0, content_length = esp8266_skip_http_response_header();
+		is_status_row = true;
+		while(bytes_read < content_length){
+			if(HAL_UART_Receive(&huart1, &c, 1, 15000 ) != HAL_OK){
+				break;
+			}
+			if(is_status_row){
+				if (c == '\n'){
+					is_status_row = false;
+					status_message[pos] = '\0';
+					pos = 0;
+				}else if(bytes_read < 1){
+					plus_store_status[bytes_read] = (uint8_t)c;
+				}else if(bytes_read < 2){
+					trim_path = c - '0';
+				}else{
+					status_message[pos++] = c;
+				}
+
+
+			}else if((*num_menu_entries) < NUM_MENU_ITEMS){
+				if(char_counter == 0){ // first char defines if its an entry row
+					is_entry_row = (c >= '0' && c <= '9' ); // First char is entry.type '0' to '9'
+					if(is_entry_row){
+						(*dst)->type = c - 48;
+					}
+				}else if( is_entry_row ){
+					if(char_counter == 1){
+						(*dst)->filesize = 0U;
+						pos = 0;
+					}else if( char_counter < 8 ){ // get the filesize
+						(*dst)->filesize = (*dst)->filesize * 10 + (uint8_t)( c - '0' );
+					}else if( char_counter > 8 && char_counter < 41 && c != '\n'){ // filename/dirname should begin at index 9
+						(*dst)->entryname[pos] = c;
+						pos++;
+					}
+				}
+				if (c == '\n'){
+					if(is_entry_row){
+						(*dst)->entryname[pos] = '\0';
+						(*dst)->font = user_settings.font_style;
+						(*dst)++;
+						(*num_menu_entries)++;
+					}
+					char_counter = 0;
+				}else{
+					char_counter++;
+				}
+			}
+			bytes_read++;
+		}
+
+		esp8266_PlusStore_API_end_transmission();
+	}
+	return trim_path;
+}
+
 bool esp8266_PlusStore_API_connect(){
 	uint8_t c;
 	while(HAL_UART_Receive(&huart1, &c, 1, 10 ) == HAL_OK);// first read old messages..
@@ -55,13 +124,11 @@ bool esp8266_PlusStore_API_connect(){
     return false;
 }
 
-void esp8266_PlusStore_API_prepare_request_header(char *path, bool prepare_range_request, bool basic_uri_encode){
+void esp8266_PlusStore_API_prepare_request_header(char *path, bool prepare_range_request){
 
-	if(basic_uri_encode){
-		for (char* p = path; (p = strchr(p, ' ')); ++p) {
-			*p = '+';
-		}
-	}
+	// ' ' --> '+' last check no space in http GET request!
+	for (char* p = path; (p = strchr(p, ' ')); *p++ = '+');
+
 
     http_request_header[0] = '\0';
 
@@ -82,9 +149,12 @@ void esp8266_PlusStore_API_prepare_request_header(char *path, bool prepare_range
     http_request_header[header_len] = '\0';
 
     if(STM32F4_FLASH_SIZE > 512U)
-        strcat(http_request_header, ",1");
+        strcat(http_request_header, ",1, ");
     else
-        strcat(http_request_header, ",0");
+        strcat(http_request_header, ",0, ");
+
+    itoa(( HARDWARE_TYPE - 1 + (( MENU_TYPE - 1 ) << 1 ) + ( USE_SD_CARD << 2) + ( USE_WIFI << 3 )),
+    		(char *)&http_request_header[(header_len+3)], 16);									// 0 - F
 
     strcat(http_request_header, API_ATCMD_5);
 
@@ -104,7 +174,7 @@ uint32_t esp8266_PlusStore_API_range_request(char *path, http_range range, uint8
 	uint16_t expected_size =  (uint16_t) ( range.stop + 1 - range.start );
 	uint8_t c;
 
-	esp8266_PlusStore_API_prepare_request_header(path, true, false);
+	esp8266_PlusStore_API_prepare_request_header(path, true);
 
     sprintf(http_request_header, "%s%lu-%lu", http_request_header, range.start, range.stop);
     strcat(http_request_header, (char *)"\r\n\r\n");
@@ -156,7 +226,7 @@ int esp8266_PlusROM_API_connect(unsigned int size){
     http_request_header[0] = '\0';
 	strcat(http_request_header, (char *)"AT+CIPSTART=\"TCP\",\"");
     strcat(http_request_header, (char *)&buffer[offset]);
-    strcat(http_request_header, (char *)"\",80\r\n");
+    strcat(http_request_header, (char *)"\",80,1\r\n");
 
     esp8266_send_command(http_request_header, PLUSROM_API_CONNECT_TIMEOUT);
 
@@ -302,7 +372,7 @@ bool esp8266_wifi_list(MENU_ENTRY **dst, int *num_menu_entries){
             if(count == 0){ // first char defines if its an entry row with SSID or Header Row
             	is_entry_row = (c == '+' ) ? 1 : 0;
             	if(is_entry_row){
-                    (*dst)->type = Setup_Menu;
+                    (*dst)->type = Input_Field;
                     (*dst)->filesize = 0U;
                     memset((*dst)->entryname, 30 , 32);
                     (*dst)->entryname[32] = '\0';
@@ -472,7 +542,7 @@ uint8_t process_http_headline(){
         	strncat(cur_path, p_array[0].value, (127 - sizeof(URLENCODE_MENU_TEXT_SETUP "/" URLENCODE_MENU_TEXT_PLUS_CONNECT "/") ) );
         	strcat(cur_path, "/Enter");
 
-			esp8266_PlusStore_API_prepare_request_header(cur_path, false, false );
+			esp8266_PlusStore_API_prepare_request_header(cur_path, false );
 			connect_tcp_link(send_link_id);
 			init_send_tcp_link(send_link_id, (uint16_t)strlen(http_request_header));
 			esp8266_print(http_request_header);
@@ -782,22 +852,6 @@ uint64_t wait_response(uint32_t timeout) {
 
 	}
 	return hash;
-}
-
-void generate_udid_string(){
-	int i;
-	uint8_t c;
-	memset(stm32_udid, '0', 24);
-	stm32_udid[24] = '\0';
-	for (int j = 2; j > -1; j--){
-		uint32_t content_len = STM32_UDID[j];
-		i = (j * 8) + 7;
-		while (content_len != 0 && i > -1) {
-			c = content_len % 16;
-			stm32_udid[i--] = (char)((c > 9)? (c-10) + 'a' : c + '0');
-			content_len = content_len/16;
-		}
-	}
 }
 
 void read_esp8266_at_version(){

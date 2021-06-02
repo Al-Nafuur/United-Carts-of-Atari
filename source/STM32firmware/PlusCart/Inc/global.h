@@ -2,9 +2,10 @@
 #define GLOBAL_H
 
 #include <stdint.h>
+#include <stdbool.h>
 #include "stm32f4xx_hal.h"
 
-#define VERSION                   "1.1.0"
+//#define VERSION /* VERSION moved to "Project" -> "Properties" -> "C/C++ Build" -> "Build Variables" */
 #define PLUSSTORE_API_HOST        "pluscart.firmaplus.de"
 
 #define CHARS_PER_LINE					32
@@ -14,6 +15,7 @@
 
 #define MENU_TEXT_GO_BACK                   "(Go Back)"
 #define MENU_TEXT_DELETE_CHAR               "Delete Character"
+#define MENU_TEXT_SD_CARD_CONTENT           "SD-Card Content"
 #define MENU_TEXT_OFFLINE_ROMS              "Offline ROMs"
 #define MENU_TEXT_DETECT_OFFLINE_ROMS       "Detect Offline ROMs"
 #define MENU_TEXT_DELETE_OFFLINE_ROMS       "Erase Offline ROMs"
@@ -38,13 +40,16 @@
 #define MENU_TEXT_FONT_CAPTAIN_MORGAN_SPICE "  Captain Morgan Spice"
 #define MENU_TEXT_FONT_GLACIER_BELLE        "  Glacier Belle"
 
+#define MENU_TEXT_FORMAT_SD_CARD            "Format SD-Card"
+
 #define MENU_TEXT_SPACING_SETUP             "Line Spacing"
 #define MENU_TEXT_SPACING_DENSE             "  Dense"
 #define MENU_TEXT_SPACING_MEDIUM            "  Regular"
 #define MENU_TEXT_SPACING_SPARSE            "  Sparse"
 
 #define MENU_TEXT_PRIVATE_KEY               "Private Key"
-#define MENU_TEXT_FIRMWARE_UPDATE           "** Update Firmware **"
+#define MENU_TEXT_FIRMWARE_UPDATE           "** WiFi Firmware Update **"
+#define MENU_TEXT_SD_FIRMWARE_UPDATE        "** SD-Card Firmware Update **"
 #define MENU_TEXT_OFFLINE_ROM_UPDATE        "Download Offline ROMs"
 #define MENU_TEXT_PLUS_CONNECT              "PlusStore Connect"
 #define MENU_TEXT_PLUS_REMOVE               "PlusStore Disconnect"
@@ -56,6 +61,7 @@
 #define MENU_TEXT_UPPERCASE                 "Uppercase"
 #define MENU_TEXT_SYMBOLS                   "Symbols"
 
+
 #define URLENCODE_MENU_TEXT_SYSTEM_INFO     "System%20Info"
 #define URLENCODE_MENU_TEXT_PLUS_CONNECT    "PlusStore%20Connect"
 #define URLENCODE_MENU_TEXT_SETUP           "Setup"
@@ -66,9 +72,11 @@
 
 #define SIZEOF_WIFI_SELECT_BASE_PATH        sizeof(MENU_TEXT_SETUP) + sizeof(MENU_TEXT_WIFI_SETUP) + sizeof(MENU_TEXT_WIFI_SELECT)
 
-
+#if USE_WIFI
 extern UART_HandleTypeDef huart1;
+#endif
 extern char http_request_header[];
+extern char stm32_udid[];
 
 extern uint8_t buffer[];
 extern unsigned int cart_size_bytes;
@@ -94,17 +102,19 @@ enum eStatus_bytes_PageTypes {
 enum MENU_ENTRY_Type {
 	Root_Menu = -1,
 	Leave_Menu,
-	Sub_Menu,
+	Sub_Menu,  // should be PlusStore or WiFi_Sub_Menu
 	Cart_File,
 	Input_Field,
 	Keyboard_Char,
 	Keyboard_Row,
 	Menu_Action,
 	Delete_Keyboard_Char,
-	Offline_Cart_File,
-	Offline_Sub_Menu,
+	Offline_Cart_File,  // should be Flash_Sub_Menu
+	Offline_Sub_Menu,  // should be Flash_Sub_Menu
 	Setup_Menu,
 	Leave_SubKeyboard_Menu,
+	SD_Cart_File,
+	SD_Sub_Menu,
 };
 
 enum cart_base_type{

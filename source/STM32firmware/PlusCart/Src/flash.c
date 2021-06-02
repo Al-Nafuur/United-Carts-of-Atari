@@ -1,13 +1,15 @@
 #include <string.h>
 #include <stdlib.h>
-
+#include "global.h"
+#if USE_WIFI
 #include "esp8266.h"
+#endif
 #include "flash.h"
 #include "cartridge_firmware.h"
 
 
 extern FLASH_ProcessTypeDef pFlash;
-const uint8_t * eeprom_pointer;
+
 // reserve eeprom data storage;
 unsigned const char eeprom_data[16384] __attribute__((__section__(".eeprom"), used)) = {[0 ... 16383] = 0xff };
 
@@ -97,6 +99,7 @@ void flash_set_eeprom_user_settings(USER_SETTINGS user_settings){
     HAL_FLASH_Lock();
 }
 
+#if USE_WIFI
 /* write to flash with multiple HTTP range requests */
 uint32_t flash_download(char *filename, uint32_t filesize, uint32_t http_range_start, bool append){
 
@@ -110,16 +113,6 @@ uint32_t flash_download(char *filename, uint32_t filesize, uint32_t http_range_s
 	if( start_sector < (uint8_t)FLASH_SECTOR_5 || esp8266_PlusStore_API_connect() == false){
     	return 0;
 	}
-
-    uint8_t c;
-    size_t http_range_param_pos_counter, http_range_param_pos;
-    uint32_t count, http_range_end = http_range_start + MAX_RANGE_SIZE - 1;
-	uint32_t Address = DOWNLOAD_AREA_START_ADDRESS + 128U * 1024U * (uint8_t)( start_sector - 5);
-
-	esp8266_PlusStore_API_prepare_request_header((char *)filename, true, false );
-	strcat(http_request_header, (char *)"     0- 32767\r\n\r\n");
-	http_range_param_pos = strlen((char *)http_request_header) - 5;
-
 
     flash_erase_storage(start_sector);
 
@@ -146,8 +139,17 @@ uint32_t flash_download(char *filename, uint32_t filesize, uint32_t http_range_s
     pFlash.Lock = HAL_LOCKED;
     FLASH_WaitInRAMForLastOperationWithMaxDelay();
 
+    uint8_t c;
+    uint32_t count, http_range_end = http_range_start + (filesize < MAX_RANGE_SIZE ? filesize : MAX_RANGE_SIZE) - 1;
+	uint32_t Address = DOWNLOAD_AREA_START_ADDRESS + 128U * 1024U * (uint8_t)( start_sector - 5);
+
+	esp8266_PlusStore_API_prepare_request_header((char *)filename, true );
+	strcat(http_request_header, (char *)"     0- 32767\r\n\r\n");
+    size_t http_range_param_pos_counter, http_range_param_pos = strlen((char *)http_request_header) - 5;
+
     uint8_t parts = (uint8_t)(( filesize + MAX_RANGE_SIZE - 1 )  / MAX_RANGE_SIZE);
     uint16_t last_part_size = (filesize % MAX_RANGE_SIZE)?(filesize % MAX_RANGE_SIZE):MAX_RANGE_SIZE;
+
     while(parts != 0 ){
         http_range_param_pos_counter = http_range_param_pos;
         count = http_range_end;
@@ -223,7 +225,7 @@ uint32_t flash_download(char *filename, uint32_t filesize, uint32_t http_range_s
 	}
 	return (uint32_t)( DOWNLOAD_AREA_START_ADDRESS + 128U * 1024U * (uint32_t)( start_sector - 5) );
 }
-
+#endif
 
 /* write (firmware) to flash from buffer */
 void flash_firmware_update(uint32_t filesize){
@@ -341,7 +343,7 @@ bool flash_has_downloaded_roms(){
     return user_settings.first_free_flash_sector > 5;
 }
 
-void flash_file_list( char *path, MENU_ENTRY **dst , int *num_p){
+void flash_file_list( char *path, MENU_ENTRY **dst, int *num_menu_entries ){
     uint32_t base_adress = (uint32_t)( DOWNLOAD_AREA_START_ADDRESS), length, r;
     uint8_t pos, c;
 	size_t path_len = strlen(path);
@@ -355,7 +357,7 @@ void flash_file_list( char *path, MENU_ENTRY **dst , int *num_p){
 
     c =  (*(__IO uint8_t*)(base_adress));
 
-    while(c != 0xff && *num_p < NUM_MENU_ITEMS){ // NUM_MENU_ITEMS and c < 127 ? Ascii ?
+    while(c != 0xff && (*num_menu_entries) < NUM_MENU_ITEMS){ // NUM_MENU_ITEMS and c < 127 ? Ascii ?
         pos = 0;
         length = get_filesize(base_adress);
         is_dir = ((*(__IO uint8_t*)(base_adress + 156)) == '5');
@@ -374,14 +376,15 @@ void flash_file_list( char *path, MENU_ENTRY **dst , int *num_p){
             if(strncmp(tmp_path, act_tar_file_path_name, path_len ) == 0 ){
             	char *act_tar_filename = &act_tar_file_path_name[ path_len ];
             	if( !( strchr( act_tar_filename, '/') ) ){
-            		strncpy((*dst)->entryname, act_tar_filename, 33);
-                    (*dst)->type = is_dir?Offline_Sub_Menu:Offline_Cart_File;
-                    (*dst)->flash_base_address = base_adress;
+            		(*dst)->entryname[0] = '\0';
+            		strncat((*dst)->entryname, act_tar_filename, 32);
+            		(*dst)->type = is_dir?Offline_Sub_Menu:Offline_Cart_File;
+            		(*dst)->flash_base_address = base_adress;
 
-                    (*dst)->filesize = length;
+            		(*dst)->filesize = length;
 
-                    (*dst)++;
-                    (*num_p)++;
+            		(*dst)++;
+                    (*num_menu_entries)++;
             	}
             }
         }
@@ -397,7 +400,6 @@ void flash_file_list( char *path, MENU_ENTRY **dst , int *num_p){
     }
 
     free(tmp_path);
-
 }
 
 uint32_t flash_check_offline_roms_size( ){
@@ -494,12 +496,13 @@ static uint8_t get_sector(uint32_t Address)
 
 int16_t get_active_eeprom_page(){
     int16_t index = 0;
-    eeprom_pointer = (const uint8_t *)(&eeprom_data[0]);
-    while ( index <  EEPROM_MAX_PAGE_ID &&  (*( uint32_t*)(eeprom_pointer)) == EEPROM_INVALID_PAGE_HEADER ){
+    uint32_t eeprom_pointer = (uint32_t) eeprom_data;
+    while ( index <  EEPROM_MAX_PAGE_ID &&  *(__IO uint32_t *) eeprom_pointer == EEPROM_INVALID_PAGE_HEADER ){
         index++;
         eeprom_pointer += EEPROM_PAGE_SIZE;
     }
-    if((*( uint32_t*)(eeprom_pointer)) != EEPROM_ACTIVE_PAGE_HEADER )
+    //
+    if( *(__IO uint32_t *) eeprom_pointer != EEPROM_ACTIVE_PAGE_HEADER )
         index = -1;
     return index;
 }
@@ -509,12 +512,12 @@ int16_t get_active_eeprom_page_entry(int16_t page_index){
 
 	uint32_t dataIndex = (uint32_t) (page_index * EEPROM_PAGE_SIZE) + EEPROM_PAGE_HEADER_SIZE;
 
-    eeprom_pointer =  &eeprom_data[dataIndex];
-    while( index <  EEPROM_MAX_ENTRY_ID && (*( uint16_t*)(eeprom_pointer)) == EEPROM_INVALID_ENTRY_HEADER ){
+	uint32_t eeprom_pointer =  (uint32_t) &eeprom_data[dataIndex];
+    while( index <  EEPROM_MAX_ENTRY_ID &&  *(__IO uint16_t *) eeprom_pointer == EEPROM_INVALID_ENTRY_HEADER ){
         index++;
         eeprom_pointer += EEPROM_ENTRY_SIZE;
     }
-    if((*( uint16_t*)(eeprom_pointer)) != EEPROM_ACTIVE_ENTRY_HEADER )
+    if( *(__IO uint16_t *) eeprom_pointer != EEPROM_ACTIVE_ENTRY_HEADER )
         index = -1;
     return index;
 }

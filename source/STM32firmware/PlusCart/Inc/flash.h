@@ -59,12 +59,11 @@ void flash_firmware_update(uint32_t)__attribute__((section(".data#")));
 
 uint32_t flash_download(char *, uint32_t , uint32_t , bool );
 
-
 uint32_t flash_file_request( uint8_t *, uint32_t, uint32_t, uint32_t );
 
 bool flash_has_downloaded_roms(void);
 
-void flash_file_list(char *, MENU_ENTRY **dst, int *);
+void flash_file_list(char *, MENU_ENTRY **, int *);
 uint32_t flash_check_offline_roms_size(void);
 
 void flash_erase_storage(uint8_t);

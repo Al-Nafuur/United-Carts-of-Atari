@@ -4,10 +4,7 @@
  *
  */
 
-#include <stdint.h>
-#include <stdbool.h>
 #include "global.h"
-
 
 #ifndef ESP8266_H
 #define	ESP8266_H
@@ -58,7 +55,6 @@ extern "C" {
 
 #define MAX_RANGE_SIZE           32768
 
-char stm32_udid[25];
 char esp8266_at_version[15];
 
 typedef struct {
@@ -75,8 +71,10 @@ void esp8266_update(void) __attribute__((section(".flash01")));
 
 /** Function prototypes **/
 
+int esp8266_file_list(char *, MENU_ENTRY **, int *, uint8_t *, char *);
+
 bool esp8266_PlusStore_API_connect(void) __attribute__((section(".flash01")));
-void esp8266_PlusStore_API_prepare_request_header(char *, bool, bool ) __attribute__((section(".flash01")));
+void esp8266_PlusStore_API_prepare_request_header(char *, bool ) __attribute__((section(".flash01")));
 void esp8266_PlusStore_API_end_transmission(void) __attribute__((section(".flash01")));
 
 int esp8266_PlusROM_API_connect(unsigned int) __attribute__((section(".flash01")));
@@ -105,7 +103,6 @@ void esp8266_print(char *) __attribute__((section(".flash01")));
 
 void esp8266_AT_WiFiManager() __attribute__((section(".flash01")));
 
-void generate_udid_string(void) __attribute__((section(".flash01")));
 void read_esp8266_at_version(void) __attribute__((section(".flash01")));
 
 #ifdef	__cplusplus

@@ -1,9 +1,9 @@
 #ifndef CARTRIDGE_EMULATION_H
 #define CARTRIDGE_EMULATION_H
 
-
 #include <stdint.h>
 #include <stdbool.h>
+#include "global.h"
 
 #define RESET_ADDR addr = addr_prev = 0xffff;
 #define CCM_RAM ((uint8_t*)0x10000000)
@@ -24,7 +24,7 @@ enum Transmission_State{
 	Receive_Finished
 };
 
-
+#if USE_WIFI
 #define setup_plus_rom_functions() \
 		uint8_t receive_buffer_write_pointer = 0, receive_buffer_read_pointer = 0, content_counter = 0; \
 		uint8_t out_buffer_write_pointer = 0, out_buffer_send_pointer = 0; \
@@ -34,6 +34,19 @@ enum Transmission_State{
 		int content_length_pos = header_length - 5; \
 		enum Transmission_State huart_state = No_Transmission; \
 
+#else //Todo make setup_plus_rom_functions empty if no WiFi
+#define setup_plus_rom_functions() \
+		uint8_t receive_buffer_write_pointer = 0, receive_buffer_read_pointer = 0, content_counter = 0; \
+		uint8_t out_buffer_write_pointer = 0, out_buffer_send_pointer = 0; \
+		uint8_t receive_buffer[256], out_buffer[256]; \
+		uint8_t prev_c = 0, prev_prev_c = 0, i, c; \
+		uint16_t content_len; \
+		int content_length_pos = header_length - 5; \
+		enum Transmission_State huart_state = No_Transmission; \
+
+#endif
+
+#if USE_WIFI
 #define process_transmission() \
         switch(huart_state){ \
           case Send_Start: { \
@@ -123,6 +136,9 @@ enum Transmission_State{
           default: \
             break; \
         }
+#else
+#define process_transmission()
+#endif
 
 void exit_cartridge(uint16_t , uint16_t );
 
