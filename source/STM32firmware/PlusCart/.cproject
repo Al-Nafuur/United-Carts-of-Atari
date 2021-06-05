@@ -9,7 +9,7 @@
                 				
                 <macros>
                     					
-                    <stringMacro name="version" type="VALUE_TEXT" value="2.0.18"/>
+                    <stringMacro name="version" type="VALUE_TEXT" value="2.1.0"/>
                     				
                 </macros>
                 				
@@ -211,7 +211,7 @@
                 				
                 <macros>
                     					
-                    <stringMacro name="version" type="VALUE_TEXT" value="2.0.18"/>
+                    <stringMacro name="version" type="VALUE_TEXT" value="2.1.0"/>
                     				
                 </macros>
                 				
@@ -413,7 +413,7 @@
                 				
                 <macros>
                     					
-                    <stringMacro name="version" type="VALUE_TEXT" value="2.0.18"/>
+                    <stringMacro name="version" type="VALUE_TEXT" value="2.1.0"/>
                     				
                 </macros>
                 				
@@ -615,7 +615,7 @@
                 				
                 <macros>
                     					
-                    <stringMacro name="version" type="VALUE_TEXT" value="2.0.18"/>
+                    <stringMacro name="version" type="VALUE_TEXT" value="2.1.0"/>
                     				
                 </macros>
                 				
@@ -817,7 +817,7 @@
                 				
                 <macros>
                     					
-                    <stringMacro name="version" type="VALUE_TEXT" value="2.0.18"/>
+                    <stringMacro name="version" type="VALUE_TEXT" value="2.1.0"/>
                     				
                 </macros>
                 				
