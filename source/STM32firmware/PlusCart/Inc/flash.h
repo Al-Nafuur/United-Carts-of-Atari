@@ -70,6 +70,7 @@ void flash_erase_storage(uint8_t);
 
 USER_SETTINGS flash_get_eeprom_user_settings(void);
 void flash_set_eeprom_user_settings(USER_SETTINGS);
+void flash_erase_eeprom();
 
 #ifdef	__cplusplus
 }

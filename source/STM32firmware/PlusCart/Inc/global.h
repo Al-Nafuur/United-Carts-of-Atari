@@ -41,6 +41,7 @@
 #define MENU_TEXT_FONT_GLACIER_BELLE        "  Glacier Belle"
 
 #define MENU_TEXT_FORMAT_SD_CARD            "Format SD-Card"
+#define MENU_TEXT_FORMAT_EEPROM             "Format User Settings"
 
 #define MENU_TEXT_SPACING_SETUP             "Line Spacing"
 #define MENU_TEXT_SPACING_DENSE             "  Dense"

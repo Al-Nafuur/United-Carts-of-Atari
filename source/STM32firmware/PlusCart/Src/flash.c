@@ -99,6 +99,17 @@ void flash_set_eeprom_user_settings(USER_SETTINGS user_settings){
     HAL_FLASH_Lock();
 }
 
+void flash_erase_eeprom(){
+
+    HAL_FLASH_Unlock();
+    FLASH_WaitForLastOperation((uint32_t)FLASH_TIMEOUT_VALUE);
+    FLASH_Erase_Sector(EEPROM_SECTOR_ID, (uint8_t) FLASH_VOLTAGE_RANGE_3);
+    FLASH_WaitForLastOperation((uint32_t)FLASH_TIMEOUT_VALUE);
+    CLEAR_BIT(FLASH->CR, (FLASH_CR_SER | FLASH_CR_SNB));
+    HAL_FLASH_Lock();
+}
+
+
 #if USE_WIFI
 /* write to flash with multiple HTTP range requests */
 uint32_t flash_download(char *filename, uint32_t filesize, uint32_t http_range_start, bool append){

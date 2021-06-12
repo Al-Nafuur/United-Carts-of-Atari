@@ -385,9 +385,6 @@ MENU_ENTRY* generateSetupMenu(MENU_ENTRY *dst) {
 #if USE_WIFI
 	make_menu_entry(&dst, MENU_TEXT_WIFI_SETUP, Setup_Menu);
 #endif
-#if USE_SD_CARD
-	make_menu_entry(&dst, MENU_TEXT_FORMAT_SD_CARD, Menu_Action);
-#endif
 	make_menu_entry(&dst, MENU_TEXT_DISPLAY, Setup_Menu);
 	make_menu_entry(&dst, MENU_TEXT_SYSTEM_INFO, Sub_Menu);
 
@@ -395,6 +392,10 @@ MENU_ENTRY* generateSetupMenu(MENU_ENTRY *dst) {
 		make_menu_entry(&dst, MENU_TEXT_DELETE_OFFLINE_ROMS, Menu_Action);
 	else
 		make_menu_entry(&dst, MENU_TEXT_DETECT_OFFLINE_ROMS, Menu_Action);
+#if USE_SD_CARD
+	make_menu_entry(&dst, MENU_TEXT_FORMAT_SD_CARD, Menu_Action);
+#endif
+	make_menu_entry(&dst, MENU_TEXT_FORMAT_EEPROM, Menu_Action);
 
 	return dst;
 }
@@ -642,8 +643,13 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			}
 		}
 #endif
+		else if (strstr(mts, MENU_TEXT_FORMAT_EEPROM) == mts) {
+			flash_erase_eeprom();
+			truncate_curPath();
+			buildMenuFromPath(d);
+			menuStatusMessage = done;
+		}
 		// Display
-
 		else if (strstr(mts, MENU_TEXT_DISPLAY) == mts) {
 
 
