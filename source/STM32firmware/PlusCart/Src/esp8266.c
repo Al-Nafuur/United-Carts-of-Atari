@@ -23,6 +23,7 @@
 #include "stm32_udid.h"
 #include "esp8266_AT_WifiManager.h"
 #include "esp8266.h"
+#include "md5.h"
 
 extern UART_HandleTypeDef huart1;
 
@@ -218,8 +219,10 @@ uint32_t esp8266_PlusStore_API_file_request(uint8_t *ext_buffer, char *path, uin
 int esp8266_PlusROM_API_connect(unsigned int size){
 	uint16_t * nmi_p = (uint16_t * )&buffer[size - 6];
 	int i = nmi_p[0] - 0x1000;
-
+	unsigned char device_id_hash[16];
 	int offset = (int)strlen((char *)&buffer[i]) + 1 + i;
+
+	md5( (unsigned char *)stm32_udid, 24, device_id_hash);
 
     esp8266_send_command("AT+CIPCLOSE\r\n", 5000);
 
@@ -235,9 +238,16 @@ int esp8266_PlusROM_API_connect(unsigned int size){
     strcat(http_request_header, (char *)&buffer[i]);
     strcat(http_request_header, (char *)" HTTP/1.0\r\nHost: ");
     strcat(http_request_header, (char *)&buffer[offset]);
-    strcat(http_request_header, (char *)"\r\nConnection: keep-alive\r\nContent-Type: application/octet-stream\r\nPlusStore-ID: v" VERSION " ");
-    strcat(http_request_header, (char *)stm32_udid);
-    strcat(http_request_header, (char *)"\r\nContent-Length:    \r\n\r\n");
+    strcat(http_request_header, (char *)"\r\nConnection: keep-alive\r\n"
+                                        "Content-Type: application/octet-stream\r\n"
+                                        "PlusROM-Info: agent=PlusCart;ver=" VERSION ";id=");
+
+    char *ptr = &http_request_header[strlen(http_request_header)];
+    for (i = 0; i < 16; i++) {
+        ptr += sprintf(ptr, "%02X", device_id_hash[i]);
+    }
+
+    strcat(http_request_header, (char *)";nick=\r\nContent-Length:    \r\n\r\n");
     offset = (int)strlen(http_request_header);
 
     esp8266_send_command(API_ATCMD_2, 5000);
