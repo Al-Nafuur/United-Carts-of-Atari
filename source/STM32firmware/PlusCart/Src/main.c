@@ -58,6 +58,7 @@
 #include "cartridge_emulation_bf.h"
 #include "cartridge_emulation_sb.h"
 #include "cartridge_emulation_dpcp.h"
+#include "cartridge_emulation_ACE.h"
 
 void generate_udid_string(void);
 
@@ -143,7 +144,7 @@ const char *status_message[]__attribute__((section(".flash01#"))) = {
 	"Your Chat Message",
 	"Offline ROMs erased",
 	"ROM file too big!",
-	"ACE is not supported",
+	"ACE file unsupported",
 	"Unknown/invalid ROM",
 	"Done",
 	"Failed",
@@ -1257,6 +1258,12 @@ void emulate_cartridge(CART_TYPE cart_type, MENU_ENTRY *d)
 
 	else if (cart_type.base_type == base_type_SB)
 		emulate_SB_cartridge(curPath, cart_size_bytes, buffer, d);
+	else if (cart_type.base_type == base_type_ACE)
+	{
+		volatile static unsigned char CCMUsageFinder __attribute__((section(".ccmram#")));
+		uint32_t* CCMpointer;
+		launch_ace_cartridge(curPath, cart_size_bytes, buffer, d, offset, cart_type.withPlusFunctions,CCMpointer);
+	}
 
 #if USE_WIFI
 	if (cart_type.withPlusFunctions)
@@ -1428,7 +1435,7 @@ int main(void)
 					CART_TYPE cart_type = identify_cartridge(d);
 					HAL_Delay(200);
 
-					if (cart_type.base_type == base_type_ACE)
+					if (cart_type.base_type == base_type_ACE && !(is_pluscart_ace_cartridge(d->filesize, buffer)))
 						menuStatusMessage = romtype_ACE_unsupported;
 
 					else if (cart_type.base_type == base_type_Load_Failed)
