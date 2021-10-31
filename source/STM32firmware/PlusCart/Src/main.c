@@ -1260,8 +1260,8 @@ void emulate_cartridge(CART_TYPE cart_type, MENU_ENTRY *d)
 		emulate_SB_cartridge(curPath, cart_size_bytes, buffer, d);
 	else if (cart_type.base_type == base_type_ACE)
 	{
-		volatile static unsigned char CCMUsageFinder __attribute__((section(".ccmram#")));
-		uint32_t* CCMpointer;
+		static unsigned char CCMUsageFinder __attribute__((section(".ccmram#"))); //Method of finding where allocation has reached for CCM RAM
+		uint32_t* CCMpointer=&CCMUsageFinder;
 		launch_ace_cartridge(curPath, cart_size_bytes, buffer, d, offset, cart_type.withPlusFunctions,CCMpointer);
 	}
 

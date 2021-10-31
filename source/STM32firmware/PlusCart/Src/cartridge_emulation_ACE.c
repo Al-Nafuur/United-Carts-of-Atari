@@ -2,15 +2,12 @@
 #include <stdbool.h>
 #include "flash.h"
 #include "cartridge_emulation_ACE.h"
-#include "cartridge_emulation_ACEROM.h"
 #include "cartridge_firmware.h"
-
-
 
 // This header must exist at the beginning of every valid ace file
 
 typedef struct __attribute__((packed)) {
-	uint8_t magic_number[8]; // Always ascii "ACE-PC00"
+	uint8_t magic_number[8]; // Always ascii "ACE-PC00" for Pluscart ACE files
 	uint8_t driver_name[16]; // emulators care about this
 	uint32_t driver_version; // emulators care about this
 	uint32_t rom_size;		 // size of ROM to be copied to flash, 996KB max
@@ -45,11 +42,10 @@ int launch_ace_cartridge( const char* filename, uint32_t image_size, uint8_t* bu
 
 	ACEFileHeader header = *((ACEFileHeader *)buffer);
 
-
-
 	uint8_t* cart_rom = 0; //Set NULL pointer for now
 	void *EntryVector = 0; //Set NULL pointer for now
-//Write to flash memory, or if offline run directly from flash.
+
+	//Write to flash memory, or if offline run directly from flash.
 	if(d->type == Cart_File ){
 
 #if USE_WIFI
@@ -78,7 +74,7 @@ int launch_ace_cartridge( const char* filename, uint32_t image_size, uint8_t* bu
 	buffer32++;
 	*buffer32 = (uint32_t)(&emulate_firmware_cartridge); //Pass function pointer for emulate_firmware_cartridge
 
-//Stock code uses "EntryVector" below. Use emulate_ACEROM_cartridge for potentially quicker test cycle in firmware.
+//Stock code uses "EntryVector" below. Use emulate_ACEROM_cartridge for potentially quicker test cycle for ACE code in test firmware.
 	((void (*)())EntryVector)(); /*Uncomment this line to run in ACE mode (code in ROM)*/
 //	emulate_ACEROM_cartridge();  /*Uncomment this line to run in firmware mode(code in Pluscart fimrware) */
 
