@@ -51,6 +51,7 @@
 #include "flash.h"
 #include "cartridge_io.h"
 #include "cartridge_firmware.h"
+#include "cartridge_emulation_ACE.h"
 #include "cartridge_emulation_ar.h"
 #include "cartridge_detection.h"
 #include "cartridge_emulation.h"
@@ -58,6 +59,7 @@
 #include "cartridge_emulation_bf.h"
 #include "cartridge_emulation_sb.h"
 #include "cartridge_emulation_dpcp.h"
+
 
 void generate_udid_string(void);
 
@@ -143,7 +145,7 @@ const char *status_message[]__attribute__((section(".flash01#"))) = {
 	"Your Chat Message",
 	"Offline ROMs erased",
 	"ROM file too big!",
-	"ACE is not supported",
+	"ACE file unsupported",
 	"Unknown/invalid ROM",
 	"Done",
 	"Failed",
@@ -1257,6 +1259,12 @@ void emulate_cartridge(CART_TYPE cart_type, MENU_ENTRY *d)
 
 	else if (cart_type.base_type == base_type_SB)
 		emulate_SB_cartridge(curPath, cart_size_bytes, buffer, d);
+	else if (cart_type.base_type == base_type_ACE)
+	{
+		static unsigned char CCMUsageFinder __attribute__((section(".ccmram#"))); //Method of finding where allocation has reached for CCM RAM
+		uint32_t* CCMpointer=(uint32_t*)&CCMUsageFinder; //Find address of CCM allocation and cast as a pointer
+		launch_ace_cartridge(curPath, cart_size_bytes, buffer, d, offset, cart_type.withPlusFunctions,CCMpointer); //Open the ACE bootloader library function
+	}
 
 #if USE_WIFI
 	if (cart_type.withPlusFunctions)
@@ -1428,7 +1436,7 @@ int main(void)
 					CART_TYPE cart_type = identify_cartridge(d);
 					HAL_Delay(200);
 
-					if (cart_type.base_type == base_type_ACE)
+					if (cart_type.base_type == base_type_ACE && !(is_pluscart_ace_cartridge(d->filesize, buffer)))
 						menuStatusMessage = romtype_ACE_unsupported;
 
 					else if (cart_type.base_type == base_type_Load_Failed)
@@ -1443,18 +1451,17 @@ int main(void)
 						if(cart_type.uses_systick){
 							SysTick_Config(SystemCoreClock / 1000U);	// 1KHz
 						}
-						if (cart_type.uses_ccmram) {
-							truncate_curPath(); // ?? twice ?
-							d->type = Sub_Menu;
-							buildMenuFromPath(d);
-						}
 					}
 
 					else
 						menuStatusMessage = romtype_unknown;
 				}
 
-				truncate_curPath(); // ?? twice ?
+				truncate_curPath();
+
+					d->type = Sub_Menu;
+					buildMenuFromPath(d);
+
 
 			}
 
