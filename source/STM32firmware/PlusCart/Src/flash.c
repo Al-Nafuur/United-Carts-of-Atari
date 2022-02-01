@@ -299,38 +299,35 @@ void flash_firmware_update(uint32_t filesize){
     FLASH_WaitInRAMForLastOperationWithMaxDelay();
 
 
-        // Now for the HTTP Body
-        count = 0;
-        while(count < filesize ){
+    uint8_t* data_pointer = buffer;
+    count = 0;
+    while(count < filesize ){
+        //HAL_FLASH_Program();
+        /* Program the user Flash area byte by byte
+         (area defined by FLASH_USER_START_ADDR and FLASH_USER_END_ADDR) ***********/
+        /* Wait for last operation to be completed */
+        FLASH_WaitInRAMForLastOperationWithMaxDelay() ;
+        /*Program byte (8-bit) at a specified address.*/
+        // FLASH_Program_Byte(Address, (uint8_t) c);
+        CLEAR_BIT(FLASH->CR, FLASH_CR_PSIZE);
+        FLASH->CR |= FLASH_PSIZE_BYTE;
+        FLASH->CR |= FLASH_CR_PG;
 
-                //HAL_FLASH_Program();
-                /* Program the user Flash area byte by byte
-                (area defined by FLASH_USER_START_ADDR and FLASH_USER_END_ADDR) ***********/
-                /* Wait for last operation to be completed */
-                //if(FLASH_WaitInRAMForLastOperationWithMaxDelay() == HAL_OK){
-                FLASH_WaitInRAMForLastOperationWithMaxDelay() ;
-                    /*Program byte (8-bit) at a specified address.*/
-                    // FLASH_Program_Byte(Address, (uint8_t) c);
-                    CLEAR_BIT(FLASH->CR, FLASH_CR_PSIZE);
-                    FLASH->CR |= FLASH_PSIZE_BYTE;
-                    FLASH->CR |= FLASH_CR_PG;
+        *(__IO uint8_t*)Address = data_pointer[count];
+        // end FLASH_Program_Byte(Address, (uint8_t) c);
 
-                    *(__IO uint8_t*)Address = buffer[count];
-                    // end FLASH_Program_Byte(Address, (uint8_t) c);
+        /* Wait for last operation to be completed */
+        FLASH_WaitInRAMForLastOperationWithMaxDelay();
 
-                    /* Wait for last operation to be completed */
-                    FLASH_WaitInRAMForLastOperationWithMaxDelay();
-
-                    /* If the program operation is completed, disable the PG Bit */
-                    FLASH->CR &= (~FLASH_CR_PG);
-                    Address++;
-                    if( Address == ADDR_FLASH_SECTOR_1)
-                    	Address = ADDR_FLASH_SECTOR_2; // Skip user settings area
-                    // end HAL_FLASH_Program
-               // }else{
-                //    return;
-               // }
-                count++;
+        /* If the program operation is completed, disable the PG Bit */
+        FLASH->CR &= (~FLASH_CR_PG);
+        Address++;
+        count++;
+        if( Address == ADDR_FLASH_SECTOR_1){
+        	Address = ADDR_FLASH_SECTOR_2; // Skip user settings area
+        } else if(Address == ( ADDR_FLASH_SECTOR_4 + 48 * 1024 ) ){
+        	data_pointer = ((uint8_t*)0x10000000) - 96 * 1024 ;
+        }
     }
     __HAL_UNLOCK(&pFlash);
 

@@ -818,17 +818,27 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 
 		if (strstr(curPath, MENU_TEXT_FIRMWARE_UPDATE) == curPath) {
 #if USE_WIFI
+#define FIRMWARE_MAX_RAM 0x1C000
+
 			strcpy(curPath, "&u=1");
-			uint32_t bytes_read = esp8266_PlusStore_API_file_request( buffer, curPath, 0, 0x4000 );
-			bytes_read += esp8266_PlusStore_API_file_request( &buffer[0x4000], curPath, 0x8000, (d->filesize - 0x8000) );
+			uint32_t bytes_read;
+			uint32_t bytes_to_read = d->filesize - 0x4000;
+			uint32_t bytes_to_ram = d->filesize > FIRMWARE_MAX_RAM ? FIRMWARE_MAX_RAM : d->filesize;
+
+			bytes_read = esp8266_PlusStore_API_file_request( buffer, curPath, 0, 0x4000 );
+			bytes_read += esp8266_PlusStore_API_file_request( &buffer[0x4000], curPath, 0x8000, (bytes_to_ram - 0x8000));
+			if (d->filesize > FIRMWARE_MAX_RAM ){
+				bytes_read += esp8266_PlusStore_API_file_request( ((uint8_t*)0x10000000), curPath, FIRMWARE_MAX_RAM, ( d->filesize - FIRMWARE_MAX_RAM) );
+			}
+
 #else
 			uint32_t bytes_read = 0;
 #endif
 
-			if(bytes_read == d->filesize - 0x4000 ){
+			if(bytes_read == bytes_to_read ){
 				__disable_irq();
 				HAL_FLASH_Unlock();
-				flash_firmware_update(d->filesize);
+				flash_firmware_update(bytes_read);
 			}else{
 				menuStatusMessage = download_failed;
 			}
@@ -1459,9 +1469,8 @@ int main(void)
 
 				truncate_curPath();
 
-					d->type = Sub_Menu;
-					buildMenuFromPath(d);
-
+				d->type = Sub_Menu;
+				buildMenuFromPath(d);
 
 			}
 
