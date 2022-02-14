@@ -71,6 +71,8 @@
 
 #define PATH_SEPERATOR '/' /*CHAR_SELECTION*/
 
+#define FIRMWARE_MAX_RAM                    0x1C000
+
 #define SIZEOF_WIFI_SELECT_BASE_PATH        sizeof(MENU_TEXT_SETUP) + sizeof(MENU_TEXT_WIFI_SETUP) + sizeof(MENU_TEXT_WIFI_SELECT)
 
 #if USE_WIFI
