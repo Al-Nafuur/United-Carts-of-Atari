@@ -55,7 +55,7 @@ extern "C" {
 
 #define MAX_RANGE_SIZE           32768
 
-char esp8266_at_version[15];
+extern char esp8266_at_version[15];
 
 typedef struct {
 	uint32_t start;
