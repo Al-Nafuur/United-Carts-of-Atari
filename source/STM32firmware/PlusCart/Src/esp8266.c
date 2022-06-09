@@ -47,6 +47,7 @@ bool init_send_tcp_link(char link_id, uint16_t bytes_to_send) __attribute__((sec
 void close_tcp_link(char link_id) __attribute__((section(".flash01")));
 
 char tmp_uart_buffer[50];
+char esp8266_at_version[15];
 
 
 int esp8266_file_list( char *path, MENU_ENTRY **dst, int *num_menu_entries, uint8_t *plus_store_status, char * status_message){
