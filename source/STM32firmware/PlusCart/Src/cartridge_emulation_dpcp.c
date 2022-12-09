@@ -41,7 +41,8 @@ void emulate_DPCplus_cartridge( uint32_t image_size)
 
 	uint8_t prev_rom = 0;
 
-    uint16_t addr, addr_prev = 0, addr_prev2 = 0, tmp_addr=0, data = 0, data_prev = 0;
+    uint16_t addr, addr_prev = 0, addr_prev2 = 0, tmp_addr=0;
+    uint8_t data = 0, data_prev = 0;
 
     uint8_t* ccm = CCM_RAM;
 	memcpy(ccm, buffer, 0xc00); // DPC+ ARM Driver code (not really needed)
@@ -181,7 +182,7 @@ void emulate_DPCplus_cartridge( uint32_t image_size)
 					{
 						//  flag = (myCounters[index] & 0xFF) < myBottoms[index] ? 0xFF : 0;
 						//  flag = (((myTops[index]-(myCounters[index] & 0x00ff)) & 0xFF) > ((myTops[index]-myBottoms[index]) & 0xFF)) ? 0xFF : 0;
-						data = (uint16_t)(myDisplayImage[myCounters[index]] & ( (((myTops[index]-(myCounters[index] & 0x00ff)) & 0xFF) > ((myTops[index]-myBottoms[index]) & 0xFF)) ? 0xFF : 0));
+						data = (uint8_t)(myDisplayImage[myCounters[index]] & ( (((myTops[index]-(myCounters[index] & 0x00ff)) & 0xFF) > ((myTops[index]-myBottoms[index]) & 0xFF)) ? 0xFF : 0));
 						myCounters[index] = (myCounters[index] + 0x1) & 0x0fff;
 						break;
 					}
@@ -207,7 +208,7 @@ void emulate_DPCplus_cartridge( uint32_t image_size)
 			    }
 
 
-				DATA_OUT = data DATA_OUT_SHIFT;
+				DATA_OUT = data;
 				SET_DATA_MODE_OUT
 				addr = tmp_addr; // restore addr, because of possible fast fetch
 
@@ -332,7 +333,7 @@ void emulate_DPCplus_cartridge( uint32_t image_size)
 			        	    case 255: // call without IRQ driven audio
 			        	    	// wait for the next address (which is the address we send PC back later)
 			        	    	while ((addr = ADDR_IN) != addr_prev) addr_prev = addr;
-				        	    DATA_OUT = ((uint16_t)0xEA)DATA_OUT_SHIFT;				// (NOP)
+				        	    DATA_OUT = 0xEA;				// (NOP)
 				        	    SET_DATA_MODE_OUT;
 				        	    // check Parameter flag and copy and reset myParameterPointer and Flag.
 				        	    // but maybe multiple copy tasks have to be done..
@@ -358,15 +359,15 @@ void emulate_DPCplus_cartridge( uint32_t image_size)
 				        	    while (ADDR_IN == addr);
 
 			        	    	addr = ADDR_IN;
-				        	    DATA_OUT = ((uint16_t)0x4C)DATA_OUT_SHIFT;				// (JMP)
+				        	    DATA_OUT = 0x4C;				// (JMP)
 				        	    while (ADDR_IN == addr);
 
 			        	    	addr = ADDR_IN;
-				        	    DATA_OUT = (addr_prev & 0xff)DATA_OUT_SHIFT;	// (Low Byte of new addr)
+				        	    DATA_OUT = (uint8_t)(addr_prev & 0xff);	// (Low Byte of new addr)
 				        	    while (ADDR_IN == addr);
 
 			        	    	addr = ADDR_IN;
-				        	    DATA_OUT = (addr_prev >> 8)DATA_OUT_SHIFT;	// (High Byte of new addr)
+				        	    DATA_OUT = (uint8_t)(addr_prev >> 8);	// (High Byte of new addr)
 			        	    	addr_prev = addr;				// set addr_prev for next loop
 				        	    while (ADDR_IN == addr);
 				        	    SET_DATA_MODE_IN;
@@ -475,7 +476,7 @@ void emulate_DPCplus_cartridge( uint32_t image_size)
 
 				// normal rom access
 				prev_rom = bankPtr[addr&0xFFF];
-				DATA_OUT = ((uint16_t) prev_rom)DATA_OUT_SHIFT;
+				DATA_OUT = prev_rom;
 				SET_DATA_MODE_OUT;
 
 				if(myDataFetcherCopyType == 0){

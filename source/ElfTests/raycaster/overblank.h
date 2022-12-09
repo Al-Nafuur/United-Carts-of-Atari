@@ -1,0 +1,1 @@
+void overblank(unsigned char but1, unsigned char joy1, uint8_t colors[40], uint32_t systemType);

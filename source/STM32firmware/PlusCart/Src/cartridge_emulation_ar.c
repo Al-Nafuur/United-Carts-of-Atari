@@ -163,7 +163,8 @@ void emulate_ar_cartridge(const char* cartridge_path, unsigned int image_size, u
 	uint8_t *multiload_map = rom + 0x0800;
 	uint8_t *multiload_buffer = multiload_map + 0x0100;
 
-	uint16_t addr = 0, addr_prev = 0, addr_prev2 = 0, last_address = 0, data_prev = 0, data = 0;
+	uint16_t addr = 0, addr_prev = 0, addr_prev2 = 0, last_address = 0;
+	uint8_t data_prev = 0, data = 0;
 
 	uint8_t *bank0 = ram, *bank1 = rom;
 	uint32_t transition_count = 0;
@@ -195,7 +196,7 @@ void emulate_ar_cartridge(const char* cartridge_path, unsigned int image_size, u
 			else
 				value_out = addr < 0x1800 ? bank0[addr & 0x07ff] : bank1[addr & 0x07ff];
 
-			DATA_OUT = ((uint16_t)value_out) DATA_OUT_SHIFT;
+			DATA_OUT = value_out;
 			SET_DATA_MODE_OUT;
 
 			if (addr == 0x1ff9 && bank1 == rom && last_address <= 0xff) {
@@ -203,7 +204,7 @@ void emulate_ar_cartridge(const char* cartridge_path, unsigned int image_size, u
 
 				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
 
-				load_multiload(ram, rom, multiload_map[(data_prev DATA_IN_SHIFT) & 0xff], cartridge_path, multiload_buffer, image_size, d);
+				load_multiload(ram, rom, multiload_map[data_prev & 0xff], cartridge_path, multiload_buffer, image_size, d);
 
 			}
 			else if ((addr & 0x0f00) == 0 && (transition_count > 5 || !write_ram_enabled)) {
@@ -264,13 +265,13 @@ void emulate_ar_cartridge(const char* cartridge_path, unsigned int image_size, u
 		}else{
 			if (transition_count < 6) transition_count++;
 			last_address = addr;
-            if(addr == SWCHB){
+            if(addr == EXIT_SWCHB_ADDR){
         		while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-        		if( !((data_prev DATA_IN_SHIFT) & 0x1) && joy_status)
+        		if( !(data_prev & 0x1) && joy_status)
         			break;
             }else if(addr == SWCHA){
         		while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-        		joy_status = !((data_prev DATA_IN_SHIFT) & 0x80);
+        		joy_status = !(data_prev & 0x80);
             }else{
         		while (ADDR_IN == addr);
             }

@@ -8,7 +8,6 @@
 #define RESET_ADDR addr = addr_prev = 0xffff;
 #define CCM_RAM ((uint8_t*)0x10000000)
 
-#define SWCHB          0x282
 #define SWCHA          0x280
 
 enum Transmission_State{
