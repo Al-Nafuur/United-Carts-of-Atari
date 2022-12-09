@@ -10,6 +10,7 @@
 #include "cartridge_emulation.h"
 #include "cartridge_firmware.h"
 #include "global.h"
+#include "stm32f4xx_hal.h"
 
 #include "cartridge_emulation_dpcp.h"
 
@@ -298,6 +299,7 @@ void emulate_DPCplus_cartridge( uint32_t image_size)
 			        	      myParameterPointer = 0;
 			        	      break;
 			        	    case 1: // Copy ROM to fetcher
+			        	    	//DMA2_Stream0->
 			        	    	myDataFetcherCopyPointer = myParameter[3];
 			        	    	myDataFetcherCopyType = (uint8_t) data_prev;
 
