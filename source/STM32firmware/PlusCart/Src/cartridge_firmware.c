@@ -31,6 +31,7 @@
 	(uint8_t)(sharedFont[ convertAsciiToCharnum(fontType, l) * 12 + s ] << 4 | \
 	sharedFont[ convertAsciiToCharnum(fontType, r) * 12 + s ])
 
+const uint16_t DATAMODE_OUT = 0x5555;
 
 static char menu_header[CHARS_PER_LINE]__attribute__((section(".ccmram#")));
 static char pendingStatusMessage[STATUS_MESSAGE_LENGTH]__attribute__((section(".ccmram#")));
@@ -758,7 +759,7 @@ bool comms_enabled = false;
 int emulate_firmware_cartridge() {
 	__disable_irq();	// Disable interrupts
 	uint16_t addr, addr_prev = 0;
-	uint16_t data = 0, data_prev = 0;
+	uint8_t data = 0, data_prev = 0;
 	unsigned const char *bankPtr = &firmware_rom[0];
 
 	while (true) {
@@ -778,12 +779,12 @@ int emulate_firmware_cartridge() {
 
 					if (addr > 0x1FF4 && addr <= 0x1FFB) {	// bank-switch
 						bankPtr = &buffer[(addr - 0x1FF5) * 4 * 1024];
-						DATA_OUT = ((uint16_t)bankPtr[addr & 0xFFF])DATA_OUT_SHIFT;
+						DATA_OUT = bankPtr[addr & 0xFFF];
 					}
 
 					else if (addr == 0x1FF4) {
 						bankPtr = &firmware_rom[0];
-						DATA_OUT = ((uint16_t)bankPtr[addr & 0xFFF])DATA_OUT_SHIFT;
+						DATA_OUT = bankPtr[addr & 0xFFF];
 					}
 
 					else if (addr == CART_CMD_HOTSPOT) {// atari 2600 has send an command
@@ -791,30 +792,30 @@ int emulate_firmware_cartridge() {
 							data_prev = data;
 							data = DATA_IN_BYTE;
 						}
-						addr = data_prev DATA_IN_SHIFT;
+						addr = data_prev;
 						break;
 					}
 
 					else if (addr > CART_STATUS_BYTES_START - 1
 							&& addr < CART_STATUS_BYTES_END + 1) {
-						DATA_OUT = ((uint16_t)menu_status[addr - CART_STATUS_BYTES_START])DATA_OUT_SHIFT;
+						DATA_OUT = menu_status[addr - CART_STATUS_BYTES_START];
 					}
 
 					else if (addr > CART_STATUS_BYTES_END) {
-						DATA_OUT = ((uint16_t)end_bank[addr - (CART_STATUS_BYTES_END + 1)])DATA_OUT_SHIFT;
+						DATA_OUT = end_bank[addr - (CART_STATUS_BYTES_END + 1)];
 					} else {
-						DATA_OUT = ((uint16_t)bankPtr[addr & 0xFFF])DATA_OUT_SHIFT;
+						DATA_OUT = bankPtr[addr & 0xFFF];
 					}
 
 				} else
-					DATA_OUT = ((uint16_t)bankPtr[addr & 0xFFF])DATA_OUT_SHIFT;
+					DATA_OUT = bankPtr[addr & 0xFFF];
 
 			} else {// prior to an access to $1FF4, we might be running on a 7800 with the CPU at
 					// ~1.8MHz so we've got less time than usual - keep this short.
 				if (addr > CART_STATUS_BYTES_END) {
-					DATA_OUT = ((uint16_t)end_bank[addr - (CART_STATUS_BYTES_END + 1)])DATA_OUT_SHIFT;
+					DATA_OUT = end_bank[addr - (CART_STATUS_BYTES_END + 1)];
 				} else {
-					DATA_OUT = ((uint16_t)bankPtr[addr & 0xFFF])DATA_OUT_SHIFT;
+					DATA_OUT = bankPtr[addr & 0xFFF];
 				}
 				if (addr == 0x1FF4) // we should move this comm enable hotspot because it is in the bankswitch area..
 					comms_enabled = true;

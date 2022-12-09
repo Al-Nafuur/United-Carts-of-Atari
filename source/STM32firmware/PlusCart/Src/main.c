@@ -53,6 +53,7 @@
 #include "cartridge_firmware.h"
 #include "cartridge_emulation_ACE.h"
 #include "cartridge_emulation_ar.h"
+#include "cartridge_emulation_ELF.h"
 #include "cartridge_detection.h"
 #include "cartridge_emulation.h"
 #include "cartridge_emulation_df.h"
@@ -125,6 +126,7 @@ const EXT_TO_CART_TYPE_MAP ext_to_cart_type_map[]__attribute__((section(".flash0
 	{"DPCP", { base_type_DPCplus, false, false, false, true  }},
 	{"SB",   { base_type_SB,      false, false, true,  false }},
 	{"UA",   { base_type_UA,      false, false, false, false }},
+	{"ELF",  { base_type_ELF,     false, false, false, false }},
 
 	{0,{0,0,0}}
 };
@@ -394,10 +396,11 @@ MENU_ENTRY* generateSetupMenu(MENU_ENTRY *dst) {
 		make_menu_entry(&dst, MENU_TEXT_DELETE_OFFLINE_ROMS, Menu_Action);
 	else
 		make_menu_entry(&dst, MENU_TEXT_DETECT_OFFLINE_ROMS, Menu_Action);
-#if USE_SD_CARD
-	make_menu_entry(&dst, MENU_TEXT_FORMAT_SD_CARD, Menu_Action);
-#endif
 	make_menu_entry(&dst, MENU_TEXT_FORMAT_EEPROM, Menu_Action);
+	if (EXIT_SWCHB_ADDR == SWCHB)
+		make_menu_entry(&dst, MENU_TEXT_DISABLE_EMU_EXIT, Menu_Action);
+	else
+		make_menu_entry(&dst, MENU_TEXT_ENABLE_EMU_EXIT, Menu_Action);
 
 	return dst;
 }
@@ -552,13 +555,6 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			dst = generateSystemInfo(dst);
 			loadStore = true;
 		}
-#if USE_SD_CARD
-		else if (strstr(mts, MENU_TEXT_FORMAT_SD_CARD) == mts) {
-			menuStatusMessage = sd_card_format() ? done : failed;
-			dst = generateSetupMenu(dst);
-			loadStore = true;
-		}
-#endif
 #if USE_WIFI
 		// WiFi Setup
 		else if (strstr(mts, MENU_TEXT_WIFI_SETUP) == mts) {
@@ -647,6 +643,18 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 #endif
 		else if (strstr(mts, MENU_TEXT_FORMAT_EEPROM) == mts) {
 			flash_erase_eeprom();
+			truncate_curPath();
+			buildMenuFromPath(d);
+			menuStatusMessage = done;
+		}
+		else if (strstr(mts, MENU_TEXT_ENABLE_EMU_EXIT) == mts) {
+			EXIT_SWCHB_ADDR = SWCHB;
+			truncate_curPath();
+			buildMenuFromPath(d);
+			menuStatusMessage = done;
+		}
+		else if (strstr(mts, MENU_TEXT_DISABLE_EMU_EXIT) == mts) {
+			EXIT_SWCHB_ADDR = 0xffff; // Impossible address prevents snooping SWCHB reads
 			truncate_curPath();
 			buildMenuFromPath(d);
 			menuStatusMessage = done;
@@ -1055,7 +1063,15 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 	// If we don't already know the type (from the file extension), then we
 	// auto-detect the cart type - largely follows code in Stella's CartDetector.cpp
 
-	if (d->filesize <= 64 * 1024 && (d->filesize % 1024) == 0 && isProbably3EPlus(d->filesize, buffer))
+	// Check with types that have headers first since they are more reliable than huristics
+	if(isElf(bytes_read, buffer))
+	{
+		cart_type.base_type = base_type_ELF;
+	}
+	else if(is_ace_cartridge(bytes_read, buffer)){
+		cart_type.base_type = base_type_ACE;
+	}
+	else if (d->filesize <= 64 * 1024 && (d->filesize % 1024) == 0 && isProbably3EPlus(d->filesize, buffer))
 	{
 		cart_type.base_type = base_type_3EPlus;
 	}
@@ -1277,6 +1293,10 @@ void emulate_cartridge(CART_TYPE cart_type, MENU_ENTRY *d)
 		uint32_t* CCMpointer=(uint32_t*)&CCMUsageFinder; //Find address of CCM allocation and cast as a pointer
 		launch_ace_cartridge(curPath, cart_size_bytes, buffer, d, offset, cart_type.withPlusFunctions,CCMpointer); //Open the ACE bootloader library function
 	}
+	else if (cart_type.base_type == base_type_ELF)
+	{
+		launch_elf_file(curPath, cart_size_bytes, buffer);
+	}
 
 #if USE_WIFI
 	if (cart_type.withPlusFunctions)
@@ -1448,7 +1468,7 @@ int main(void)
 					CART_TYPE cart_type = identify_cartridge(d);
 					HAL_Delay(200);
 
-					if (cart_type.base_type == base_type_ACE && !(is_pluscart_ace_cartridge(d->filesize, buffer)))
+					if (cart_type.base_type == base_type_ACE && !(is_ace_cartridge(d->filesize, buffer)))
 						menuStatusMessage = romtype_ACE_unsupported;
 
 					else if (cart_type.base_type == base_type_Load_Failed)
@@ -1575,15 +1595,24 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
+#if HARDWARE_TYPE == PLUSCART
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLM = 8;
+#else
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
   RCC_OscInitStruct.PLL.PLLM = 16;
-  RCC_OscInitStruct.PLL.PLLN = 398;
+#endif
+  
+  RCC_OscInitStruct.PLL.PLLN = 432;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-  RCC_OscInitStruct.PLL.PLLQ = 7;
+  RCC_OscInitStruct.PLL.PLLQ = 9;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
