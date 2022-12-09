@@ -1304,14 +1304,19 @@ void truncate_curPath(){
 
 }
 
-void system_secondary_init(void){
+void check_autostart(bool check_PlusROM){
 	if(flash_has_downloaded_roms() ){
 	    MENU_ENTRY *d = &menu_entries[0];
 	    MENU_ENTRY *dst = (MENU_ENTRY *)&menu_entries[0];
 		curPath[0] = '\0';
 		flash_file_list( curPath, &dst, &num_menu_entries);
 
-		if(strncmp(AUTOSTART_FILENAME_PREFIX, d->entryname, sizeof(AUTOSTART_FILENAME_PREFIX) - 1) == 0 ){
+		if( ( !check_PlusROM &&
+			strncmp(STD_ROM_AUTOSTART_FILENAME_PREFIX, d->entryname, sizeof(STD_ROM_AUTOSTART_FILENAME_PREFIX) - 1) == 0 )
+			||
+			( check_PlusROM &&
+			strncmp(PLUSROM_AUTOSTART_FILENAME_PREFIX, d->entryname, sizeof(PLUSROM_AUTOSTART_FILENAME_PREFIX) - 1) == 0 )
+		){
     		CART_TYPE cart_type = identify_cartridge(d);
             HAL_Delay(200);
             if (cart_type.base_type != base_type_None){
@@ -1320,6 +1325,12 @@ void system_secondary_init(void){
 		}
 		num_menu_entries = 0;
 	}
+
+}
+
+void system_secondary_init(void){
+	check_autostart(false);
+
 	//	check user_settings properties that haven't been in user_setting since v1
 	if( user_settings.line_spacing >= SPACING_MAX )
 		user_settings.line_spacing = SPACING_DEFAULT;
@@ -1327,7 +1338,6 @@ void system_secondary_init(void){
 	if( user_settings.font_style >= FONT_MAX )
 		user_settings.font_style = FONT_DEFAULT;
 
-	set_menu_status_byte(STATUS_StatusByteReboot, 0);
 	generate_udid_string();
 
 #if USE_SD_CARD
@@ -1343,7 +1353,11 @@ void system_secondary_init(void){
 	MX_USART1_UART_Init();
 	esp8266_init();
 	read_esp8266_at_version();
+	check_autostart(true);
 #endif
+
+	set_menu_status_byte(STATUS_StatusByteReboot, 0);
+
 	// set up status area
 }
 

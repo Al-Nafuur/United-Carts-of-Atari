@@ -67,7 +67,8 @@
 #define URLENCODE_MENU_TEXT_PLUS_CONNECT    "PlusStore%20Connect"
 #define URLENCODE_MENU_TEXT_SETUP           "Setup"
 
-#define AUTOSTART_FILENAME_PREFIX           "Autostart."
+#define STD_ROM_AUTOSTART_FILENAME_PREFIX  "Autostart."
+#define PLUSROM_AUTOSTART_FILENAME_PREFIX  "PlusROM.Autostart."
 
 #define PATH_SEPERATOR '/' /*CHAR_SELECTION*/
 
