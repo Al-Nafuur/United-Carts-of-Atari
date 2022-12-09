@@ -112,20 +112,36 @@ void flash_erase_eeprom(){
 
 #if USE_WIFI
 /* write to flash with multiple HTTP range requests */
-uint32_t flash_download(char *filename, uint32_t filesize, uint32_t http_range_start, bool append){
-
+uint32_t flash_download(char *filename, uint32_t download_size, uint32_t http_range_start, bool append){
 	uint8_t start_sector;
-
 	if(append)
 		start_sector = user_settings.first_free_flash_sector;
 	else
 		start_sector = (uint8_t)FLASH_SECTOR_5;
 
-	if( start_sector < (uint8_t)FLASH_SECTOR_5 || esp8266_PlusStore_API_connect() == false){
+	if( start_sector < (uint8_t)FLASH_SECTOR_5){
     	return 0;
 	}
 
     flash_erase_storage(start_sector);
+
+	uint32_t address = DOWNLOAD_AREA_START_ADDRESS + 128U * 1024U * (uint8_t)( start_sector - 5);
+    flash_download_at(filename, download_size, http_range_start, (uint8_t*)address);
+
+    // flash new usersettings .. (if not appended)
+	if(! append){
+		user_settings.first_free_flash_sector = (uint8_t)(get_sector(address+download_size) + 1);
+    	flash_set_eeprom_user_settings(user_settings);
+	}
+
+	return address;
+}
+
+void flash_download_at(char *filename, uint32_t download_size, uint32_t http_range_start, uint8_t* flash_address){
+	if( esp8266_PlusStore_API_connect() == false){
+    	return;
+	}
+
 
     __disable_irq();
 	HAL_FLASH_Unlock();
@@ -151,15 +167,14 @@ uint32_t flash_download(char *filename, uint32_t filesize, uint32_t http_range_s
     FLASH_WaitInRAMForLastOperationWithMaxDelay();
 
     uint8_t c;
-    uint32_t count, http_range_end = http_range_start + (filesize < MAX_RANGE_SIZE ? filesize : MAX_RANGE_SIZE) - 1;
-	uint32_t Address = DOWNLOAD_AREA_START_ADDRESS + 128U * 1024U * (uint8_t)( start_sector - 5);
+    uint32_t count, http_range_end = http_range_start + (download_size < MAX_RANGE_SIZE ? download_size : MAX_RANGE_SIZE) - 1;
 
 	esp8266_PlusStore_API_prepare_request_header((char *)filename, true );
 	strcat(http_request_header, (char *)"     0- 00000\r\n\r\n");
     size_t http_range_param_pos_counter, http_range_param_pos = strlen((char *)http_request_header) - 5;
 
-    uint8_t parts = (uint8_t)(( filesize + MAX_RANGE_SIZE - 1 )  / MAX_RANGE_SIZE);
-    uint16_t last_part_size = (filesize % MAX_RANGE_SIZE)?(filesize % MAX_RANGE_SIZE):MAX_RANGE_SIZE;
+    uint8_t parts = (uint8_t)(( download_size + MAX_RANGE_SIZE - 1 )  / MAX_RANGE_SIZE);
+    uint16_t last_part_size = (download_size % MAX_RANGE_SIZE)?(download_size % MAX_RANGE_SIZE):MAX_RANGE_SIZE;
 
     while(parts != 0 ){
         http_range_param_pos_counter = http_range_param_pos;
@@ -198,7 +213,7 @@ uint32_t flash_download(char *filename, uint32_t filesize, uint32_t http_range_s
                     FLASH->CR |= FLASH_PSIZE_BYTE;
                     FLASH->CR |= FLASH_CR_PG;
 
-                    *(__IO uint8_t*)Address = c;
+                    *(__IO uint8_t*)flash_address = c;
                     // end FLASH_Program_Byte(Address, (uint8_t) c);
 
                     /* Wait for last operation to be completed */
@@ -206,7 +221,7 @@ uint32_t flash_download(char *filename, uint32_t filesize, uint32_t http_range_s
 
                     /* If the program operation is completed, disable the PG Bit */
                     FLASH->CR &= (~FLASH_CR_PG);
-                    Address++;
+                    flash_address++;
                     // end HAL_FLASH_Program
                // }else{
                 //    return;
@@ -223,20 +238,72 @@ uint32_t flash_download(char *filename, uint32_t filesize, uint32_t http_range_s
         }
     }
     __HAL_UNLOCK(&pFlash);
+    HAL_FLASH_Lock();
 
     __enable_irq();
 
     // End Transparent Transmission
     esp8266_PlusStore_API_end_transmission();
 
-    // flash new usersettings .. (if not appended)
-	if(! append){
-		user_settings.first_free_flash_sector = (uint8_t)(get_sector(Address) + 1);
-    	flash_set_eeprom_user_settings(user_settings);
-	}
-	return (uint32_t)( DOWNLOAD_AREA_START_ADDRESS + 128U * 1024U * (uint32_t)( start_sector - 5) );
 }
 #endif
+
+void flash_buffer_at(uint8_t* buffer, uint32_t buffer_size, uint8_t* flash_address)
+{
+	   __disable_irq();
+		HAL_FLASH_Unlock();
+
+	    /* Process Unlocked */
+	    __HAL_UNLOCK(&pFlash);
+	    //end HAL_FLASHEx_Erase();
+
+	    /* Flush the caches to be sure of the data consistency */
+	    __HAL_FLASH_DATA_CACHE_DISABLE();
+	    __HAL_FLASH_INSTRUCTION_CACHE_DISABLE();
+
+	    __HAL_FLASH_DATA_CACHE_RESET();
+	    __HAL_FLASH_INSTRUCTION_CACHE_RESET();
+
+	    __HAL_FLASH_INSTRUCTION_CACHE_ENABLE();
+	    __HAL_FLASH_DATA_CACHE_ENABLE();
+
+
+	    //__HAL_LOCK(&pFlash);
+
+	    pFlash.Lock = HAL_LOCKED;
+	    FLASH_WaitInRAMForLastOperationWithMaxDelay();
+
+
+		for(int i = 0; i < buffer_size; i++)
+		{
+			//HAL_FLASH_Program();
+			/* Program the user Flash area byte by byte
+			(area defined by FLASH_USER_START_ADDR and FLASH_USER_END_ADDR) ***********/
+			/* Wait for last operation to be completed */
+			//if(FLASH_WaitInRAMForLastOperationWithMaxDelay() == HAL_OK){
+			FLASH_WaitInRAMForLastOperationWithMaxDelay() ;
+			/*Program byte (8-bit) at a specified address.*/
+			// FLASH_Program_Byte(Address, (uint8_t) c);
+			CLEAR_BIT(FLASH->CR, FLASH_CR_PSIZE);
+			FLASH->CR |= FLASH_PSIZE_BYTE;
+			FLASH->CR |= FLASH_CR_PG;
+
+			*(__IO uint8_t*)flash_address = buffer[i];
+			// end FLASH_Program_Byte(Address, (uint8_t) c);
+
+			/* Wait for last operation to be completed */
+			FLASH_WaitInRAMForLastOperationWithMaxDelay();
+
+			/* If the program operation is completed, disable the PG Bit */
+			FLASH->CR &= (~FLASH_CR_PG);
+			flash_address++;
+			// end HAL_FLASH_Program
+	    }
+	    __HAL_UNLOCK(&pFlash);
+	    HAL_FLASH_Lock();
+
+	    __enable_irq();
+}
 
 /* write (firmware) to flash from buffer */
 void flash_firmware_update(uint32_t filesize){

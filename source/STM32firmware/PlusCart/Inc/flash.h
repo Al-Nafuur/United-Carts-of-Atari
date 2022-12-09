@@ -58,6 +58,8 @@ extern "C" {
 void flash_firmware_update(uint32_t)__attribute__((section(".data#")));
 
 uint32_t flash_download(char *, uint32_t , uint32_t , bool );
+void flash_download_at(char *filename, uint32_t download_size, uint32_t file_offset, uint8_t* flash_address);
+void flash_buffer_at(uint8_t* buffer, uint32_t buffer_size, uint8_t* flash_address);
 
 uint32_t flash_file_request( uint8_t *, uint32_t, uint32_t, uint32_t );
 

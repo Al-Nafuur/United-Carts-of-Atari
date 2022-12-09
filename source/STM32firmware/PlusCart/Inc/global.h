@@ -28,7 +28,8 @@
 #define MENU_TEXT_ESP8266_UPDATE            "WiFi Firmware Update"
 //#define MENU_TEXT_APPEARANCE                "Appearance"
 #define MENU_TEXT_DISPLAY                   "Display Preferences"
-
+#define MENU_TEXT_DISABLE_EMU_EXIT			"Disable Right+Reset Exit"
+#define MENU_TEXT_ENABLE_EMU_EXIT			"Enable Right+Reset Exit"
 #define MENU_TEXT_WIFI_RECONNECT            "WiFi Retry"
 #define MENU_TEXT_TV_MODE_SETUP             "TV Mode"
 #define MENU_TEXT_TV_MODE_PAL               "  PAL"
@@ -40,7 +41,6 @@
 #define MENU_TEXT_FONT_CAPTAIN_MORGAN_SPICE "  Captain Morgan Spice"
 #define MENU_TEXT_FONT_GLACIER_BELLE        "  Glacier Belle"
 
-#define MENU_TEXT_FORMAT_SD_CARD            "Format SD-Card"
 #define MENU_TEXT_FORMAT_EEPROM             "Format User Settings"
 
 #define MENU_TEXT_SPACING_SETUP             "Line Spacing"
@@ -151,7 +151,8 @@ enum cart_base_type{
 	base_type_DPCplus,
 	base_type_SB,
 	base_type_UA,
-	base_type_ACE
+	base_type_ACE,
+	base_type_ELF
 };
 
 typedef struct {

@@ -74,6 +74,7 @@ bool setup_cartridge_image(const char* filename, uint32_t image_size, uint8_t* b
         case base_type_3EPlus:
         case base_type_DPCplus:
         case base_type_ACE:
+        case base_type_ELF:
         case base_type_Load_Failed:
         default:
         	return false;

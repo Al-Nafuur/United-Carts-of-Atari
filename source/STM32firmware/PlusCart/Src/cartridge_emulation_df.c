@@ -22,7 +22,8 @@ void emulate_dfsc_cartridge(const char* filename, uint32_t image_size, uint8_t* 
     if (!reboot_into_cartridge()) return;
     __disable_irq();
 
-    uint16_t addr, addr_prev = 0, addr_prev2 = 0, data = 0, data_prev = 0;
+    uint16_t addr, addr_prev = 0, addr_prev2 = 0;
+    uint8_t data = 0, data_prev = 0;
 
 	while (1)
 	{
@@ -38,7 +39,7 @@ void emulate_dfsc_cartridge(const char* filename, uint32_t image_size, uint8_t* 
 
 			if (address < 0x80) {
 				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-				data = data_prev DATA_IN_SHIFT;
+				data = data_prev;
 
 				ram[address] = (uint8_t) data;
 			} else {
@@ -46,20 +47,20 @@ void emulate_dfsc_cartridge(const char* filename, uint32_t image_size, uint8_t* 
 
 				data = (address < 0x0100) ? ram[address & 0x7f] : bank[address];
 
-				DATA_OUT = ((uint16_t)data)DATA_OUT_SHIFT;
+				DATA_OUT = data;
 				SET_DATA_MODE_OUT
 				// wait for address bus to change
 				while (ADDR_IN == addr) ;
 				SET_DATA_MODE_IN
 			}
         }else{
-            if(addr == SWCHB){
+            if(addr == EXIT_SWCHB_ADDR){
         		while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-        		if( !((data_prev DATA_IN_SHIFT) & 0x1) && joy_status)
+        		if( !(data_prev & 0x1) && joy_status)
         			break;
             }else if(addr == SWCHA){
         		while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-        		joy_status = !((data_prev DATA_IN_SHIFT) & 0x80);
+        		joy_status = !(data_prev & 0x80);
             }
         }
 
@@ -80,7 +81,8 @@ void emulate_df_cartridge(const char* filename, uint32_t image_size, uint8_t* bu
     if (!reboot_into_cartridge()) return;
     __disable_irq();
 
-    uint16_t addr, addr_prev = 0, addr_prev2 = 0, data = 0, data_prev = 0;
+    uint16_t addr, addr_prev = 0, addr_prev2 = 0;
+    uint8_t data = 0, data_prev = 0;
 
 	while (1)
 	{
@@ -95,19 +97,19 @@ void emulate_df_cartridge(const char* filename, uint32_t image_size, uint8_t* bu
 
             if (address >= 0x0fc0 && address <= 0x0fdf) bank = layout->banks[address - 0x0fc0];
 
-            DATA_OUT = ((uint16_t)bank[address])DATA_OUT_SHIFT;
+            DATA_OUT = bank[address];
             SET_DATA_MODE_OUT
             // wait for address bus to change
             while (ADDR_IN == addr) ;
             SET_DATA_MODE_IN
         }else{
-            if(addr == SWCHB){
+            if(addr == EXIT_SWCHB_ADDR){
         		while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-        		if( !((data_prev DATA_IN_SHIFT) & 0x1) && joy_status)
+        		if( !(data_prev & 0x1) && joy_status)
         			break;
             }else if(addr == SWCHA){
         		while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-        		joy_status = !((data_prev DATA_IN_SHIFT) & 0x80);
+        		joy_status = !(data_prev & 0x80);
             }
         }
     }

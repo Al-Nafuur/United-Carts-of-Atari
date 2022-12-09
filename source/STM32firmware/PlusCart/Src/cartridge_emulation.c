@@ -24,12 +24,12 @@
 
 void exit_cartridge(uint16_t addr, uint16_t addr_prev){
 
-	DATA_OUT = 0xEA DATA_OUT_SHIFT;                  // (NOP) or data for SWCHB
+	DATA_OUT = 0xEA;                  // (NOP) or data for SWCHB
 	SET_DATA_MODE_OUT;
 	while (ADDR_IN == addr);
 
 	addr = ADDR_IN;
-	DATA_OUT = 0x00 DATA_OUT_SHIFT;                  // (BRK)
+	DATA_OUT = 0x00;                  // (BRK)
 	while (ADDR_IN == addr);
 
 	emulate_firmware_cartridge();
@@ -48,7 +48,8 @@ void emulate_standard_cartridge(int header_length, bool withPlusFunctions, uint1
 {
 	setup_cartridge_image_with_ram();
 
-	uint16_t addr, addr_prev = 0, data = 0, data_prev = 0;
+	uint16_t addr, addr_prev = 0;
+	uint8_t data = 0, data_prev = 0;
 	unsigned char *bankPtr = &cart_rom[0];
 	bool joy_status = false;
 
@@ -66,7 +67,7 @@ void emulate_standard_cartridge(int header_length, bool withPlusFunctions, uint1
 		{ // A12 high
 			if(withPlusFunctions && addr > 0x1fef && addr < 0x1ff4){
 				if(addr == 0x1ff2 ){// read from receive buffer
-					DATA_OUT = ((uint16_t)receive_buffer[receive_buffer_read_pointer])DATA_OUT_SHIFT;
+					DATA_OUT = receive_buffer[receive_buffer_read_pointer];
 					SET_DATA_MODE_OUT
 					// if there is more data on the receive_buffer
 					if(receive_buffer_read_pointer != receive_buffer_write_pointer )
@@ -78,16 +79,16 @@ void emulate_standard_cartridge(int header_length, bool withPlusFunctions, uint1
 					while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
 					if(huart_state == No_Transmission)
 						huart_state = Send_Start;
-					out_buffer[out_buffer_write_pointer] = (uint8_t)(data_prev DATA_IN_SHIFT);
+					out_buffer[out_buffer_write_pointer] = data_prev;
 				}else if(addr == 0x1ff3){ // read receive Buffer length
-					DATA_OUT = ((uint16_t)(receive_buffer_write_pointer - receive_buffer_read_pointer))DATA_OUT_SHIFT;
+					DATA_OUT = receive_buffer_write_pointer - receive_buffer_read_pointer;
 					SET_DATA_MODE_OUT
 					// wait for address bus to change
 					while (ADDR_IN == addr){}
 					SET_DATA_MODE_IN
 				}else{ // if(addr == 0x1ff0){ // write to send Buffer
 					while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-					out_buffer[out_buffer_write_pointer++] = (uint8_t) (data_prev DATA_IN_SHIFT);
+					out_buffer[out_buffer_write_pointer++] = data_prev;
 				}
 			}else{
 				if (addr >= lowBS && addr <= highBS)	// bank-switch
@@ -97,7 +98,7 @@ void emulate_standard_cartridge(int header_length, bool withPlusFunctions, uint1
 				{	// SC RAM access
 					if (addr & 0x0080)
 					{	// a read from cartridge ram
-						DATA_OUT = ((uint16_t)cart_ram[addr&0x7F])DATA_OUT_SHIFT;
+						DATA_OUT = cart_ram[addr&0x7F];
 						SET_DATA_MODE_OUT
 						// wait for address bus to change
 						while (ADDR_IN == addr) ;
@@ -107,12 +108,12 @@ void emulate_standard_cartridge(int header_length, bool withPlusFunctions, uint1
 					{	// a write to cartridge ram
 						// read last data on the bus before the address lines change
 						while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-						cart_ram[addr&0x7F] = (uint8_t) (data_prev DATA_IN_SHIFT);
+						cart_ram[addr&0x7F] = data_prev;
 					}
 				}
 				else
 				{	// normal rom access
-					DATA_OUT = ((uint16_t)bankPtr[addr&0xFFF])DATA_OUT_SHIFT;
+					DATA_OUT = bankPtr[addr&0xFFF];
 					SET_DATA_MODE_OUT
 					// wait for address bus to change
 					while (ADDR_IN == addr){ process_transmission(); }
@@ -121,13 +122,13 @@ void emulate_standard_cartridge(int header_length, bool withPlusFunctions, uint1
 
 			}
 		}else{
-			if(addr == SWCHB){
+			if(addr == EXIT_SWCHB_ADDR){
 				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-				if( !((data_prev DATA_IN_SHIFT) & 0x1) && joy_status)
+				if( !(data_prev & 0x1) && joy_status)
 					break;
 			}else if(addr == SWCHA){
 				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-				joy_status = !((data_prev DATA_IN_SHIFT) & 0x80);
+				joy_status = !(data_prev & 0x80);
 			}else if(withPlusFunctions){
 				while (ADDR_IN == addr) {
 					process_transmission();
@@ -162,7 +163,7 @@ void emulate_UA_cartridge()
 		if (addr & 0x1000)
 		{ // A12 high
 			// normal rom access
-			DATA_OUT = ((uint16_t)bankPtr[addr&0xFFF])DATA_OUT_SHIFT;
+			DATA_OUT = bankPtr[addr&0xFFF];
 			SET_DATA_MODE_OUT
 			// wait for address bus to change
 			while (ADDR_IN == addr)
@@ -173,13 +174,13 @@ void emulate_UA_cartridge()
 				bankPtr = &cart_rom[0];
 			}else if(addr == 0x240){
 				bankPtr = &cart_rom[4*1024];
-			}else if(addr == SWCHB){
+			}else if(addr == EXIT_SWCHB_ADDR){
 				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-				if( !((data_prev DATA_IN_SHIFT) & 0x1) && joy_status)
+				if( !(data_prev & 0x1) && joy_status)
 					break;
 			}else if(addr == SWCHA){
 				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-				joy_status = !((data_prev DATA_IN_SHIFT) & 0x80);
+				joy_status = !(data_prev & 0x80);
 			}
 		}
 	}
@@ -199,7 +200,8 @@ void emulate_FA_cartridge(int header_length, bool withPlusFunctions)
 {
 	setup_cartridge_image_with_ram();
 
-	uint16_t addr, addr_prev = 0, data = 0, data_prev = 0;
+	uint16_t addr, addr_prev = 0;
+	uint8_t data = 0, data_prev = 0;
 	unsigned char *bankPtr = &cart_rom[0];
 	bool joy_status = false;
 
@@ -217,7 +219,7 @@ void emulate_FA_cartridge(int header_length, bool withPlusFunctions)
 		{ // A12 high
 			if(withPlusFunctions && addr > 0x1fef && addr < 0x1ff4){
 				if(addr == 0x1ff2 ){// read from receive buffer
-					DATA_OUT = ((uint16_t)receive_buffer[receive_buffer_read_pointer])DATA_OUT_SHIFT;
+					DATA_OUT = receive_buffer[receive_buffer_read_pointer];
 					SET_DATA_MODE_OUT
 					// if there is more data on the receive_buffer
 					if(receive_buffer_read_pointer != receive_buffer_write_pointer )
@@ -229,16 +231,16 @@ void emulate_FA_cartridge(int header_length, bool withPlusFunctions)
 					while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
 					if(huart_state == No_Transmission)
 						huart_state = Send_Start;
-					out_buffer[out_buffer_write_pointer] = (uint8_t) (data_prev DATA_IN_SHIFT);
+					out_buffer[out_buffer_write_pointer] = data_prev;
 				}else if(addr == 0x1ff3){ // read receive Buffer length
-					DATA_OUT = ((uint16_t)(receive_buffer_write_pointer - receive_buffer_read_pointer))DATA_OUT_SHIFT;
+					DATA_OUT = receive_buffer_write_pointer - receive_buffer_read_pointer;
 					SET_DATA_MODE_OUT
 					// wait for address bus to change
 					while (ADDR_IN == addr){}
 					SET_DATA_MODE_IN
 				}else{ // if(addr == 0x1ff0){ // write to send Buffer
 					while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-					out_buffer[out_buffer_write_pointer++] = (uint8_t) (data_prev DATA_IN_SHIFT);
+					out_buffer[out_buffer_write_pointer++] = data_prev;
 				}
 			}else{
 				if (addr >= 0x1FF8 && addr <= 0x1FFA)	// bank-switch
@@ -246,7 +248,7 @@ void emulate_FA_cartridge(int header_length, bool withPlusFunctions)
 
 				if ((addr & 0x1F00) == 0x1100)
 				{	// a read from cartridge ram
-					DATA_OUT = ((uint16_t)cart_ram[addr&0xFF])DATA_OUT_SHIFT;
+					DATA_OUT = cart_ram[addr&0xFF];
 					SET_DATA_MODE_OUT
 					// wait for address bus to change
 					while (ADDR_IN == addr) ;
@@ -256,11 +258,11 @@ void emulate_FA_cartridge(int header_length, bool withPlusFunctions)
 				{	// a write to cartridge ram
 					// read last data on the bus before the address lines change
 					while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-					cart_ram[addr&0xFF] = (uint8_t) (data_prev DATA_IN_SHIFT);
+					cart_ram[addr&0xFF] = data_prev;
 				}
 				else
 				{	// normal rom access
-					DATA_OUT = ((uint16_t)bankPtr[addr&0xFFF])DATA_OUT_SHIFT;
+					DATA_OUT = bankPtr[addr&0xFFF];
 					SET_DATA_MODE_OUT
 					// wait for address bus to change
 					while (ADDR_IN == addr){ process_transmission(); }
@@ -268,13 +270,13 @@ void emulate_FA_cartridge(int header_length, bool withPlusFunctions)
 				}
 			}
 		}else{
-			if(addr == SWCHB){
+			if(addr == EXIT_SWCHB_ADDR){
 				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-				if( !((data_prev DATA_IN_SHIFT) & 0x1) && joy_status)
+				if( !(data_prev & 0x1) && joy_status)
 					break;
 			}else if(addr == SWCHA){
 				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-				joy_status = !((data_prev DATA_IN_SHIFT) & 0x80);
+				joy_status = !(data_prev & 0x80);
 			}else if(withPlusFunctions){
 				while (ADDR_IN == addr) { process_transmission(); }
 			}
@@ -345,7 +347,8 @@ void emulate_FE_cartridge()
 {
 	setup_cartridge_image();
 
-	uint16_t addr, addr_prev = 0, data = 0, data_prev = 0;
+	uint16_t addr, addr_prev = 0;
+	uint8_t data = 0, data_prev = 0;
 	unsigned char *bankPtr = &cart_rom[0];
 	int lastAccessWasFE = 0;
 	bool joy_status = false;
@@ -361,7 +364,7 @@ void emulate_FE_cartridge()
 		if (addr & 0x1000)
 		{ // A12 high
 			data = bankPtr[addr&0xFFF];
-			DATA_OUT = data DATA_OUT_SHIFT;
+			DATA_OUT = data;
 			SET_DATA_MODE_OUT
 			// wait for address bus to change
 			while (ADDR_IN == addr) ;
@@ -370,8 +373,8 @@ void emulate_FE_cartridge()
 		else
 		{	// A12 low, read last data on the bus before the address lines change
 			while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-			data = (data_prev DATA_IN_SHIFT);
-			if(addr == SWCHB){
+			data = data_prev;
+			if(addr == EXIT_SWCHB_ADDR){
 				if( !(data & 0x1) && joy_status)
 					break;
 			}else if(addr == SWCHA){
@@ -419,7 +422,8 @@ void emulate_3F_cartridge()
 	setup_cartridge_image();
 
 	int cartPages = (int) cart_size_bytes/2048;
-	uint16_t addr, addr_prev = 0, addr_prev2 = 0, data = 0, data_prev = 0;
+	uint16_t addr, addr_prev = 0, addr_prev2 = 0;
+	uint8_t data = 0, data_prev = 0;
 	unsigned char *bankPtr = &cart_rom[0];
 	unsigned char *fixedPtr = &cart_rom[(cartPages-1)*2048];
 	bool joy_status = false;
@@ -438,9 +442,9 @@ void emulate_3F_cartridge()
 		if (addr & 0x1000)
 		{ // A12 high
 			if (addr & 0x800)
-				DATA_OUT = ((uint16_t)fixedPtr[addr&0x7FF])DATA_OUT_SHIFT;
+				DATA_OUT = fixedPtr[addr&0x7FF];
 			else
-				DATA_OUT = ((uint16_t)bankPtr[addr&0x7FF])DATA_OUT_SHIFT;
+				DATA_OUT = bankPtr[addr&0x7FF];
 			SET_DATA_MODE_OUT
 			// wait for address bus to change
 			while (ADDR_IN == addr) ;
@@ -451,14 +455,14 @@ void emulate_3F_cartridge()
 			while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
 			if (addr == 0x003F)
 			{	// switch bank
-				int newPage = ((data_prev DATA_IN_SHIFT)) % cartPages; //data_prev>>8
+				int newPage = data_prev % cartPages; //data_prev>>8
 				bankPtr = &cart_rom[newPage*2048];
 			}
-			else if(addr == SWCHB){
-				if( !((data_prev DATA_IN_SHIFT) & 0x1) && joy_status)
+			else if(addr == EXIT_SWCHB_ADDR){
+				if( !(data_prev & 0x1) && joy_status)
 					break;
 			}else if(addr == SWCHA){
-				joy_status = !((data_prev DATA_IN_SHIFT) & 0x80);
+				joy_status = !(data_prev & 0x80);
 			}
 		}
 	}
@@ -528,7 +532,8 @@ void emulate_3E_cartridge(int header_length, bool withPlusFunctions)
 
 	int cartROMPages = (int) cart_size_bytes/2048;
 	int cartRAMPages = 32;
-	uint16_t addr, addr_prev = 0, addr_prev2 = 0, data = 0, data_prev = 0;
+	uint16_t addr, addr_prev = 0, addr_prev2 = 0;
+	uint8_t data = 0, data_prev = 0;
 	unsigned char *bankPtr = &cart_rom[0];
 	unsigned char *fixedPtr = &cart_rom[(cartROMPages-1)*2048];
 	int bankIsRAM = 0;
@@ -551,7 +556,7 @@ void emulate_3E_cartridge(int header_length, bool withPlusFunctions)
 		{ // A12 high
 			if(withPlusFunctions && addr > 0x1fef && addr < 0x1ff4){
 				if(addr == 0x1ff2 ){// read from receive buffer
-					DATA_OUT = ((uint16_t)receive_buffer[receive_buffer_read_pointer])DATA_OUT_SHIFT;
+					DATA_OUT = receive_buffer[receive_buffer_read_pointer];
 					SET_DATA_MODE_OUT
 					// if there is more data on the receive_buffer
 					if(receive_buffer_read_pointer != receive_buffer_write_pointer )
@@ -563,23 +568,23 @@ void emulate_3E_cartridge(int header_length, bool withPlusFunctions)
 					while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
 					if(huart_state == No_Transmission)
 						huart_state = Send_Start;
-					out_buffer[out_buffer_write_pointer] = (uint8_t) (data_prev DATA_IN_SHIFT);
+					out_buffer[out_buffer_write_pointer] = data_prev;
 				}else if(addr == 0x1ff3){ // read receive Buffer length
-					DATA_OUT = ((uint16_t)(receive_buffer_write_pointer - receive_buffer_read_pointer))DATA_OUT_SHIFT;
+					DATA_OUT = receive_buffer_write_pointer - receive_buffer_read_pointer;
 					SET_DATA_MODE_OUT
 					// wait for address bus to change
 					while (ADDR_IN == addr){}
 					SET_DATA_MODE_IN
 				}else{ // if(addr == 0x1ff0){ // write to send Buffer
 					while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-					out_buffer[out_buffer_write_pointer++] = (uint8_t) (data_prev DATA_IN_SHIFT);
+					out_buffer[out_buffer_write_pointer++] = data_prev;
 				}
 			}else{
 				if (bankIsRAM && (addr & 0xC00) == 0x400)
 				{	// we are accessing the RAM write addresses ($1400-$17FF)
 					// read last data on the bus before the address lines change
 					while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-					bankPtr[addr&0x3FF] = (uint8_t) (data_prev DATA_IN_SHIFT);
+					bankPtr[addr&0x3FF] = data_prev;
 				}else
 				{	// reads to either ROM or RAM
 					if (addr & 0x800)
@@ -593,7 +598,7 @@ void emulate_3E_cartridge(int header_length, bool withPlusFunctions)
 						else
 							data = bankPtr[addr&0x3FF];	// must be RAM read
 					}
-					DATA_OUT = data DATA_OUT_SHIFT;
+					DATA_OUT = data;
 					SET_DATA_MODE_OUT
 					// wait for address bus to change
 					while (ADDR_IN == addr){process_transmission();}
@@ -606,20 +611,20 @@ void emulate_3E_cartridge(int header_length, bool withPlusFunctions)
 			if (addr == 0x003F) {
 				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN;}
 				bankIsRAM = 0;
-				bankPtr = &cart_rom[((data_prev DATA_IN_SHIFT)%cartROMPages)*2048];	// switch in ROM bank
+				bankPtr = &cart_rom[(data_prev % cartROMPages)*2048];	// switch in ROM bank
 			}
 			else if (addr == 0x003E) {
 				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN;}
 				bankIsRAM = 1;
-				bankPtr = &cart_ram[((data_prev DATA_IN_SHIFT)%cartRAMPages)*1024];	// switch in RAM bank
+				bankPtr = &cart_ram[(data_prev % cartRAMPages)*1024];	// switch in RAM bank
 			}
-			else if(addr == SWCHB){
+			else if(addr == EXIT_SWCHB_ADDR){
 				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN;}
-				if( !((data_prev DATA_IN_SHIFT) & 0x1) && joy_status)
+				if( !(data_prev & 0x1) && joy_status)
 					break;
 			}else if(addr == SWCHA){
 				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN;}
-				joy_status = !((data_prev DATA_IN_SHIFT) & 0x80);
+				joy_status = !(data_prev & 0x80);
 			}else if(withPlusFunctions){
 				while (ADDR_IN == addr) {
 					process_transmission();
@@ -647,7 +652,8 @@ void emulate_3EPlus_cartridge(int header_length, bool withPlusFunctions)
 
 	int cartRAMPages = 64;
 	int cartROMPages = (int) cart_size_bytes / 1024;
-	uint16_t addr, addr_prev = 0, data = 0, data_prev = 0;
+	uint16_t addr, addr_prev = 0;
+	uint8_t data = 0, data_prev = 0;
 	uint16_t act_bank = 0;
 	uint8_t* cart_rom = buffer;
 	uint8_t* cart_ram = buffer + cart_size_bytes + (((~cart_size_bytes & 0x03) + 1) & 0x03);
@@ -670,7 +676,7 @@ void emulate_3EPlus_cartridge(int header_length, bool withPlusFunctions)
 		{ // A12 high
 			if(withPlusFunctions && addr > 0x1fef && addr < 0x1ff4){
 				if(addr == 0x1ff2 ){// read from receive buffer
-					DATA_OUT = ((uint16_t)receive_buffer[receive_buffer_read_pointer])DATA_OUT_SHIFT;
+					DATA_OUT = receive_buffer[receive_buffer_read_pointer];
 					SET_DATA_MODE_OUT
 					// if there is more data on the receive_buffer
 					if(receive_buffer_read_pointer != receive_buffer_write_pointer )
@@ -682,16 +688,16 @@ void emulate_3EPlus_cartridge(int header_length, bool withPlusFunctions)
 					while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
 					if(huart_state == No_Transmission)
 						huart_state = Send_Start;
-					out_buffer[out_buffer_write_pointer] = (uint8_t) (data_prev DATA_IN_SHIFT);
+					out_buffer[out_buffer_write_pointer] = data_prev;
 				}else if(addr == 0x1ff3){ // read receive Buffer length
-					DATA_OUT = ((uint16_t)(receive_buffer_write_pointer - receive_buffer_read_pointer))DATA_OUT_SHIFT;
+					DATA_OUT = receive_buffer_write_pointer - receive_buffer_read_pointer;
 					SET_DATA_MODE_OUT
 					// wait for address bus to change
 					while (ADDR_IN == addr){}
 					SET_DATA_MODE_IN
 				}else{ // if(addr == 0x1ff0){ // write to send Buffer
 					while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-					out_buffer[out_buffer_write_pointer++] = (uint8_t) (data_prev DATA_IN_SHIFT);
+					out_buffer[out_buffer_write_pointer++] = data_prev;
 				}
 			}else{
 				act_bank = (( addr & 0x0C00 ) >> 10); // bit 10 an 11 define the bank
@@ -699,14 +705,14 @@ void emulate_3EPlus_cartridge(int header_length, bool withPlusFunctions)
 				{	// we are accessing a RAM write address ($1200-$13FF, $1600-$17FF, $1A00-$1BFF or $1E00-$1FFF)
 					// read last data on the bus before the address lines change
 					while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-					bankPtr[act_bank][addr & 0x1FF] = (uint8_t) (data_prev DATA_IN_SHIFT);
+					bankPtr[act_bank][addr & 0x1FF] = data_prev;
 				}
 				else
 				{	// reads to either RAM or ROM
 					if (bankIsRAM[act_bank]){
-						DATA_OUT = ((uint16_t) bankPtr[act_bank][addr & 0x1FF])DATA_OUT_SHIFT;	// RAM read
+						DATA_OUT = bankPtr[act_bank][addr & 0x1FF];	// RAM read
 					}else{
-						DATA_OUT = ((uint16_t)bankPtr[act_bank][addr & 0x3FF])DATA_OUT_SHIFT ;	// ROM read
+						DATA_OUT = bankPtr[act_bank][addr & 0x3FF];	// ROM read
 					}
 
 					SET_DATA_MODE_OUT
@@ -721,20 +727,20 @@ void emulate_3EPlus_cartridge(int header_length, bool withPlusFunctions)
 				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN;}
 				act_bank = (data_prev & 0x0C0) >> 6; // bit 6 and 7 define the bank
 				bankIsRAM[act_bank] = true;
-				bankPtr[act_bank] =  cart_ram + ( (((data_prev DATA_IN_SHIFT) & 0x03F) % cartRAMPages) << 9 );	// * 512 switch in a RAM bank
+				bankPtr[act_bank] =  cart_ram + ( ((data_prev & 0x03F) % cartRAMPages) << 9 );	// * 512 switch in a RAM bank
 			}
 			else if ( addr == 0x3f ){
 				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN;}
-				act_bank = ((data_prev DATA_IN_SHIFT) & 0x0C0) >> 6; // bit 6 and 7 define the bank
+				act_bank = (data_prev & 0x0C0) >> 6; // bit 6 and 7 define the bank
 				bankIsRAM[act_bank] = false;
-				bankPtr[act_bank] = cart_rom + ( (((data_prev DATA_IN_SHIFT) & 0x03F) % cartROMPages) << 10);	// * 1024 switch in a ROM bank
-			}else if(addr == SWCHB){
+				bankPtr[act_bank] = cart_rom + ( ((data_prev & 0x03F) % cartROMPages) << 10);	// * 1024 switch in a ROM bank
+			}else if(addr == EXIT_SWCHB_ADDR){
 				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN;}
-				if( !((data_prev DATA_IN_SHIFT) & 0x1) && joy_status)
+				if( !(data_prev & 0x1) && joy_status)
 					break;
 			}else if(addr == SWCHA){
 				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN;}
-				joy_status = !((data_prev DATA_IN_SHIFT) & 0x80);
+				joy_status = !(data_prev & 0x80);
 			}else if(withPlusFunctions){
 				while (ADDR_IN == addr){process_transmission();}
 			}
@@ -793,19 +799,19 @@ void emulate_E0_cartridge()
 			}
 			// fetch data from the correct bank
 			int target = (addr & 0xC00) >> 10;
-			DATA_OUT = ((uint16_t)cart_rom[curBanks[target]*1024 + (addr&0x3FF)])DATA_OUT_SHIFT;
+			DATA_OUT = cart_rom[curBanks[target]*1024 + (addr&0x3FF)];
 			SET_DATA_MODE_OUT
 			// wait for address bus to change
 			while (ADDR_IN == addr) ;
 			SET_DATA_MODE_IN
 		}else{
-			if(addr == SWCHB){
+			if(addr == EXIT_SWCHB_ADDR){
 				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-				if( !((data_prev DATA_IN_SHIFT) & 0x1) && joy_status)
+				if( !(data_prev & 0x1) && joy_status)
 					break;
 			}else if(addr == SWCHA){
 				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-				joy_status = !((data_prev DATA_IN_SHIFT) & 0x80);
+				joy_status = !(data_prev & 0x80);
 			}
 		}
 	}
@@ -848,7 +854,7 @@ void emulate_0840_cartridge()
 		// got a stable address
 		if (addr & 0x1000)
 		{ // A12 high
-			DATA_OUT = ((uint16_t)bankPtr[addr&0xFFF])DATA_OUT_SHIFT;
+			DATA_OUT = bankPtr[addr&0xFFF];
 			SET_DATA_MODE_OUT
 			// wait for address bus to change
 			while (ADDR_IN == addr) ;
@@ -860,11 +866,11 @@ void emulate_0840_cartridge()
 			else if ((addr & 0x0840) == 0x0840) bankPtr = &cart_rom[4*1024];
 			// wait for address bus to change
 			while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-			if(addr == SWCHB){
-				if( !((data_prev DATA_IN_SHIFT) & 0x1) && joy_status)
+			if(addr == EXIT_SWCHB_ADDR){
+				if( !(data_prev & 0x1) && joy_status)
 					break;
 			}else if(addr == SWCHA){
-				joy_status = !((data_prev DATA_IN_SHIFT) & 0x80);
+				joy_status = !(data_prev & 0x80);
 			}
 		}
 	}
@@ -882,7 +888,8 @@ void emulate_CV_cartridge()
 {
 	setup_cartridge_image_with_ram();
 
-	uint16_t addr, addr_prev = 0, data = 0, data_prev = 0;
+	uint16_t addr, addr_prev = 0;
+	uint8_t data = 0, data_prev = 0;
 	bool joy_status = false;
 
 	if (!reboot_into_cartridge()) return;
@@ -897,7 +904,7 @@ void emulate_CV_cartridge()
 		{ // A12 high
 			if (addr & 0x0800)
 			{	// ROM read
-				DATA_OUT = ((uint16_t)cart_rom[addr&0x7FF])DATA_OUT_SHIFT;
+				DATA_OUT = cart_rom[addr&0x7FF];
 				SET_DATA_MODE_OUT
 				// wait for address bus to change
 				while (ADDR_IN == addr) ;
@@ -909,11 +916,11 @@ void emulate_CV_cartridge()
 				{	// a write to cartridge ram
 					// read last data on the bus before the address lines change
 					while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-					cart_ram[addr&0x3FF] = (uint8_t) (data_prev DATA_IN_SHIFT);
+					cart_ram[addr&0x3FF] = data_prev;
 				}
 				else
 				{	// a read from cartridge ram
-					DATA_OUT = ((uint16_t)cart_ram[addr&0x3FF])DATA_OUT_SHIFT;
+					DATA_OUT = cart_ram[addr&0x3FF];
 					SET_DATA_MODE_OUT
 					// wait for address bus to change
 					while (ADDR_IN == addr) ;
@@ -923,13 +930,13 @@ void emulate_CV_cartridge()
 		}
 		else
 		{
-			if(addr == SWCHB){
+			if(addr == EXIT_SWCHB_ADDR){
 				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-				if( !((data_prev DATA_IN_SHIFT) & 0x1) && joy_status)
+				if( !(data_prev & 0x1) && joy_status)
 					break;
 			}else if(addr == SWCHA){
 				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-				joy_status = !((data_prev DATA_IN_SHIFT) & 0x80);
+				joy_status = !(data_prev & 0x80);
 			}
 		}
 	}
@@ -945,7 +952,8 @@ void emulate_F0_cartridge()
 {
 	setup_cartridge_image();
 
-	uint16_t addr, addr_prev = 0, data = 0, data_prev = 0;
+	uint16_t addr, addr_prev = 0;
+	uint8_t data = 0, data_prev = 0;
 	int currentBank = 0;
 	bool joy_status = false;
 
@@ -962,19 +970,19 @@ void emulate_F0_cartridge()
 			if (addr == 0x1FF0)
 				currentBank = (currentBank + 1) % 16;
 			// ROM access
-			DATA_OUT = ((uint16_t)cart_rom[(currentBank * 4096)+(addr&0xFFF)])DATA_OUT_SHIFT;
+			DATA_OUT = cart_rom[(currentBank * 4096)+(addr&0xFFF)];
 			SET_DATA_MODE_OUT
 			// wait for address bus to change
 			while (ADDR_IN == addr) ;
 			SET_DATA_MODE_IN
 		}else{
-			if(addr == SWCHB){
+			if(addr == EXIT_SWCHB_ADDR){
 				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-				if( !((data_prev DATA_IN_SHIFT) & 0x1) && joy_status)
+				if( !(data_prev & 0x1) && joy_status)
 					break;
 			}else if(addr == SWCHA){
 				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-				joy_status = !((data_prev DATA_IN_SHIFT) & 0x80);
+				joy_status = !(data_prev & 0x80);
 			}
 		}
 	}
@@ -1013,7 +1021,8 @@ void emulate_E7_cartridge()
 {
 	setup_cartridge_image_with_ram();
 
-	uint16_t addr, addr_prev = 0, data = 0, data_prev = 0;
+	uint16_t addr, addr_prev = 0;
+	uint8_t data = 0, data_prev = 0;
 	unsigned char *bankPtr = &cart_rom[0];
 	unsigned char *fixedPtr = &cart_rom[(8-1)*2048];
 	unsigned char *ram1Ptr = &cart_ram[0];
@@ -1037,7 +1046,7 @@ void emulate_E7_cartridge()
 				{	// 256 byte RAM access
 					if (addr & 0x0100)
 					{	// 1900-19FF is the read port
-						DATA_OUT = ((uint16_t)ram1Ptr[addr&0xFF])DATA_OUT_SHIFT;
+						DATA_OUT = ram1Ptr[addr&0xFF];
 						SET_DATA_MODE_OUT
 						// wait for address bus to change
 						while (ADDR_IN == addr) ;
@@ -1046,7 +1055,7 @@ void emulate_E7_cartridge()
 					else
 					{	// 1800-18FF is the write port
 						while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-						ram1Ptr[addr&0xFF] = (unsigned char) (data_prev DATA_IN_SHIFT);
+						ram1Ptr[addr&0xFF] = data_prev;
 					}
 				}
 				else
@@ -1064,7 +1073,7 @@ void emulate_E7_cartridge()
 					else if (addr >= 0x1FE8 && addr <= 0x1FEB)
 						ram1Ptr = &cart_ram[(addr - 0x1FE8)*256];
 
-					DATA_OUT = ((uint16_t)fixedPtr[addr&0x7FF])DATA_OUT_SHIFT;
+					DATA_OUT = fixedPtr[addr&0x7FF];
 					SET_DATA_MODE_OUT
 					// wait for address bus to change
 					while (ADDR_IN == addr) ;
@@ -1077,7 +1086,7 @@ void emulate_E7_cartridge()
 				{	// 1K RAM access
 					if (addr & 0x400)
 					{	// 1400-17FF is the read port
-						DATA_OUT = ((uint16_t)ram2Ptr[addr&0x3FF])DATA_OUT_SHIFT;
+						DATA_OUT = ram2Ptr[addr&0x3FF];
 						SET_DATA_MODE_OUT
 						// wait for address bus to change
 						while (ADDR_IN == addr) ;
@@ -1086,12 +1095,12 @@ void emulate_E7_cartridge()
 					else
 					{	// 1000-13FF is the write port
 						while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-						ram2Ptr[addr&0x3FF] = (unsigned char) (data_prev DATA_IN_SHIFT);
+						ram2Ptr[addr&0x3FF] = data_prev;
 					}
 				}
 				else
 				{	// selected ROM bank access
-					DATA_OUT = ((uint16_t)bankPtr[addr&0x7FF])DATA_OUT_SHIFT;
+					DATA_OUT = bankPtr[addr&0x7FF];
 					SET_DATA_MODE_OUT
 					// wait for address bus to change
 					while (ADDR_IN == addr) ;
@@ -1099,13 +1108,13 @@ void emulate_E7_cartridge()
 				}
 			}
 		}else{
-			if(addr == SWCHB){
+			if(addr == EXIT_SWCHB_ADDR){
 				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-				if( !((data_prev DATA_IN_SHIFT) & 0x1) && joy_status)
+				if( !(data_prev & 0x1) && joy_status)
 					break;
 			}else if(addr == SWCHA){
 				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-				joy_status = !((data_prev DATA_IN_SHIFT) & 0x80);
+				joy_status = !(data_prev & 0x80);
 			}
 		}
 	}
@@ -1149,7 +1158,8 @@ void emulate_DPC_cartridge( uint32_t image_size)
 
 	uint8_t prev_rom = 0, prev_rom2 = 0;
 
-	uint16_t addr, addr_prev, data = 0, data_prev = 0;
+	uint16_t addr, addr_prev;
+	uint8_t data = 0, data_prev = 0;
 	unsigned char *bankPtr = buffer, *DpcDisplayPtr = buffer + 8*1024;
 	bool joy_status = false;
 	RESET_ADDR;
@@ -1251,7 +1261,7 @@ void emulate_DPC_cartridge( uint32_t image_size)
 					break;
 				}
 
-				DATA_OUT = ((uint16_t)result)DATA_OUT_SHIFT;
+				DATA_OUT = result;
 				SET_DATA_MODE_OUT
 				// wait for address bus to change
 
@@ -1283,7 +1293,7 @@ void emulate_DPC_cartridge( uint32_t image_size)
 				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
 				RESET_ADDR;
 
-				unsigned char value = (unsigned char) (data_prev DATA_IN_SHIFT);
+				unsigned char value = data_prev;
 				switch (function)
 				{
 				case 0x00:
@@ -1374,7 +1384,7 @@ void emulate_DPC_cartridge( uint32_t image_size)
 					bankPtr = buffer_ptr + 4*1024;
 
 				// normal rom access
-				DATA_OUT = ((uint16_t)bankPtr[addr&0xFFF])DATA_OUT_SHIFT;
+				DATA_OUT = bankPtr[addr&0xFFF];
 				SET_DATA_MODE_OUT;
 
 				prev_rom2 = prev_rom;
@@ -1396,13 +1406,13 @@ void emulate_DPC_cartridge( uint32_t image_size)
 
 			while (ADDR_IN == addr);
 			RESET_ADDR;
-		}else if(addr == SWCHB){
+		}else if(addr == EXIT_SWCHB_ADDR){
 			while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-			if( !((data_prev DATA_IN_SHIFT) & 0x1) && joy_status)
+			if( !(data_prev & 0x1) && joy_status)
 				break;
 		}else if(addr == SWCHA){
 			while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-			joy_status = !((data_prev DATA_IN_SHIFT) & 0x80);
+			joy_status = !(data_prev & 0x80);
 		}
 
 	}
@@ -1460,7 +1470,8 @@ void emulate_pp_cartridge( uint8_t* ram) {
 	uint8_t pending_bank = 0;
 	uint8_t bankswitch_counter = 0;
 
-	uint16_t addr, addr_prev = 0, addr_prev2 = 0, data = 0, data_prev = 0;
+	uint16_t addr, addr_prev = 0, addr_prev2 = 0;
+	uint8_t data = 0, data_prev = 0;
 	bool joy_status = false;
 
 	for (uint8_t i = 0; i <= 7; i++) {
@@ -1490,7 +1501,7 @@ void emulate_pp_cartridge( uint8_t* ram) {
 			if (caddr < 0x40) {
 				data = ram[caddr];
 
-				DATA_OUT = ((uint16_t)data)DATA_OUT_SHIFT;
+				DATA_OUT = data;
 				SET_DATA_MODE_OUT
 
 				while (ADDR_IN == addr);
@@ -1499,12 +1510,12 @@ void emulate_pp_cartridge( uint8_t* ram) {
 			else if (caddr < 0x80) {
 				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
 
-				ram[caddr - 0x40] = (uint8_t) (data_prev DATA_IN_SHIFT);
+				ram[caddr - 0x40] = data_prev;
 			}
 			else {
 				data = segments[caddr >> 10][caddr & 0x03ff];
 
-				DATA_OUT = ((uint16_t)data)DATA_OUT_SHIFT;
+				DATA_OUT = data;
 				SET_DATA_MODE_OUT
 
 				while (ADDR_IN == addr) ;
@@ -1517,13 +1528,13 @@ void emulate_pp_cartridge( uint8_t* ram) {
 				bankswitch_pending = true;
 				pending_bank = zaddr & 0x07;
 				bankswitch_counter = 3;
-			}else if(addr == SWCHB){
+			}else if(addr == EXIT_SWCHB_ADDR){
 				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-				if( !((data_prev DATA_IN_SHIFT) & 0x1) && joy_status)
+				if( !(data_prev & 0x1) && joy_status)
 					break;
 			}else if(addr == SWCHA){
 				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
-				joy_status = !((data_prev DATA_IN_SHIFT) & 0x80);
+				joy_status = !(data_prev & 0x80);
 			}
 		}
 	}

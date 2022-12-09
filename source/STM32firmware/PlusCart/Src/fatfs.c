@@ -72,7 +72,7 @@ bool is_text_file(char * filename){
 	return (strcasecmp(dot, "txt") == 0);
 }
 
-int find_last_path_seperator(char * path){
+int find_last_path_seperator(const char * path){
     int i = (int)strlen(path) - 1;
     for (; i >= 0 ; i--){
         if (path[i] == PATH_SEPERATOR) break;
@@ -80,7 +80,7 @@ int find_last_path_seperator(char * path){
     return i;
 }
 
-void basename(char * path, char * filename){
+void basename(const char * path, char * filename){
 	int pos = find_last_path_seperator(path) + 1;
 	memset(filename, 0, 33);
 	strncpy(filename, &path[pos], 32);
@@ -232,12 +232,12 @@ bool sd_card_file_list( char *path, MENU_ENTRY **dst, int *num_menu_entries ){
 }
 
 
-uint32_t sd_card_file_request(uint8_t *ext_buffer, char *path, uint32_t start_pos, uint32_t length ){
+uint32_t sd_card_file_request(uint8_t *ext_buffer, const char *path, uint32_t start_pos, uint32_t length ){
 	UINT bytes_read = 0;
 	FATFS FatFs;
 	FIL fil;
 	FRESULT read_result;
-	char * sd_file;
+	const char * sd_file = 0;
 	if (f_mount(&FatFs, "", 1) == FR_OK){
 		if(strstr(path, MENU_TEXT_SD_CARD_CONTENT) == path){
 			sd_file = &path[sizeof(MENU_TEXT_SD_CARD_CONTENT)];
@@ -245,10 +245,12 @@ uint32_t sd_card_file_request(uint8_t *ext_buffer, char *path, uint32_t start_po
 	    	if(open_system_file(&fil, "Search", (FA_OPEN_EXISTING | FA_READ) ) == FR_OK){
 	    		char filename[33];
 	    		basename(path, filename);
-	    		while( f_gets( path, 255, &fil )){
-	    			int pos = find_last_path_seperator(path) + 1;
-		    		if(strstr(&path[pos], filename) == &path[pos] ){
-		    			sd_file = path;
+	    		char sd_path[256];
+	    		strcpy(sd_path, path);
+	    		while( f_gets( sd_path, 255, &fil )){
+	    			int pos = find_last_path_seperator(sd_path) + 1;
+		    		if(strstr(&sd_path[pos], filename) == &sd_path[pos] ){
+		    			sd_file = sd_path;
 		    			break;
 		    		}
 	    		}
@@ -312,11 +314,6 @@ int * sd_card_statistic(){
 		f_mount(0, "", 1);
     }
     return response;
-}
-
-bool sd_card_format(void){
-	BYTE work[512]; /* Work area (larger is better for processing time) */
-	return f_mkfs( "", FM_ANY, 0, work, sizeof work) == FR_OK;
 }
 
 
