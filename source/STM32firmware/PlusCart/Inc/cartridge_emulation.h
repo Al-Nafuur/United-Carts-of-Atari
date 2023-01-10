@@ -174,7 +174,8 @@ void emulate_CV_cartridge();
 void emulate_F0_cartridge();
 
 /* E7 Bankswitching */
-void emulate_E7_cartridge();
+void emulate_E7_cartridge(int, bool);
+
 
 /* DPC (Pitfall II) Bankswitching */
 void emulate_DPC_cartridge(uint32_t);
