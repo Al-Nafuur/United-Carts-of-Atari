@@ -1105,7 +1105,11 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 			cart_type.base_type = base_type_FE;
 		else if (isProbably0840(d->filesize, buffer))
 			cart_type.base_type = base_type_0840;
-		else
+		else if (isProbablyE78K(d->filesize, buffer)) {
+			cart_type.base_type = base_type_E7;
+			memmove(buffer+0x2000,buffer,0x2000);
+			d->filesize = 16*1024;
+		} else
 			cart_type.base_type = base_type_F8;
 	}
 	else if (d->filesize == 8*1024 + 3) {
@@ -1119,7 +1123,12 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 	}
 	else if (d->filesize == 12*1024)
 	{
-		cart_type.base_type = base_type_FA;
+		if (isProbablyE7(d->filesize, buffer)){
+			cart_type.base_type = base_type_E7;
+			memmove(buffer+0x1000, buffer, 0x3000);
+			d->filesize = 16*1024;
+		} else
+			cart_type.base_type = base_type_FA;
 	}
 	else if (d->filesize == 16*1024)
 	{
@@ -1256,7 +1265,7 @@ void emulate_cartridge(CART_TYPE cart_type, MENU_ENTRY *d)
 		emulate_FA_cartridge(offset, cart_type.withPlusFunctions);
 
 	else if (cart_type.base_type == base_type_E7)
-		emulate_E7_cartridge();
+		emulate_E7_cartridge(offset, cart_type.withPlusFunctions);
 
 	else if (cart_type.base_type == base_type_DPC)
 		emulate_DPC_cartridge((uint32_t)cart_size_bytes);

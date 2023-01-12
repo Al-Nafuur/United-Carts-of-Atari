@@ -1016,8 +1016,11 @@ Only 256 bytes of RAM is accessable at time, but there are four different 256 by
 banks making a total of 1K accessable here.
 
 Accessing 1FE8 through 1FEB select which 256 byte bank shows up.
+
+2022-12-23 PlusROM extensions available at standard PlusROM addresses 0x1FF0-0x1FF4 
+
  */
-void emulate_E7_cartridge()
+void emulate_E7_cartridge(int header_length, bool withPlusFunctions)
 {
 	setup_cartridge_image_with_ram();
 
@@ -1029,6 +1032,8 @@ void emulate_E7_cartridge()
 	unsigned char *ram2Ptr = &cart_ram[1024];
 	int ram_mode = 0;
 	bool joy_status = false;
+
+	setup_plus_rom_functions();
 
 	if (!reboot_into_cartridge()) return;
 	__disable_irq();	// Disable interrupts
@@ -1042,7 +1047,33 @@ void emulate_E7_cartridge()
 		{ // A12 high
 			if (addr & 0x0800)
 			{	// higher 2k cartridge ROM area
-				if ((addr & 0x0E00) == 0x0800)
+				if(withPlusFunctions && addr > 0x1fef && addr < 0x1ff4){
+					if(addr == 0x1ff2 ){// read from receive buffer
+						DATA_OUT = receive_buffer[receive_buffer_read_pointer];
+						SET_DATA_MODE_OUT
+						// if there is more data on the receive_buffer
+						if(receive_buffer_read_pointer != receive_buffer_write_pointer )
+							receive_buffer_read_pointer++;
+						// wait for address bus to change
+						while (ADDR_IN == addr){}
+						SET_DATA_MODE_IN
+					}else if(addr == 0x1ff1){ // write to send Buffer and start Request !!
+						while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+						if(huart_state == No_Transmission)
+							huart_state = Send_Start;
+						out_buffer[out_buffer_write_pointer] = data_prev;
+					}else if(addr == 0x1ff3){ // read receive Buffer length
+						DATA_OUT = receive_buffer_write_pointer - receive_buffer_read_pointer;
+						SET_DATA_MODE_OUT
+						// wait for address bus to change
+						while (ADDR_IN == addr){}
+						SET_DATA_MODE_IN
+					}else{ // if(addr == 0x1ff0){ // write to send Buffer
+						while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+						out_buffer[out_buffer_write_pointer++] = data_prev;
+					}
+
+			} else if ((addr & 0x0E00) == 0x0800)
 				{	// 256 byte RAM access
 					if (addr & 0x0100)
 					{	// 1900-19FF is the read port
@@ -1076,7 +1107,7 @@ void emulate_E7_cartridge()
 					DATA_OUT = fixedPtr[addr&0x7FF];
 					SET_DATA_MODE_OUT
 					// wait for address bus to change
-					while (ADDR_IN == addr) ;
+					while (ADDR_IN == addr){process_transmission();}
 					SET_DATA_MODE_IN
 				}
 			}
@@ -1103,7 +1134,7 @@ void emulate_E7_cartridge()
 					DATA_OUT = bankPtr[addr&0x7FF];
 					SET_DATA_MODE_OUT
 					// wait for address bus to change
-					while (ADDR_IN == addr) ;
+					while (ADDR_IN == addr){process_transmission();}
 					SET_DATA_MODE_IN
 				}
 			}
@@ -1115,6 +1146,8 @@ void emulate_E7_cartridge()
 			}else if(addr == SWCHA){
 				while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
 				joy_status = !(data_prev & 0x80);
+			} else if(withPlusFunctions){
+				while (ADDR_IN == addr){process_transmission();}
 			}
 		}
 	}
