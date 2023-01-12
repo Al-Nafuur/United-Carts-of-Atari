@@ -20,6 +20,7 @@ int isProbably0840(unsigned int, unsigned char *);
 int isProbablyCV(unsigned int, unsigned char *);
 int isProbablyEF(unsigned int, unsigned char *);
 int isProbablyE7(unsigned int, unsigned char *);
+int isProbablyE78K(unsigned int, unsigned char *);
 int isProbablyBF(unsigned char *);
 int isProbablyBFSC(unsigned char *);
 int isProbablyDF(unsigned char *);

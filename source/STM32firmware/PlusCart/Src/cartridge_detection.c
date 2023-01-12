@@ -264,6 +264,24 @@ int isProbablyE7(unsigned int size, unsigned char *bytes)
 	return 0;
 }
 
+int isProbablyE78K(unsigned int size, unsigned char *bytes)
+{
+	// E78K cart bankswitching is triggered by accessing addresses
+	// $FE4 to $FE6 using absolute non-indexed addressing
+	// To eliminate false positives (and speed up processing), we
+	// search for only certain known signatures
+	unsigned char signature[3][3] = {
+			{ 0xAD, 0xE4, 0xFF },  // LDA $FFE4
+			{ 0xAD, 0xE5, 0xFF },  // LDA $FFE5
+			{ 0xAD, 0xE6, 0xFF },  // LDA $FFE6
+	};
+	for(int i = 0; i < 3; ++i)
+		if(searchForBytes(bytes, size, signature[i], 3, 1))
+			return 1;
+	return 0;
+}
+
+
 int isProbablyBF(unsigned char *tail)
 {
 	return !memcmp(tail + 8, "BFBF", 4);
