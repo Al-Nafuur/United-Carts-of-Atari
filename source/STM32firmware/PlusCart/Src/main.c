@@ -994,6 +994,10 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 #endif
     }
 
+    // Check for exit function disable key in filename
+    if (strstr(d->entryname, EXIT_FUNCTION_DISABLE_FILENAME_KEY) != NULL)
+		EXIT_SWCHB_ADDR = 0xffff; // Impossible address prevents snooping SWCHB reads
+
     // select type by file extension?
 	char *ext = get_filename_ext(d->entryname);
 	const EXT_TO_CART_TYPE_MAP *p = ext_to_cart_type_map;
