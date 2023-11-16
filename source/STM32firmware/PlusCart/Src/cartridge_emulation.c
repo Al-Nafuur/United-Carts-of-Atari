@@ -44,6 +44,7 @@ void exit_cartridge(uint16_t addr, uint16_t addr_prev){
  * SC variants have 128 bytes of RAM:
  * RAM read port is $1080 - $10FF, write port is $1000 - $107F.
  */
+__attribute__((section(".RamFunc")))
 void emulate_standard_cartridge(int header_length, bool withPlusFunctions, uint16_t lowBS, uint16_t highBS, int isSC)
 {
 	setup_cartridge_image_with_ram();
