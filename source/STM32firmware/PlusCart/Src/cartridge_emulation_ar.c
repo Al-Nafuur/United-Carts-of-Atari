@@ -262,6 +262,11 @@ void emulate_ar_cartridge(const char* cartridge_path, unsigned int image_size, u
 					bank1[addr & 0x07ff] = data_hold;
 			}
 
+			if (transition_count < 6) transition_count++;
+			last_address = addr;
+			while (ADDR_IN == addr);
+			SET_DATA_MODE_IN;
+
 		}else{
 			if (transition_count < 6) transition_count++;
 			last_address = addr;
@@ -275,13 +280,7 @@ void emulate_ar_cartridge(const char* cartridge_path, unsigned int image_size, u
             }else{
         		while (ADDR_IN == addr);
             }
-            continue;
 		}
-		if (transition_count < 6) transition_count++;
-
-		last_address = addr;
-		while (ADDR_IN == addr);
-		SET_DATA_MODE_IN;
 	}
 
 	exit_cartridge(addr, addr_prev);
