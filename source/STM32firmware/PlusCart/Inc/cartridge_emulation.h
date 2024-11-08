@@ -147,8 +147,8 @@ void emulate_standard_cartridge(int, bool, uint16_t, uint16_t, int);
 /* UA Bankswitching */
 void emulate_UA_cartridge();
 
-/* FA (CBS RAM plus) Bankswitching */
-void emulate_FA_cartridge(int, bool);
+/* FA (CBS RAM plus) and FA2 Bankswitching */
+void emulate_FA_FA2_cartridge(int, bool, uint16_t, uint16_t);
 
 /* FE Bankswitching */
 void emulate_FE_cartridge();

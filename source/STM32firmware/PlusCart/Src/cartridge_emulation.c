@@ -195,8 +195,26 @@ void emulate_UA_cartridge()
  * Similar to the above, but with 3 ROM banks for a total of 12K
  * plus 256 bytes of RAM:
  * RAM read port is $1100 - $11FF, write port is $1000 - $10FF.
- */
-void emulate_FA_cartridge(int header_length, bool withPlusFunctions)
+ *
+ * FA2  Bankswitching
+ * -------------------------------
+ * This is an extended version of the CBS RAM Plus bankswitching scheme
+ * supported by the Harmony cartridge.
+ *
+ * There are six (or seven) 4K banks, accessible by read/write to $1FF5 -
+ * $1FFA (or $1FFB), and 256 bytes of RAM.
+ *
+ * RAM read port is $1100 - $11FF, write port is $1000 - $10FF.
+ *
+ * For 29K versions of the scheme, the first 1K is ARM code (implements
+ * actual bankswitching on the Harmony cart), which is completely ignored
+ * by the emulator and the PlusCart. Also supported by the emulators, but
+ * not by the PlusCart is a 32K variant.  In any event, only data at
+ * 1K - 29K of the ROM is used.
+ *
+ * Stella Code by:  Chris D. Walton, Thomas Jentzsch
+*/
+void emulate_FA_FA2_cartridge(int header_length, bool withPlusFunctions, uint16_t lowBS, uint16_t highBS)
 {
 	setup_cartridge_image_with_ram();
 
@@ -243,8 +261,8 @@ void emulate_FA_cartridge(int header_length, bool withPlusFunctions)
 					out_buffer[out_buffer_write_pointer++] = data_prev;
 				}
 			}else{
-				if (addr >= 0x1FF8 && addr <= 0x1FFA)	// bank-switch
-					bankPtr = &cart_rom[(addr-0x1FF8)*4*1024];
+				if (addr >= lowBS && addr <= highBS)	// bank-switch
+					bankPtr = &cart_rom[(addr-lowBS)*4*1024];
 
 				if ((addr & 0x1F00) == 0x1100)
 				{	// a read from cartridge ram
