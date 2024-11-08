@@ -23,7 +23,6 @@ uint32_t get_filesize(uint32_t);
 
 
 USER_SETTINGS flash_get_eeprom_user_settings(void){
-    USER_SETTINGS user_settings = {TV_MODE_DEFAULT, FIRST_FREE_SECTOR, FONT_DEFAULT, SPACING_DEFAULT};
     int16_t act_page_index = get_active_eeprom_page();
     int16_t act_entry_index = -1;
     if( act_page_index != -1 ){
@@ -34,9 +33,10 @@ USER_SETTINGS flash_get_eeprom_user_settings(void){
     	uint32_t dataIndex = (uint32_t) (act_page_index * EEPROM_PAGE_SIZE) + EEPROM_PAGE_HEADER_SIZE;
     	dataIndex += (uint32_t)(act_entry_index * EEPROM_ENTRY_SIZE) + EEPROM_ENTRY_HEADER_SIZE;
 
-    	user_settings = (*(USER_SETTINGS *)(&eeprom_data[dataIndex]));
+    	return (*(USER_SETTINGS *)(&eeprom_data[dataIndex]));
+    } else {
+    	return (USER_SETTINGS) {TV_MODE_DEFAULT, FIRST_FREE_SECTOR, FONT_DEFAULT, SPACING_DEFAULT, PLUSSTORE_API_HOST};
     }
-    return user_settings;
 }
 
 void flash_set_eeprom_user_settings(USER_SETTINGS user_settings){
