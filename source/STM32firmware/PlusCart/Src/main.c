@@ -59,7 +59,6 @@
 #include "cartridge_emulation_df.h"
 #include "cartridge_emulation_bf.h"
 #include "cartridge_emulation_sb.h"
-#include "cartridge_emulation_dpcp.h"
 
 
 void generate_udid_string(void);
@@ -113,6 +112,7 @@ const EXT_TO_CART_TYPE_MAP ext_to_cart_type_map[]__attribute__((section(".flash0
 	{"EFS",  { base_type_EF,      true,  false, false, false }},
 	{"F0",   { base_type_F0,      false, false, false, false }},
 	{"FA",   { base_type_FA,      false, false, false, false }},
+	{"FA2",  { base_type_FA2,     false, false, false, false }},
 	{"E7",   { base_type_E7,      false, false, false, false }},
 	{"DPC",  { base_type_DPC,     false, false, true,  true  }},
 	{"AR",   { base_type_AR,      false, false, false, false }},
@@ -166,6 +166,7 @@ const char *status_message[]__attribute__((section(".flash01#"))) = {
 	MENU_TEXT_SEARCH_FOR_ROM,
 	"Enter search details",
 	"Search results",
+	"Host name or IP address",
 
 //	MENU_TEXT_APPEARANCE,
 };
@@ -388,6 +389,7 @@ MENU_ENTRY* generateSetupMenu(MENU_ENTRY *dst) {
 	make_menu_entry(&dst, MENU_TEXT_GO_BACK, Leave_Menu);
 #if USE_WIFI
 	make_menu_entry(&dst, MENU_TEXT_WIFI_SETUP, Setup_Menu);
+	make_menu_entry(&dst, MENU_TEXT_API_HOST, Input_Field);
 #endif
 	make_menu_entry(&dst, MENU_TEXT_DISPLAY, Setup_Menu);
 	make_menu_entry(&dst, MENU_TEXT_SYSTEM_INFO, Sub_Menu);
@@ -419,6 +421,9 @@ MENU_ENTRY* generateSystemInfo(MENU_ENTRY *dst) {
 
 #if USE_WIFI
 	sprintf(input_field, "WiFi Firmware      %s", esp8266_at_version);
+	make_menu_entry(&dst, input_field, Leave_Menu);
+	make_menu_entry(&dst, "API Host", Leave_Menu);
+	sprintf(input_field, "  %s", user_settings.api_host);
 	make_menu_entry(&dst, input_field, Leave_Menu);
 #endif
 
@@ -528,6 +533,8 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 		        new_status = plus_connect;
 		    else if(strstr(mts, MENU_TEXT_WIFI_SETUP) == mts)
 		        new_status = insert_password;
+		    else if(strstr(mts, MENU_TEXT_API_HOST) == mts)
+		        new_status = STATUS_HOST_OR_IP;
 		    else
 		        new_status = STATUS_YOUR_MESSAGE;
 		}
@@ -556,6 +563,17 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 			loadStore = true;
 		}
 #if USE_WIFI
+		else if (strstr(mts, MENU_TEXT_API_HOST) == mts) {
+			if(d->type == Menu_Action){ // if actual Entry is of type Menu_Action -> change host
+				// curPath is:
+				// MENU_TEXT_SETUP "/" MENU_TEXT_API_HOST "/" api_host[30] "/Enter" '\0'
+				truncate_curPath(); // delete "/Enter" at end of Path
+				strcpy(user_settings.api_host, &curPath[SIZEOF_API_HOST_BASE_PATH]);
+				flash_set_eeprom_user_settings(user_settings);
+				curPath[0] = '\0';
+			}
+
+		}
 		// WiFi Setup
 		else if (strstr(mts, MENU_TEXT_WIFI_SETUP) == mts) {
 
@@ -1143,10 +1161,19 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 		else
 			cart_type.base_type = base_type_F6;
 	}
+	else if (d->filesize == 24*1024 || d->filesize == 28*1024)
+	{
+		cart_type.base_type = base_type_FA2;
+	}
 	else if (d->filesize == 29*1024)
 	{
-		if (isProbablyDPCplus(d->filesize, buffer))
+		if (isProbablyDPCplus(d->filesize, buffer)){
 			cart_type.base_type = base_type_DPCplus;
+		} else{
+			cart_type.base_type = base_type_FA2;
+			memmove(buffer, buffer+0x0400, 0x7000);
+			d->filesize = 28*1024;
+		}
 	}
 	else if (d->filesize == 32*1024)
 	{
@@ -1266,7 +1293,15 @@ void emulate_cartridge(CART_TYPE cart_type, MENU_ENTRY *d)
 		emulate_F0_cartridge();
 
 	else if (cart_type.base_type == base_type_FA)
-		emulate_FA_cartridge(offset, cart_type.withPlusFunctions);
+		emulate_FA_FA2_cartridge(offset, cart_type.withPlusFunctions, 0x1FF8, 0x1FFA);
+
+	else if (cart_type.base_type == base_type_FA2){
+		/* Workaround to set Melody Flash-ROM hotspot ($1ff4 bit 6) to 0 in every bank */
+		for (long hotspot = 0xff4; hotspot < 0x7000; hotspot += 0x1000) {
+			buffer[hotspot] &= 0b10111111;
+		} // End of workaround
+		emulate_FA_FA2_cartridge(offset, cart_type.withPlusFunctions, 0x1FF5, 0x1FFB);
+	}
 
 	else if (cart_type.base_type == base_type_E7)
 		emulate_E7_cartridge(offset, cart_type.withPlusFunctions);
@@ -1294,9 +1329,6 @@ void emulate_cartridge(CART_TYPE cart_type, MENU_ENTRY *d)
 
 	else if (cart_type.base_type == base_type_3EPlus)
 		emulate_3EPlus_cartridge(offset, cart_type.withPlusFunctions);
-
-	else if (cart_type.base_type == base_type_DPCplus)
-		emulate_DPCplus_cartridge(cart_size_bytes);
 
 	else if (cart_type.base_type == base_type_SB)
 		emulate_SB_cartridge(curPath, cart_size_bytes, buffer, d);
@@ -1500,6 +1532,9 @@ int main(void)
 
 					else if (cart_type.base_type == base_type_Load_Failed)
 						menuStatusMessage = rom_download_failed;
+
+					else if (cart_type.base_type == base_type_DPCplus)
+						menuStatusMessage = romtype_DPCplus_unsupported;
 
 					else if (cart_type.base_type != base_type_None) {
 
