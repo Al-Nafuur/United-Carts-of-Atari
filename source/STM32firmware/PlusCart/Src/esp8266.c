@@ -28,7 +28,7 @@
 extern UART_HandleTypeDef huart1;
 
 /* private functions */
-void get_boundary_http_header(char *) __attribute__((section(".flash01")));
+//void get_boundary_http_header(char *) __attribute__((section(".flash01")));
 uint64_t wait_response(uint32_t) __attribute__((section(".flash01")));
 void set_standard_mode(void) __attribute__((section(".flash01")));
 uint64_t esp8266_send_command(char *command, uint32_t timeout) __attribute__((section(".flash01")));
@@ -115,10 +115,25 @@ int esp8266_file_list( char *path, MENU_ENTRY **dst, int *num_menu_entries, uint
 	return trim_path;
 }
 
+void check_api_host(){
+	if(user_settings.api_host[0] == 0xff){
+		strcpy(user_settings.api_host, PLUSSTORE_API_HOST);
+		flash_set_eeprom_user_settings(user_settings);
+	}
+}
+
 bool esp8266_PlusStore_API_connect(){
 	uint8_t c;
 	while(HAL_UART_Receive(&huart1, &c, 1, 10 ) == HAL_OK);// first read old messages..
-	uint64_t resp = esp8266_send_command(API_ATCMD_1, PLUSSTORE_CONNECT_TIMEOUT);
+
+	http_request_header[0] = '\0';
+
+    strcat(http_request_header, API_ATCMD_1);
+    check_api_host();
+    strcat(http_request_header, user_settings.api_host);
+    strcat(http_request_header, API_ATCMD_1b);
+
+	uint64_t resp = esp8266_send_command(http_request_header, PLUSSTORE_CONNECT_TIMEOUT);
 	if( resp == ESP8266_CONNECT || resp == ESP8266_ALREADY_CONNECTED){
 		esp8266_send_command(API_ATCMD_2, 200);
 	    return true;
@@ -137,8 +152,11 @@ void esp8266_PlusStore_API_prepare_request_header(char *path, bool prepare_range
     strcat(http_request_header, API_ATCMD_3);
     strcat(http_request_header, path);
     strcat(http_request_header, API_ATCMD_4);
+    check_api_host();
+    strcat(http_request_header, user_settings.api_host);
+    strcat(http_request_header, API_ATCMD_5);
     strcat(http_request_header, stm32_udid);
-    strcat(http_request_header, API_ATCMD_4a);
+    strcat(http_request_header, API_ATCMD_6);
 
     size_t header_len = strlen(http_request_header);
     itoa(user_settings.first_free_flash_sector, (char *)&http_request_header[header_len++], 16); // 5 - C
@@ -158,12 +176,12 @@ void esp8266_PlusStore_API_prepare_request_header(char *path, bool prepare_range
     itoa(( HARDWARE_TYPE - 1 + (( MENU_TYPE - 1 ) << 1 ) + ( USE_SD_CARD << 2) + ( USE_WIFI << 3 )),
     		(char *)&http_request_header[(header_len+3)], 16);									// 0 - F
 
-    strcat(http_request_header, API_ATCMD_5);
+    strcat(http_request_header, API_ATCMD_7);
 
     if(prepare_range_request)
-        strcat(http_request_header, API_ATCMD_6a);
+        strcat(http_request_header, API_ATCMD_8);
     else
-        strcat(http_request_header, API_ATCMD_6b);
+        strcat(http_request_header, API_ATCMD_9);
 }
 
 void esp8266_PlusStore_API_end_transmission(){
