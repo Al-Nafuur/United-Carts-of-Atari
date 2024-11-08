@@ -27,6 +27,7 @@
 #define MENU_TEXT_ESP8266_RESTORE           "Delete WiFi Connections"
 #define MENU_TEXT_ESP8266_UPDATE            "WiFi Firmware Update"
 //#define MENU_TEXT_APPEARANCE                "Appearance"
+#define MENU_TEXT_API_HOST                  "API Host"
 #define MENU_TEXT_DISPLAY                   "Display Preferences"
 #define MENU_TEXT_DISABLE_EMU_EXIT			"Disable Right+Reset Exit"
 #define MENU_TEXT_ENABLE_EMU_EXIT			"Enable Right+Reset Exit"
@@ -76,6 +77,7 @@
 #define FIRMWARE_MAX_RAM                    0x1C000
 
 #define SIZEOF_WIFI_SELECT_BASE_PATH        sizeof(MENU_TEXT_SETUP) + sizeof(MENU_TEXT_WIFI_SETUP) + sizeof(MENU_TEXT_WIFI_SELECT)
+#define SIZEOF_API_HOST_BASE_PATH           sizeof(MENU_TEXT_SETUP) + sizeof(MENU_TEXT_API_HOST)
 
 #if USE_WIFI
 extern UART_HandleTypeDef huart1;
@@ -140,6 +142,7 @@ enum cart_base_type{
 	base_type_EF,
 	base_type_F0,
 	base_type_FA,
+	base_type_FA2,
 	base_type_E7,
 	base_type_DPC,
 	base_type_AR,
@@ -169,6 +172,7 @@ typedef struct {
 	uint8_t first_free_flash_sector;
 	uint8_t font_style;
 	uint8_t line_spacing;
+	char api_host[30];
 } USER_SETTINGS;
 
 
