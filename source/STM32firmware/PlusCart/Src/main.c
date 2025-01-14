@@ -59,6 +59,7 @@
 #include "cartridge_emulation_df.h"
 #include "cartridge_emulation_bf.h"
 #include "cartridge_emulation_sb.h"
+#include "cartridge_emulation_3F.h"
 
 
 void generate_udid_string(void);
@@ -1205,7 +1206,9 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 		else if (isProbablyDFSC(tail)){
 			cart_type.base_type = base_type_DFSC;
 			cart_type.withSuperChip = 1;
-		}else
+		}else if (isProbably3F(d->filesize, buffer))
+			cart_type.base_type = base_type_3F;
+		else
 			cart_type.base_type = base_type_SB;
 	}
 	else if (d->filesize == 256 * 1024)
@@ -1215,8 +1218,17 @@ CART_TYPE identify_cartridge( MENU_ENTRY *d )
 		else if (isProbablyBFSC(tail)){
 			cart_type.base_type = base_type_BFSC;
 			cart_type.withSuperChip = 1;
-		}else
+		}else if (isProbably3F(d->filesize, buffer))
+			cart_type.base_type = base_type_3F;
+		else
 			cart_type.base_type = base_type_SB;
+	}
+	else if (d->filesize == 512 * 1024)
+	{
+		 // if (isProbably3F(d->filesize, buffer)) // 3F is the only 512K ROM supported
+			 cart_type.base_type = base_type_3F;
+//	}else{ // No else so far
+
 	}
 
 	close:
@@ -1272,7 +1284,7 @@ void emulate_cartridge(CART_TYPE cart_type, MENU_ENTRY *d)
 		emulate_UA_cartridge();
 
 	else if (cart_type.base_type == base_type_3F)
-		emulate_3F_cartridge();
+		emulate_3F_cartridge(curPath, cart_size_bytes, buffer, d);
 
 	else if (cart_type.base_type == base_type_3E)
 		emulate_3E_cartridge(offset, cart_type.withPlusFunctions);

@@ -153,9 +153,6 @@ void emulate_FA_FA2_cartridge(int, bool, uint16_t, uint16_t);
 /* FE Bankswitching */
 void emulate_FE_cartridge();
 
-/* 3F (Tigervision) Bankswitching */
-void emulate_3F_cartridge();
-
 /* 3E (3F + RAM) Bankswitching */
 void emulate_3E_cartridge(int, bool);
 
