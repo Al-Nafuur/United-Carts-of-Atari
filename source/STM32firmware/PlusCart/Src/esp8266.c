@@ -24,11 +24,11 @@
 #include "esp8266_AT_WifiManager.h"
 #include "esp8266.h"
 #include "md5.h"
+#include "flash.h"
 
 extern UART_HandleTypeDef huart1;
 
 /* private functions */
-//void get_boundary_http_header(char *) __attribute__((section(".flash01")));
 uint64_t wait_response(uint32_t) __attribute__((section(".flash01")));
 void set_standard_mode(void) __attribute__((section(".flash01")));
 uint64_t esp8266_send_command(char *command, uint32_t timeout) __attribute__((section(".flash01")));
@@ -187,6 +187,8 @@ void esp8266_PlusStore_API_prepare_request_header(char *path, bool prepare_range
 void esp8266_PlusStore_API_end_transmission(){
 	HAL_Delay(50);
 	esp8266_send_command("+++", 1000);
+	HAL_Delay(1200); // After "+++", please wait at least 1 second before sending next AT command.
+	esp8266_send_command("AT+CIPCLOSE\r\n", 15000);
 }
 
 uint32_t esp8266_PlusStore_API_range_request(char *path, http_range range, uint8_t *ext_buffer){
