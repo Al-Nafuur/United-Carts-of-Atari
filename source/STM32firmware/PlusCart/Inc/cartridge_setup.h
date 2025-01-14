@@ -7,7 +7,7 @@
 #include "global.h"
 
 typedef struct {
-    uint8_t* banks[64];
+    uint8_t* banks[256];
 } cartridge_layout;
 
 bool setup_cartridge_image(const char*, uint32_t, uint8_t*, cartridge_layout* , MENU_ENTRY *, enum cart_base_type  );
