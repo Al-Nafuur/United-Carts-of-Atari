@@ -23,7 +23,7 @@ extern "C" {
 #define  API_ATCMD_3	"GET /api.php?p="
 #define  API_ATCMD_4	" HTTP/1.0\r\nHost: "
 #define  API_ATCMD_5	"\r\nPlusStore-ID: v" VERSION " "
-#define  API_ATCMD_6	"\r\nClient-Conf: "
+#define  API_ATCMD_6	" " DEVICE_TYPE "\r\nClient-Conf: "
 #define  API_ATCMD_7	"\r\nConnection: keep-alive\r\n"
 #define  API_ATCMD_8	"Range: bytes="
 #define  API_ATCMD_9	"\r\n"

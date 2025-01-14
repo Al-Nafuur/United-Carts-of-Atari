@@ -8,6 +8,16 @@
 //#define VERSION /* VERSION moved to "Project" -> "Properties" -> "C/C++ Build" -> "Build Variables" */
 #define PLUSSTORE_API_HOST        "pluscart.firmaplus.de"
 
+#if HARDWARE_TYPE == PLUSCART
+#if USE_SD_CARD
+#define DEVICE_TYPE		"PlusCartDuo"
+#else
+#define DEVICE_TYPE		"PlusCart"
+#endif
+#else
+#define DEVICE_TYPE		"UnoCart"
+#endif
+
 #define CHARS_PER_LINE					32
 #define STATUS_MESSAGE_LENGTH           256
 
