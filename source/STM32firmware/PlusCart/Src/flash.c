@@ -114,6 +114,7 @@ void flash_erase_eeprom(){
 /* write to flash with multiple HTTP range requests */
 uint32_t flash_download(char *filename, uint32_t download_size, uint32_t http_range_start, bool append){
 	uint8_t start_sector;
+
 	if(append)
 		start_sector = user_settings.first_free_flash_sector;
 	else
@@ -125,10 +126,10 @@ uint32_t flash_download(char *filename, uint32_t download_size, uint32_t http_ra
 
     flash_erase_storage(start_sector);
 
-	uint32_t address = DOWNLOAD_AREA_START_ADDRESS + 128U * 1024U * (uint8_t)( start_sector - 5);
+    uint32_t address = DOWNLOAD_AREA_START_ADDRESS + 128U * 1024U * (uint8_t)( start_sector - 5);
     flash_download_at(filename, download_size, http_range_start, (uint8_t*)address);
 
-    // flash new usersettings .. (if not appended)
+    // flash new user settings .. (if not appended)
 	if(! append){
 		user_settings.first_free_flash_sector = (uint8_t)(get_sector(address+download_size) + 1);
     	flash_set_eeprom_user_settings(user_settings);
