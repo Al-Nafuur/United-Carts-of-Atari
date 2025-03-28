@@ -17,6 +17,8 @@
 #define CART_CMD_PAGE_UP	0x20     // next page request (page++)
 #define CART_CMD_START_CART	0x30     // Menu ready for reboot into selected ROM
 
+extern int numMenuItemsPerPage;
+
 enum TV_MODE {
 	TV_MODE_UNKNOWN,
 
@@ -46,21 +48,14 @@ enum SPACING {
 	SPACING_MAX
 };
 
-void set_tv_mode(int tv_mode);
-
-int emulate_firmware_cartridge();
-
 void set_menu_status_msg(const char* message);
 
 void createMenuForAtari(MENU_ENTRY * menu_entries, uint8_t page_id, int num_menu_entries, bool is_connected, uint8_t * plus_store_status);
 
 void set_menu_status_byte(enum eStatus_bytes_id byte_id, uint8_t status_byte);
 
-void set_tv_mode(int tv_mode);
-//void set_my_font(int new_font);
+bool reboot_into_cartridge();
 
 int emulate_firmware_cartridge();
-
-bool reboot_into_cartridge();
 
 #endif // CARTRIDGE_FIRMWARE_H

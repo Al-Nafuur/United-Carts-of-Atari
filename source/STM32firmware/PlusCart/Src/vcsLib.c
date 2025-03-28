@@ -3,8 +3,12 @@
 
 #include "vcsLib.h"
 #include "cartridge_io.h"
+#include "wait_spinner.h"
 
 #define SetNextRomAddress(addr) next_address = addr
+
+int LockStatus = Unlocked7800;
+bool Is7800Ntsc = false;
 
 uint8_t aMask = 0xff;
 uint8_t xMask = 0xff;
@@ -193,14 +197,12 @@ void vcsLibInit()
 	// Seed with uninitialized RAM
 	srand(*((unsigned int*)rand_seed));
 	// Signal ZP load routine to transfer control back to ROM
-	SetNextRomAddress(0x1000);
-	InjectRomByte(0xd8);
-	SetNextRomAddress(0x1fef);
-	InjectRomByte(0xff);
-	SetNextRomAddress(0x1ffc);
-	InjectRomByte(0x00);
-	InjectRomByte(0x10);
-	SetNextRomAddress(0x1000);
+	EndWaitSpinner();
+	vcsLda2(0);
+	for (int i = 0; i < 0x80; i++)
+	{
+		vcsSta3(0);
+	}	
 	vcsCopyOverblankToRiotRam();
 	vcsStartOverblank();
 }
@@ -214,8 +216,7 @@ void vcsInitBusStuffing()
 	uint8_t highMask = 0xff; // Tracks high stuff failures
 	// Initialize the lookup table
 	updateLookupTables();
-	vcsEndOverblank();
-	vcsJmp3();
+	EndWaitSpinner();
 	vcsWrite5(VBLANK, 0);
 
 	// Position P0
@@ -352,7 +353,8 @@ void vcsInitBusStuffing()
 	updateLookupTables();
 
 	// Bus stuffing is ready now
-	vcsStartOverblank();
+	vcsJmp3();
+	vcsNop2n(5);
 }
 
 __attribute__((long_call, section(".RamFunc")))
@@ -399,7 +401,7 @@ void vcsJmp3()
 {
 	InjectRomByte(0x4c);
 	InjectRomByte(0x00);
-	InjectRomByte(0x10);
+	InjectRomByte(0xf0);
 	SetNextRomAddress(0x1000);
 }
 
@@ -495,7 +497,7 @@ void vcsWrite6(uint16_t address, uint8_t data)
 	InjectRomByte(0x8d);
 	InjectRomByte((uint8_t)(address & 0xff));
 	InjectRomByte((uint8_t)(address >> 8));
-	YieldDataBus(address);
+	YieldDataBus(address & 0x1fff);
 }
 
 __attribute__((long_call, section(".RamFunc")))
@@ -674,14 +676,52 @@ void vcsJmpToRam3(uint16_t address)
 	InjectRomByte(0x4c);
 	InjectRomByte((uint8_t)(address & 0xff));
 	InjectRomByte((uint8_t)(address >> 8));
-	YieldDataBus(address);
+	YieldDataBus(address & 0x1fff);
+}
+
+__attribute__((long_call, section(".RamFunc")))
+void vcsPokeRomByte(uint16_t address, uint8_t data)
+{
+	SetNextRomAddress(address);
+	InjectRomByte(data);
+	while(ADDR_IN == address)
+	;	
+	SET_DATA_MODE_IN
+}
+
+void vcsSetNextAddress(uint16_t address)
+{
+	SetNextRomAddress(address);
 }
 
 
 __attribute__((long_call, section(".RamFunc")))
-void injectDmaData(int address, int count, const uint8_t* pBuffer)
+void vcsInjectDmaData(uint16_t address, uint8_t count, const uint8_t* pBuffer)
 {
-	// TODO
+	DATA_OUT = pBuffer[0];
+	while(ADDR_IN != address)
+		;
+	SET_DATA_MODE_OUT;
+	for(int i = 1; i < count; i++){
+		address++;
+		while(ADDR_IN != address)
+			;
+		DATA_OUT = pBuffer[i];
+	}
+	while(ADDR_IN & 0x1000)
+		;
+	SET_DATA_MODE_IN;
+}
+
+__attribute__((long_call, section(".RamFunc")))
+uint8_t vcsSnoopRead(uint16_t address)
+{
+	uint8_t result = 0xff;
+	while(ADDR_IN != address)
+		;
+	while(ADDR_IN == address)
+		result = DATA_IN;
+	return result;
 }
 
 int randint()

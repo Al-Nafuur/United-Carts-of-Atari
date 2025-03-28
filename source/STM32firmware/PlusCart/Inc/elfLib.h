@@ -2,6 +2,7 @@
 #define ELFLIB_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #define SHT_PROGBITS 1
 #define SHT_SYMTAB 2
@@ -106,13 +107,13 @@ typedef struct NameAddressMapEntry {
 	char* name;
 } NameAddressMapEntry;
 
-extern NameAddressMapEntry NameAddressMap[43];
+extern NameAddressMapEntry NameAddressMap[46];
 
 int isElf(uint32_t size, uint8_t* buffer);
 
 int initSectionsMeta(uint8_t* elfBuffer, SectionMetaEntry meta[], uint32_t nobitsLoadAddress);
 
-int loadElf(uint8_t* elfBuffer, uint32_t metaCount, SectionMetaEntry meta[], uint32_t* pMainAddress, int* usesVcsWrite3);
+int loadElf(uint8_t* elfBuffer, uint32_t metaCount, SectionMetaEntry meta[], uint32_t* pMainAddress, int* usesVcsWrite3, bool* supports2600, bool* supports7800);
 
 void runPreInitFuncs(uint32_t metaCount, SectionMetaEntry meta[]);
 void runInitFuncs(uint32_t metaCount, SectionMetaEntry meta[]);

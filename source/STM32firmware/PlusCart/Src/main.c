@@ -39,7 +39,7 @@
 #include <string.h>
 
 #include "global.h"
-#include "font.h"
+#include "fonts.h"
 #if USE_WIFI
 #include "esp8266.h"
 #endif
@@ -60,6 +60,7 @@
 #include "cartridge_emulation_bf.h"
 #include "cartridge_emulation_sb.h"
 #include "cartridge_emulation_3F.h"
+#include "vcsLib.h"
 
 
 void generate_udid_string(void);
@@ -170,13 +171,6 @@ const char *status_message[]__attribute__((section(".flash01#"))) = {
 	"Host name or IP address",
 
 //	MENU_TEXT_APPEARANCE,
-};
-
-const uint8_t numMenuItemsPerPage[] = {
-		// ref: SPACING enum
-		14,									// dense
-		12,									// medium
-		10									// sparse
 };
 
 //
@@ -703,8 +697,6 @@ enum e_status_message buildMenuFromPath( MENU_ENTRY *d )  {
 						uint8_t tvMode = TV_MODE_NTSC;
 						while (!strstr(tvModes[tvMode], d->entryname + 1))
 							tvMode++;
-
-						set_tv_mode(tvMode);
 
 						if(user_settings.tv_mode != tvMode){
 							user_settings.tv_mode = tvMode;
@@ -1483,8 +1475,8 @@ int main(void)
   MX_GPIO_Init();
   /* USER CODE BEGIN 2 */
 
+  bootStrap();
   user_settings = flash_get_eeprom_user_settings();
-  set_tv_mode(user_settings.tv_mode);
 
   /* USER CODE END 2 */
 
@@ -1520,7 +1512,7 @@ int main(void)
 
 		else {
 
-			ret += act_page * numMenuItemsPerPage[user_settings.line_spacing];
+			ret += act_page * numMenuItemsPerPage;
 			d = &menu_entries[ret];
 
 			act_page = 0; // seems to fix the "blank" menus - because page # was not init'd on new menu
@@ -1637,7 +1629,7 @@ int main(void)
 	    	if (menuStatusMessage >= STATUS_ROOT)
 	    		set_menu_status_msg(status_message[menuStatusMessage]);
 
-	    	if(act_page > (num_menu_entries / numMenuItemsPerPage[user_settings.line_spacing]) )
+	    	if(act_page > (num_menu_entries / numMenuItemsPerPage) )
 	    		act_page = 0;
 
 	    	set_menu_status_byte(STATUS_PageType, (uint8_t) Directory);

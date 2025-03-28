@@ -1,0 +1,15 @@
+#ifndef WAITBIN_H
+#define WAITBIN_H
+#include <stdint.h>
+
+extern const uint8_t WaitBin[92];
+
+#define WAITBIN_ARG_BOTTOMPAD 0x00dc
+#define WAITBIN_ARG_MAGNIFY 0x00cb
+#define WAITBIN_ARG_OVERSCAN_LINES 0x00e5
+#define WAITBIN_ARG_START_SPINNER 0x0080
+#define WAITBIN_ARG_START_WAIT 0x00a1
+#define WAITBIN_ARG_TOPSHIFT 0x00b4
+#define WAITBIN_ARG_VBLANK_LINES 0x00ae
+
+#endif // WAITBIN_H

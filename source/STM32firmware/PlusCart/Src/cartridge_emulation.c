@@ -9,6 +9,8 @@
  * Cartridge Emulation
  *************************************************************************/
 #include <string.h>
+#include "vcsLib.h"
+#include "wait_spinner.h"
 #include "cartridge_emulation.h"
 #include "cartridge_firmware.h"
 
@@ -26,13 +28,10 @@ void exit_cartridge(uint16_t addr, uint16_t addr_prev){
 
 	DATA_OUT = 0xEA;                  // (NOP) or data for SWCHB
 	SET_DATA_MODE_OUT;
-	while (ADDR_IN == addr);
-
-	addr = ADDR_IN;
-	DATA_OUT = 0x00;                  // (BRK)
-	while (ADDR_IN == addr);
-
-	emulate_firmware_cartridge();
+	vcsSetNextAddress(addr_prev + 5);
+	vcsJmp3();
+	StartWaitSpinner();
+	__enable_irq();
 }
 
 

@@ -1,0 +1,13 @@
+#ifndef WAIT78BIN_H
+#define WAIT78BIN_H
+#include <stdint.h>
+
+extern const uint8_t Wait78Bin[121];
+
+#define WAIT78BIN_ARG_DISPLAY_LIST 0x2400
+#define WAIT78BIN_ARG_DISPLAY_LIST_LIST 0x2300
+#define WAIT78BIN_ARG_GRAPHICS 0x2500
+#define WAIT78BIN_ARG_KERNEL 0x2200
+#define WAIT78BIN_ARG_KERNEL_SIZE 0x0079
+
+#endif // WAIT78BIN_H

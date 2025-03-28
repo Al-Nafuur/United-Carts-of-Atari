@@ -95,7 +95,7 @@ int isElf(uint32_t size, uint8_t* buffer) {
 }
 
 // pMainAddress will have bit0 set since it's pointing to a thumb function. Mask bit0 off if looking for physical address of first byte in function
-int loadElf(uint8_t* elfBuffer, uint32_t metaCount, SectionMetaEntry meta[], uint32_t* pMainAddress, int* usesVcsWrite3) {
+int loadElf(uint8_t* elfBuffer, uint32_t metaCount, SectionMetaEntry meta[], uint32_t* pMainAddress, int* usesVcsWrite3, bool* supports2600, bool* supports7800) {
 	*pMainAddress = 0;
 	*usesVcsWrite3 = 0;
 	SectionHeader* symTableSectionHeader = 0;
@@ -148,8 +148,18 @@ int loadElf(uint8_t* elfBuffer, uint32_t metaCount, SectionMetaEntry meta[], uin
 		return 0;
 	}
 
+	*supports2600 = *supports7800 = false;
 	for (int i = 1; i < metaCount; i++)
 	{
+		if (strCmp(".elf2600", meta[i].name))
+		{
+			*supports2600 = true;
+		}
+		if (strCmp(".elf7800", meta[i].name))
+		{
+			*supports7800 = true;
+		}
+
 		if (meta[i].header->sh_type == SHT_NOBITS)
 		{
 			memset((uint8_t*)meta[i].loadAddress, 0, meta[i].header->sh_size);
@@ -163,6 +173,10 @@ int loadElf(uint8_t* elfBuffer, uint32_t metaCount, SectionMetaEntry meta[], uin
 		}
 	}
 
+	if (!*supports2600 && !*supports7800) {
+		// If neither system is explicitly supported, we assume 2600 only since that's all that existed prior to dual system support
+		*supports2600 = true;
+	}
 	return 1;
 }
 

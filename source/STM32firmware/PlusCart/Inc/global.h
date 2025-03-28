@@ -18,7 +18,7 @@
 #define DEVICE_TYPE		"UnoCart"
 #endif
 
-#define CHARS_PER_LINE					32
+#define CHARS_PER_LINE					36
 #define STATUS_MESSAGE_LENGTH           256
 
 #define NUM_MENU_ITEMS			      	1024
@@ -187,6 +187,5 @@ typedef struct {
 
 
 extern USER_SETTINGS user_settings;
-extern const uint8_t numMenuItemsPerPage[];
 
 #endif // GLOBAL_H
