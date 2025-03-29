@@ -100,9 +100,6 @@ extern unsigned int cart_size_bytes;
 
 enum eStatus_bytes_id {
 	STATUS_StatusByteReboot,
-	STATUS_CurPage,
-	STATUS_MaxPage,
-	STATUS_ItemsOnActPage,
 	STATUS_PageType,
 	STATUS_Unused1,
 	STATUS_Unused2,

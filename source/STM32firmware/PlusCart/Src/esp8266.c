@@ -90,7 +90,7 @@ int esp8266_file_list( char *path, MENU_ENTRY **dst, int *num_menu_entries, uint
 						pos = 0;
 					}else if( char_counter < 8 ){ // get the filesize
 						(*dst)->filesize = (*dst)->filesize * 10 + (uint8_t)( c - '0' );
-					}else if( char_counter > 8 && char_counter < 41 && c != '\n'){ // filename/dirname should begin at index 9
+					}else if( char_counter > 8 && char_counter < (CHARS_PER_LINE+9) && c != '\n'){ // filename/dirname should begin at index 9
 						(*dst)->entryname[pos] = c;
 						pos++;
 					}

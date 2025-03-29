@@ -5,6 +5,7 @@
 #include "text.h"
 #include "wait_spinner.h"
 #include "reboot_into_cartbin.h"
+#include "text78bin.h"
 
 #define lineCounter 0x82
 #define lineBackColour 0x84
@@ -14,11 +15,21 @@
 #define BACK_COL_NTSC 0x92
 #define BACK_COL_PAL 0xD2
 
+int numMenuItemsPerPage;
+
 static char menu_header[CHARS_PER_LINE] __attribute__((section(".ccmram#")));
 static char pendingStatusMessage[STATUS_MESSAGE_LENGTH] __attribute__((section(".ccmram#")));
 static unsigned char menu_status[STATUS_MAX] __attribute__((section(".ccmram#")));
 
-int numMenuItemsPerPage;
+// Save these when creating menu so we can change pages later
+static MENU_ENTRY *pMenuEntries;
+static uint8_t currentPage;
+static int menuEntriesCount;
+static bool isConnected;
+static uint8_t *plusStoreStatus;
+uint8_t max_page_index;
+uint8_t items_on_act_page;
+uint8_t colubk;
 
 // for colours see...
 // https://www.randomterrain.com/atari-2600-memories-tia-color-charts.html
@@ -103,6 +114,8 @@ const uint8_t textColour[2][14] = {
 
 };
 
+void handleInput(int* SelectedIndex, uint8_t swcha_prev, uint8_t swcha, uint8_t inpt4_prev, uint8_t inpt4);
+
 char cvtToNum(char *p)
 {
 	const char *digits = "0123456789ABCDEF";
@@ -116,20 +129,21 @@ void createMenuForAtari(
 	bool is_connected,
 	uint8_t *plus_store_status)
 {
-
 	uint8_t menu_string[CHARS_PER_LINE];
 	uint8_t sc, entry, odd_even;
 	size_t str_len;
+	pMenuEntries = menu_entries;
+	menuEntriesCount = num_menu_entries;
+	isConnected = is_connected;
+	plusStoreStatus = plus_store_status;
+	currentPage = page_id;
 	numMenuItemsPerPage = SetRowDensity(user_settings.line_spacing);
 	uint8_t max_page = (uint8_t)((num_menu_entries - 1) / numMenuItemsPerPage);
+	max_page_index = max_page;
 	uint8_t items_on_last_page = (uint8_t)((num_menu_entries % numMenuItemsPerPage) ? (num_menu_entries % numMenuItemsPerPage) : numMenuItemsPerPage);
-	uint8_t items_on_act_page = (uint8_t)((page_id < max_page) ? numMenuItemsPerPage : items_on_last_page);
+	items_on_act_page = (uint8_t)((page_id < max_page) ? numMenuItemsPerPage : items_on_last_page);
 
 	unsigned int offset = (unsigned int)(numMenuItemsPerPage * page_id);
-
-	set_menu_status_byte(STATUS_CurPage, page_id);
-	set_menu_status_byte(STATUS_MaxPage, max_page);
-	set_menu_status_byte(STATUS_ItemsOnActPage, items_on_act_page);
 
 	memset(menu_header, ' ', sizeof(menu_header) / sizeof(char));
 
@@ -137,9 +151,9 @@ void createMenuForAtari(
 
 	int showEllipsis = -1;
 	int pageIcon = -1;
-	int wifiIcon = 1;
-	int accountIcon = 1;
-	uint8_t i = CHARS_PER_LINE - 1;
+	int wifiIcon = -1;
+	int accountIcon = -1;
+	uint8_t i = CHARS_PER_LINE - 3; // Leave room for mode status icon
 
 #if USE_WIFI
 	i -= 4; // Leave space for the 2 status icons
@@ -171,14 +185,14 @@ void createMenuForAtari(
 
 		// if the position would cause character glitching in 2-char page, then shift everything left
 
-		if (i % 2 == 0)
+		if ((i & 1) == 0)
 		{
 			for (uint8_t j = 8; j > 0; j--)
 				menu_header[pagePos - j] = menu_header[pagePos - j + 1];
 			i--;
 		}
 
-		pageIcon = i;
+		pageIcon = i >> 1;
 		i -= 2;
 	}
 
@@ -187,13 +201,18 @@ void createMenuForAtari(
 
 	char *vp = pendingStatusMessage;
 	for (char *p = pendingStatusMessage; *p; p++)
+	{
 		if (*p == '%')
 		{
 			*vp++ = (char)(cvtToNum(p + 1) * 16 + cvtToNum(p + 2));
 			p += 2;
 		}
 		else
+		{
 			*vp++ = *p;
+		}
+	}
+	int cpySize = (int)vp - (int)pendingStatusMessage;
 	*vp = 0;
 
 	// now truncate path string to last visible n characters
@@ -207,14 +226,15 @@ void createMenuForAtari(
 		*vp = ' ';
 		*(vp + 1) = ' ';
 		showEllipsis = 1;
+		cpySize = i;
 	}
 
-	strncpy(menu_header, vp, i);
+	strncpy(menu_header, vp, cpySize);
 
 	uint8_t colourSet = user_settings.tv_mode == TV_MODE_NTSC ? 0 : 1;
 	int fontIndex = user_settings.font_style;
 	// Start of menu page generation
-	uint8_t colubk = user_settings.tv_mode == TV_MODE_NTSC ? BACK_COL_NTSC : BACK_COL_PAL;
+	colubk = user_settings.tv_mode == TV_MODE_NTSC ? BACK_COL_NTSC : BACK_COL_PAL;
 	ClearBuffers(colubk & 0xf0, colubk);
 	for (entry = 0; entry <= numMenuItemsPerPage; entry++)
 	{
@@ -285,9 +305,11 @@ RAM_FUNC int emulate_firmware_cartridge()
 		numMenuItemsPerPage = SetRowDensity(user_settings.line_spacing);
 		return CART_CMD_ROOT_DIR;
 	}
-	
+
 	// Always highlight top row
 	SetRowBackground(0, 0x55);
+	int SelectedIndex = 0;
+	DefineControlVars;
 
 	__disable_irq();
 	EndWaitSpinner();
@@ -303,8 +325,6 @@ RAM_FUNC int emulate_firmware_cartridge()
 		vcsCopyOverblankToRiotRam();
 		vcsWrite5(0x81, 13);
 		vcsStartOverblank();
-		int SelectedIndex = 0;
-		DefineControlVars;
 		while (1)
 		{
 
@@ -328,40 +348,101 @@ RAM_FUNC int emulate_firmware_cartridge()
 			else
 			{
 				vcsStartOverblank();
-
-				if (Joy0_Down_Changed && Joy0_Down)
-				{
-					SetRowBackground(SelectedIndex, 0x80);
-					SelectedIndex++;
-					if (SelectedIndex >= numMenuItemsPerPage)
-					{
-						SelectedIndex = 0;
-					}
-
-					SetRowBackground(SelectedIndex, 0x55);
-				}
-				if (Joy0_Up_Changed && Joy0_Up)
-				{
-					SetRowBackground(SelectedIndex, 0x80);
-					SelectedIndex--;
-					if (SelectedIndex < 0)
-					{
-						SelectedIndex = numMenuItemsPerPage - 1;
-					}
-
-					SetRowBackground(SelectedIndex, 0x55);
-				}
+				handleInput(&SelectedIndex, swcha_prev, swcha, inpt4_prev, inpt4);
 			}
 		}
 	}
-	else
+	else // 7800
 	{
-		int si = DisplayText78(menu_status[STATUS_ItemsOnActPage]);
-		EndWaitSpinner();
-		StartWaitSpinner();
-		__enable_irq();
-		return si;
+		// Copy Kernel
+		for (int i = 0; i < TEXT78BIN_ARG_KERNEL_SIZE; i++)
+		{
+			vcsWrite6((uint16_t)(TEXT78BIN_ARG_LOAD + i), Text78Bin[i]);
+		}
+		// Transfer control
+		vcsJmpToRam3(TEXT78BIN_ARG_KERNEL);
+
+		while (1)
+		{
+			DisplayText78();
+
+			// Should be in VBLANK soon
+
+			swcha_prev = swcha;
+			inpt4_prev = inpt4;
+			swcha = vcsSnoopRead(SWCHA);
+			inpt4 = vcsSnoopRead(INPT4);
+			if (Joy0_Fire && Joy0_Fire_Changed)
+			{
+				EndWaitSpinner();
+				StartWaitSpinner();
+				__enable_irq();
+				return SelectedIndex;
+			}
+			else
+			{
+				handleInput(&SelectedIndex, swcha_prev, swcha, inpt4_prev, inpt4);
+			}
+		}
 	}
 
 	return 0;
+}
+
+void handleInput(int* SelectedIndex, uint8_t swcha_prev, uint8_t swcha, uint8_t inpt4_prev, uint8_t inpt4)
+{
+	// Only process one direction per frame to avoid running out of vblank cycles on pointless actions
+	if (Joy0_Down_Changed && Joy0_Down)
+	{
+		SetRowBackground(*SelectedIndex, colubk);
+
+		if (*SelectedIndex < items_on_act_page - 1)
+		{
+			(*SelectedIndex)++;
+		}
+		else if (currentPage < max_page_index)
+		{
+			*SelectedIndex = 0;
+			createMenuForAtari(pMenuEntries, currentPage + 1, menuEntriesCount, isConnected, plusStoreStatus);
+		}
+
+		SetRowBackground(*SelectedIndex, 0x55);
+	}
+	else if (Joy0_Up_Changed && Joy0_Up)
+	{
+		SetRowBackground(*SelectedIndex, colubk);
+		if (*SelectedIndex > 0)
+		{
+			(*SelectedIndex)--;
+		}
+		else if (currentPage > 0)
+		{
+			*SelectedIndex = 0;
+			createMenuForAtari(pMenuEntries, currentPage - 1, menuEntriesCount, isConnected, plusStoreStatus);
+		}
+
+		SetRowBackground(*SelectedIndex, 0x55);
+	}
+	else if (Joy0_Right_Changed && Joy0_Right)
+	{
+		SetRowBackground(*SelectedIndex, colubk);
+		if (currentPage < max_page_index)
+		{
+			*SelectedIndex = 0;
+			createMenuForAtari(pMenuEntries, currentPage + 1, menuEntriesCount, isConnected, plusStoreStatus);
+		}
+
+		SetRowBackground(*SelectedIndex, 0x55);
+	}
+	else if (Joy0_Left_Changed && Joy0_Left)
+	{
+		SetRowBackground(*SelectedIndex, colubk);
+		if (currentPage > 0)
+		{
+			*SelectedIndex = 0;
+			createMenuForAtari(pMenuEntries, currentPage - 1, menuEntriesCount, isConnected, plusStoreStatus);
+		}
+
+		SetRowBackground(*SelectedIndex, 0x55);
+	}
 }

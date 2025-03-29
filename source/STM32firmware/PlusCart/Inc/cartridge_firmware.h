@@ -13,8 +13,6 @@
 #define CART_STATUS_BYTES_END	  CART_STATUS_BYTES_START + 6	// 7 bytes of status
 
 #define CART_CMD_ROOT_DIR	0xff     // Menu waits for boot menu
-#define CART_CMD_PAGE_DOWN	0x10     // previous page request (page--)
-#define CART_CMD_PAGE_UP	0x20     // next page request (page++)
 #define CART_CMD_START_CART	0x30     // Menu ready for reboot into selected ROM
 
 extern int numMenuItemsPerPage;

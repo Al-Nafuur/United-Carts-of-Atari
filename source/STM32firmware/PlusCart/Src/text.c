@@ -123,7 +123,7 @@ void PrintSmall(int font, int line, int topMargin, int botMargin, uint8_t colup,
 		int leftCharIndex = ptext[x] - '!';
 		int rightCharIndex = ptext[x + 1] - '!';
 		uint32_t topLeft = ptext[x] < '!' ? 0 : FontTops[font][leftCharIndex];
-		uint32_t topRight = ptext[x] == 0 || ptext[x + 1] < '!' ? 0 : FontTops[font][rightCharIndex];
+		uint32_t topRight = (ptext[x] == 0 || ptext[x + 1] < '!') ? 0 : FontTops[font][rightCharIndex];
 
 		// Blit the first 30 pixels
 		int shift = 29;
@@ -145,7 +145,7 @@ void PrintSmall(int font, int line, int topMargin, int botMargin, uint8_t colup,
 				// Load in the bottom 4 bits
 				shift = 0;
 				topLeft = (topLeft << 4) | ((ptext[x] < '!' ? 0 : FontBottoms[font][leftCharIndex / 2]) >> (leftCharIndex & 1 ? 4 : 0));
-				topRight = (topRight << 4) | ((ptext[x + 1] < '!' ? 0 : FontBottoms[font][rightCharIndex / 2]) >> (rightCharIndex & 1 ? 4 : 0));
+				topRight = (topRight << 4) | (((ptext[x] == 0 || ptext[x + 1] < '!') ? 0 : FontBottoms[font][rightCharIndex / 2]) >> (rightCharIndex & 1 ? 4 : 0));
 			}
 			index += rowBytesCount;
 		}
@@ -340,68 +340,19 @@ static void kernelB(int line, uint8_t textBuffer[18])
 	vcsJmp3();
 }
 
-RAM_FUNC int DisplayText78(int itemsCount)
+RAM_FUNC void DisplayText78()
 {
-	// Copy Kernel
-	for (int i = 0; i < TEXT78BIN_ARG_KERNEL_SIZE; i++)
+	int line = 0;
+	int bufferOffset = 0;
+	for (int i = 0; i < 13; i++)
 	{
-		vcsWrite6((uint16_t)(TEXT78BIN_ARG_LOAD + i), Text78Bin[i]);
-	}
-	// Transfer control
-	vcsJmpToRam3(TEXT78BIN_ARG_KERNEL);
-	int SelectedIndex = 0;
-	DefineControlVars;
-
-	while (1)
-	{
-		int line = 0;
-		int bufferOffset = 0;
-		for (int i = 0; i < 13; i++)
+		for (uint16_t addr = i < 12 ? 0x1fc0 : 0x1bc0; addr > 0x1000; addr -= 0x0100)
 		{
-			for (uint16_t addr = i < 12 ? 0x1fc0 : 0x1bc0; addr > 0x1000; addr -= 0x0100)
-			{
-				vcsInjectDmaData(0x1fb0, 1, &textColuBK[line++]);
-				vcsInjectDmaData(addr, 18, &textBuffer[bufferOffset]);
-				bufferOffset += RowWidthBytes;
-				vcsInjectDmaData(addr, 18, &textBuffer[bufferOffset]);
-				bufferOffset += RowWidthBytes;
-			}
-		}
-
-		// Should be in VBLANK soon
-
-		swcha_prev = swcha;
-		inpt4_prev = inpt4;
-		swcha = vcsSnoopRead(SWCHA);
-		inpt4 = vcsSnoopRead(INPT4);
-		if (Joy0_Fire && Joy0_Fire_Changed)
-		{
-			return SelectedIndex;
-		}
-		else
-		{
-			if (Joy0_Down_Changed && Joy0_Down)
-			{
-				SetRowBackground(SelectedIndex, 0x80);
-				SelectedIndex++;
-				if (SelectedIndex >= itemsCount)
-				{
-					SelectedIndex = 0;
-				}
-
-				SetRowBackground(SelectedIndex, 0x55);
-			}
-			if (Joy0_Up_Changed && Joy0_Up)
-			{
-				SetRowBackground(SelectedIndex, 0x80);
-				SelectedIndex--;
-				if (SelectedIndex < 0)
-				{
-					SelectedIndex = itemsCount - 1;
-				}
-
-				SetRowBackground(SelectedIndex, 0x55);
-			}
+			vcsInjectDmaData(0x1fb0, 1, &textColuBK[line++]);
+			vcsInjectDmaData(addr, 18, &textBuffer[bufferOffset]);
+			bufferOffset += RowWidthBytes;
+			vcsInjectDmaData(addr, 18, &textBuffer[bufferOffset]);
+			bufferOffset += RowWidthBytes;
 		}
 	}
 }

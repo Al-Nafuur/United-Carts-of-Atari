@@ -17,4 +17,4 @@ void PrintHeader(int font, uint8_t colup, int ellipsis, int page, int wifi, int 
 void PrintRow(int font, int row, uint8_t colup, const char *ptext);
 
 void DisplayText();
-int DisplayText78(int itemsCount);
+void DisplayText78();

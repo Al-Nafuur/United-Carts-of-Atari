@@ -1502,14 +1502,6 @@ int main(void)
 			menuStatusMessage = buildMenuFromPath(d);
 		}
 
-		else if (ret == CART_CMD_PAGE_DOWN) {
-			act_page--;
-		}
-
-		else if (ret == CART_CMD_PAGE_UP) {
-			act_page++;
-		}
-
 		else {
 
 			ret += act_page * numMenuItemsPerPage;

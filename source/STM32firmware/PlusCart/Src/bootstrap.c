@@ -77,6 +77,7 @@ RAM_FUNC void bootStrap2()
 			LockStatus = Locked2600;
 			Is7800Ntsc = false;
 			StartWaitSpinner();	
+			return;
 		}
 	}
 
