@@ -5,6 +5,7 @@
 #include "cartridge_emulation_ACE.h"
 #include "cartridge_firmware.h"
 #include "fatfs.h"
+#include "cartridge_emulation.h"
 
 
 #define ACE_MAJOR_REV 1
@@ -153,7 +154,7 @@ int launch_ace_cartridge( const char* filename, uint32_t image_size, uint8_t* bu
 	buffer32++;
 	*buffer32 = (uint32_t)(&reboot_into_cartridge); //2. Pass Pluscart library function pointer for reboot_into_cartridge. Used for bootstrapping the 2600 system before running the ACE application.
 	buffer32++;
-	*buffer32 = 0; // TODO ?? (uint32_t)(&emulate_firmware_cartridge); //3. Pass Pluscart library function pointer for emulate_firmware_cartridge. Used to exit out of a 2600 rom and back into the Pluscart menu.
+	*buffer32 = (uint32_t)(&exit_cartridge); //3. Pass Pluscart library function pointer for emulate_firmware_cartridge. Used to exit out of a 2600 rom and back into the Pluscart menu.
 	buffer32++;
 	*buffer32 = (uint32_t)(SystemCoreClock);//4. Pass the system clock frequency for time dependent functions.
 	buffer32++;

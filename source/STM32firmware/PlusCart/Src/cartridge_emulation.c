@@ -27,8 +27,16 @@
 void exit_cartridge(uint16_t addr, uint16_t addr_prev){
 
 	DATA_OUT = 0xEA;                  // (NOP) or data for SWCHB
+	while(!(ADDR_IN & 0x1000))
+		; // Wait for a ROM access
 	SET_DATA_MODE_OUT;
-	vcsSetNextAddress(addr_prev + 5);
+	addr_prev = ADDR_IN;
+	addr = ADDR_IN;
+	while(addr == addr_prev){
+		addr_prev = addr;
+		addr = ADDR_IN;
+	}
+	vcsSetNextAddress(addr + 1);
 	vcsJmp3();
 	StartWaitSpinner();
 	__enable_irq();

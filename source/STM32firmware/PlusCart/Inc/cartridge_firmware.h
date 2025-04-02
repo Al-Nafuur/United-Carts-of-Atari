@@ -12,10 +12,7 @@
 #define CART_STATUS_BYTES_START	  0x1fe7	                    // start status bytes area
 #define CART_STATUS_BYTES_END	  CART_STATUS_BYTES_START + 6	// 7 bytes of status
 
-#define CART_CMD_ROOT_DIR	0xff     // Menu waits for boot menu
-#define CART_CMD_START_CART	0x30     // Menu ready for reboot into selected ROM
-
-extern int numMenuItemsPerPage;
+#define CART_CMD_ROOT_DIR	-1     // Menu waits for boot menu
 
 enum TV_MODE {
 	TV_MODE_UNKNOWN,

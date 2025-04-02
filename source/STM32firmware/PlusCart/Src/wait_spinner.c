@@ -39,7 +39,7 @@ RAM_FUNC void StartWaitSpinner7800()
 		{
 			for (int k = 0; k < 8; k++)
 			{
-				vcsWrite6(baseAddress++, (SDSpinner[i * 8 + (7 - j)] >> (7 - k)) & 1 ? 0x55 : 0);
+				vcsWrite6(baseAddress++, (WaitSpinnerGraphics[i * 8 + (7 - j)] >> (7 - k)) & 1 ? 0x55 : 0);
 			}
 		}
 	}
@@ -125,7 +125,7 @@ RAM_FUNC void StartWaitSpinner2600()
 
 	for (uint8_t i = 0; i < 32; i++)
 	{
-		vcsWrite5(WAITBIN_ARG_START_SPINNER + i, SDSpinner[i]);
+		vcsWrite5(WAITBIN_ARG_START_SPINNER + i, WaitSpinnerGraphics[i]);
 	}
 	vcsJmp3();
 

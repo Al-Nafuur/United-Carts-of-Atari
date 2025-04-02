@@ -1450,7 +1450,6 @@ int main(void)
 {
   /* USER CODE BEGIN 1 */
 
-	uint8_t act_page = 0;
     MENU_ENTRY *d = &menu_entries[0];
 
   /* USER CODE END 1 */
@@ -1504,10 +1503,7 @@ int main(void)
 
 		else {
 
-			ret += act_page * numMenuItemsPerPage;
 			d = &menu_entries[ret];
-
-			act_page = 0; // seems to fix the "blank" menus - because page # was not init'd on new menu
 
 			if (d->type == Cart_File || d->type == Offline_Cart_File || d->type == SD_Cart_File) {
 
@@ -1621,9 +1617,6 @@ int main(void)
 	    	if (menuStatusMessage >= STATUS_ROOT)
 	    		set_menu_status_msg(status_message[menuStatusMessage]);
 
-	    	if(act_page > (num_menu_entries / numMenuItemsPerPage) )
-	    		act_page = 0;
-
 	    	set_menu_status_byte(STATUS_PageType, (uint8_t) Directory);
 	    }
 	#if USE_WIFI
@@ -1631,7 +1624,7 @@ int main(void)
 	#else
 		bool is_connected = false;
 	#endif
-		createMenuForAtari(menu_entries, act_page, num_menu_entries, is_connected, plus_store_status );
+		createMenuForAtari(menu_entries, 0, num_menu_entries, is_connected, plus_store_status );
 	    HAL_Delay(200);
   }
   /* USER CODE END 3 */

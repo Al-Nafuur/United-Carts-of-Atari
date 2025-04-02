@@ -180,6 +180,7 @@ extern const uint8_t Pal2600[256];
 extern const uint8_t Ntsc7800[256];
 extern const uint8_t Pal7800[256];
 void bootStrap();
+void lock2600mode();
 void vcsLibInit();
 void vcsInitBusStuffing();
 

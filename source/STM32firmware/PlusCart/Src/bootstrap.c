@@ -26,7 +26,7 @@ const uint8_t Signature[] = {0x07, 0xBB, 0xD4, 0x11, 0x6A, 0xD1, 0xFE, 0xF8,
 							 0xBF, 0x54, 0x43, 0x22, 0x4D, 0x7D, 0xCC, 0x0E, 0x00, 0x22, 0x7D, 0xE3,
 							 0x1F, 0x24, 0x51, 0xea};
 
-RAM_FUNC static void fakeSignature();
+RAM_FUNC void fakeSignature();
 
 void bootStrap2();
 void bootStrap()
@@ -76,7 +76,7 @@ RAM_FUNC void bootStrap2()
 
 			LockStatus = Locked2600;
 			Is7800Ntsc = false;
-			StartWaitSpinner();	
+			StartWaitSpinner();
 			return;
 		}
 	}
@@ -200,7 +200,7 @@ RAM_FUNC void bootStrap2()
 
 						// Feed in the reset vector and then we're ready to go
 
-						DATA_OUT = 0xf8;
+						DATA_OUT = 0xd8;
 						while (ADDR_IN != 0x1ffc)
 							;
 						SET_DATA_MODE_OUT;
@@ -211,6 +211,7 @@ RAM_FUNC void bootStrap2()
 						LockStatus = Unlocked7800;
 						Is7800Ntsc = false;
 						StartWaitSpinner();
+						return;
 					}
 				}
 			}
@@ -218,7 +219,7 @@ RAM_FUNC void bootStrap2()
 	}
 }
 
-RAM_FUNC static void fakeSignature()
+RAM_FUNC void fakeSignature()
 {
 	uint16_t addr;
 	int i;
@@ -339,87 +340,82 @@ RAM_FUNC static void fakeSignature()
 			;
 	}
 
-	DATA_OUT = 0xf8;
+	DATA_OUT = 0xd8;
 	while (ADDR_IN != 0x1ffc)
 		;
 	SET_DATA_MODE_OUT;
 
 	vcsSetNextAddress(0x1900);
-	// vcsWrite5(INPTCTRL, 0x7); // Lock into 7800 mode
-	vcsNop2();
+
 	LockStatus = Unlocked7800;
 	Is7800Ntsc = true;
 	StartWaitSpinner();
-	// // vcsJmp3();
-	// while (1)
-	// 	;
+}
 
-	//
-	// vcsSta3(MARIA_WSYNC);
+void lock2600mode()
+{
+	int frame = 0;
+	// unlocked so can only write 0x*c or 0x*e to TIA registers because it also writes INPTCTRL
+	while (1)
+	{
+		vcsWrite5(VSYNC, 0xe);
+//		if (frame > 60)
+//		{
+//			frame = 0;
+			vcsWrite5(WSYNC, 0xc);
+//		}
+//		else
+//		{
+//			frame++;
+//			vcsWrite6(WSYNC, 0xc);
+//		}
+		vcsWrite5(WSYNC, 0xc);
+		vcsWrite5(WSYNC, 0xc);
+		vcsWrite5(VSYNC, 0xc);
 
-	// for (int i = 0; i < sizeof(Wait78Bin); i++)
-	// {
-	// 	vcsJmp3();
-	// 	vcsWrite6((uint16_t)(WAIT78BIN_ARG_LOAD + i), Wait78Bin[i]);
-	// }
-	// vcsJmpToRam3(WAIT78BIN_ARG_START);
-	// // i = 0;
-	// // Color pattern
-	// while (1)
-	// {
-	// 	vcsSta3(MARIA_WSYNC);
-	// 	vcsWrite6(BACKGRND, (uint8_t)i++);
-	// 	vcsJmp3();
-	// }
+		for (int i = 0; i < 35; i++)
+		{
+			vcsJmp3();
+			vcsWrite5(WSYNC, 0xc);
+		}
 
-	// Lock into 2600 mode
-	// vcsWrite5(INPTCTRL, 0xd);
-	// vcsNop2n(1024);
-	// LockStatus = Locked2600;
-	// StartWaitSpinner();
+		vcsNop2n(15);
+		vcsSta4(RESP0);
+		vcsSta3(CXCLR);
 
-	// while(1)
-	// 	;
-	//	uint32_t mainArgs2600[] = {
-	//	ST_NTSC_2600, // MP_SYSTEM_TYPE (TBD)		0
-	//			0, // MP_CLOCK_HZ			1
-	//			0, // MP_FEARTURE_FLAGS		2
-	//			0, // Elapsed
-	//			0 // threshold
-	//			};
-	//	//Emulate4K();
-	//	elf_main(mainArgs2600);
-	//	while (1)
-	//		;
+		for (int i = 0; i < 192; i++)
+		{
+			vcsWrite5(VBLANK, 0xc);
+//			vcsWrite5(COLUPF, (i & 0xf0) | 0xc);
+			vcsWrite5(PF1, 0xfc);
+//			vcsWrite5(COLUP0, 0x5c);
+			vcsWrite5(GRP0, 0x3c);
+			vcsJmp3();
+			vcsWrite5(WSYNC, 0xc);
+		}
 
-	//
+		vcsWrite5(VBLANK, 0xe);
+		for (int i = 0; i < 30; i++)
+		{
+			vcsJmp3();
+			vcsWrite5(WSYNC, 0xc);
+		}
 
-	// Lock into 7800 mode
-	//	vcsWrite5(INPTCTRL, 0x7);
-	//	vcsSta3(MARIA_WSYNC);
-	//	vcsNop2n(1024);
-	//
-	//	while(1){
-	//		for(int i = 0; i < 62; i++){
-	//			vcsSta3(MARIA_WSYNC);
-	//			vcsJmp3();
-	//		}
-	//		for(int i = 0; i < 16; i++){
-	//			for(int j = 0; j < 10; j++){
-	//			vcsWrite6(BACKGRND, j)
-	//		}
-	//
-	//	}
-	//
-	//				uint32_t mainArgs[] =
-	//				{
-	//					ST_NTSC_7800, // MP_SYSTEM_TYPE (TBD)		0
-	//					0, // MP_CLOCK_HZ			1
-	//					0, // MP_FEARTURE_FLAGS		2
-	//					0, // Elapsed
-	//					0 // threshold
-	//				};
-	//				elf_main(mainArgs);
-	// while(1)
-	// 	;
+		uint8_t cx = vcsRead4(CXP0FB);
+		vcsNop2();
+		if (cx & 0x80)
+		{
+			vcsWrite5(PF0, 0x0c);
+			vcsWrite5(PF0, 0x0d);
+			vcsNop2n(2);
+			LockStatus = Locked2600;
+			Is7800Ntsc = false;
+			break;
+		}
+		else
+		{
+			vcsWrite5(PF0, 0xfc);
+		}
+		vcsWrite5(WSYNC, 0xc);
+	}
 }

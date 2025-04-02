@@ -7,9 +7,6 @@
 #include "reboot_into_cartbin.h"
 #include "text78bin.h"
 
-#define lineCounter 0x82
-#define lineBackColour 0x84
-
 // These are the colours between the top title bar and the rest of the text lines...
 
 #define BACK_COL_NTSC 0x92
@@ -114,7 +111,7 @@ const uint8_t textColour[2][14] = {
 
 };
 
-void handleInput(int* SelectedIndex, uint8_t swcha_prev, uint8_t swcha, uint8_t inpt4_prev, uint8_t inpt4);
+void handleInput(int *SelectedIndex, uint8_t swcha_prev, uint8_t swcha, uint8_t inpt4_prev, uint8_t inpt4);
 
 char cvtToNum(char *p)
 {
@@ -283,9 +280,7 @@ bool reboot_into_cartridge()
 	if (LockStatus == Unlocked7800)
 	{
 		// Lock into 2600 mode
-		vcsWrite5(INPTCTRL, 0xd);
-		vcsNop2();
-		LockStatus = Locked2600;
+		lock2600mode();
 	}
 	for (int i = 0; i < REBOOT_INTO_CARTBIN_ARG_SIZE; i++)
 	{
@@ -343,7 +338,7 @@ RAM_FUNC int emulate_firmware_cartridge()
 			{
 				StartWaitSpinner();
 				__enable_irq();
-				return SelectedIndex;
+				return currentPage * numMenuItemsPerPage + SelectedIndex;
 			}
 			else
 			{
@@ -377,7 +372,7 @@ RAM_FUNC int emulate_firmware_cartridge()
 				EndWaitSpinner();
 				StartWaitSpinner();
 				__enable_irq();
-				return SelectedIndex;
+				return currentPage * numMenuItemsPerPage + SelectedIndex;
 			}
 			else
 			{
@@ -389,7 +384,7 @@ RAM_FUNC int emulate_firmware_cartridge()
 	return 0;
 }
 
-void handleInput(int* SelectedIndex, uint8_t swcha_prev, uint8_t swcha, uint8_t inpt4_prev, uint8_t inpt4)
+void handleInput(int *SelectedIndex, uint8_t swcha_prev, uint8_t swcha, uint8_t inpt4_prev, uint8_t inpt4)
 {
 	// Only process one direction per frame to avoid running out of vblank cycles on pointless actions
 	if (Joy0_Down_Changed && Joy0_Down)

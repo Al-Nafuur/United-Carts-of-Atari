@@ -141,9 +141,7 @@ int launch_elf_file(const char *filename, uint32_t buffer_size, uint8_t *buffer)
 		else
 		{
 			// Lock into 2600 mode
-			vcsWrite5(INPTCTRL, 0xd);
-			vcsNop2();
-			LockStatus = Locked2600;
+			lock2600mode();
 		}
 	}
 
