@@ -21,7 +21,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "stm32_udid.h"
-#include "esp8266_AT_WifiManager.h"
+#include "esp8266_AT_WiFiManager.h"
 #include "esp8266.h"
 #include "md5.h"
 #include "flash.h"

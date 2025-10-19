@@ -99,23 +99,29 @@ int launch_elf_file(const char* filename, uint32_t buffer_size, uint8_t* buffer)
 	SectionMetaEntry* meta = malloc(sizeof(SectionMetaEntry) * metaCount);
 	if (!initSectionsMeta(buffer, meta, (uint32_t)CCM_RAM))
 	{
+		exit_cartridge(0x1100, 0x1000);
 		return 0;
 	}
 	if (!loadElf(buffer, metaCount, meta, &pMainAddress, &usesVcsWrite3))
 	{
+		exit_cartridge(0x1100, 0x1000);
 		return 0;
 	}
+
 	runPreInitFuncs(metaCount, meta);
 	runInitFuncs(metaCount, meta);
 
 	if(usesVcsWrite3)
 		vcsInitBusStuffing();
+
 	vcsEndOverblank();
 	vcsNop2n(1024);
 
 	// Run game
 	((void (*)())pMainAddress)(mainArgs);
+
 	// elf rom should have jumped to 0x1000 and put nop on bus
 	exit_cartridge(0x1100, 0x1000);
+
 	return 1;
 }
