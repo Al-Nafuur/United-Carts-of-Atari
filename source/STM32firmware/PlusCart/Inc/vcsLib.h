@@ -116,6 +116,7 @@ void vcsLdaForBusStuff2();
 void vcsLdxForBusStuff2();
 void vcsLdyForBusStuff2();
 void vcsWrite3(uint8_t ZP, uint8_t data);
+void vcsWrite4(uint16_t address, uint8_t data);
 
 void vcsJmp3(); // jmp $f000 - used to keep PC in range of ROM. Call this when there are spare cycles to kill
 

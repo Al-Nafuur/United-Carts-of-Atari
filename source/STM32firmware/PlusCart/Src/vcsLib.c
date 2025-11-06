@@ -394,6 +394,23 @@ void vcsWrite3(uint8_t ZP, uint8_t data)
 	SET_DATA_MODE(modeLookup[data]);
 }
 
+// Uses Bus-Stuffing, requires A,X,Y to be set via vcsLd*ForBusStuff2() functions prior to use and any time those registers are changed.
+__attribute__((long_call, section(".RamFunc")))
+void vcsWrite4(uint16_t address, uint8_t data)
+{
+    InjectRomByte(opcodeLookup[data] + 8); // Adding 8 to the opcode changes the address mode from zero page to absolute.
+    InjectRomByte((uint8_t)address);
+    InjectRomByte((uint8_t)(address >> 8));
+
+	// Stuff in the data over what's there
+	while (address != ADDR_IN)
+		;
+
+	// The full value is written to ODR, but thanks to modeLookup[], only bits that need to be stuffed get driven
+	DATA_OUT = data;
+	SET_DATA_MODE(modeLookup[data]);
+}
+
 __attribute__((long_call, section(".RamFunc")))
 void vcsJmp3()
 {
