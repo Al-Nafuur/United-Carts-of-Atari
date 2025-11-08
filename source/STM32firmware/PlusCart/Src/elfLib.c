@@ -95,9 +95,9 @@ int isElf(uint32_t size, uint8_t* buffer) {
 }
 
 // pMainAddress will have bit0 set since it's pointing to a thumb function. Mask bit0 off if looking for physical address of first byte in function
-int loadElf(uint8_t* elfBuffer, uint32_t metaCount, SectionMetaEntry meta[], uint32_t* pMainAddress, int* usesVcsWrite3) {
+int loadElf(uint8_t* elfBuffer, uint32_t metaCount, SectionMetaEntry meta[], uint32_t* pMainAddress, int* usesBusStuffing) {
 	*pMainAddress = 0;
-	*usesVcsWrite3 = 0;
+	*usesBusStuffing = 0;
 	SectionHeader* symTableSectionHeader = 0;
 	ElfHeader* pHeader = (ElfHeader*)elfBuffer;
 
@@ -138,9 +138,9 @@ int loadElf(uint8_t* elfBuffer, uint32_t metaCount, SectionMetaEntry meta[], uin
 				return 0;
 			}
 		}
-		else if (strCmp(name, "vcsWrite3"))
+		else if (strCmp(name, "vcsWrite3") || strCmp(name, "vcsWrite4"))
 		{
-			*usesVcsWrite3 = 1;
+			*usesBusStuffing = 1;
 		}
 	}
 	if (*pMainAddress == 0)
