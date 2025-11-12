@@ -463,7 +463,7 @@ uint8_t vcsRead4(uint16_t address)
 __attribute__((long_call, section(".RamFunc")))
 uint8_t vcsRead6(uint16_t address)
 {
-    InjectRomByte(0xad);  // then LDA absolute (4 cycles)
+    InjectRomByte(0xad); 
     InjectRomByte((uint8_t)(address & 0xff));
     InjectRomByte((uint8_t)(address >> 8));
     InjectRomByte(0xea);  // NOP (2 cycles) - gives us time to process the read value
