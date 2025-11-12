@@ -30,7 +30,7 @@ void vcsSta3(uint8_t ZP)
 }
 
 __attribute__((section(".vcsMock")))
-uint8_t vcsRead4(uint16_t address)
+uint8_t vcsRead6(uint16_t address)
 {
 	return 0;
 }

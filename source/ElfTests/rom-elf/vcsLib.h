@@ -80,7 +80,7 @@ void vcsLibInit(int initBusStuffing);
 void vcsJmp3();
 void vcsLda2(uint8_t data);
 void vcsSta3(uint8_t zeroPage);
-uint8_t vcsRead4(uint16_t address);
+uint8_t vcsRead6(uint16_t address);
 void vcsCopyOverblankToRiotRam();
 void vcsStartOverblank();
 void vcsEndOverblank();

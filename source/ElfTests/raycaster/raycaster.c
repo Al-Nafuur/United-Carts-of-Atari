@@ -163,8 +163,8 @@ int elf_main(uint32_t *args)
 		}
 
 		vcsWrite5(VBLANK, 2);
-		but0 = vcsRead4(INPT4);
-		joy0 = vcsRead4(SWCHA);
+		but0 = vcsRead6(INPT4);
+		joy0 = vcsRead6(SWCHA);
 		vcsStartOverblank();
 	}
 }

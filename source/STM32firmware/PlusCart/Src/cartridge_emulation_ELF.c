@@ -49,7 +49,8 @@ NameAddressMapEntry NameAddressMap[] = {
 	{(uint32_t)vcsCopyOverblankToRiotRam, "vcsCopyOverblankToRiotRam" },
 	{(uint32_t)vcsStartOverblank, "vcsStartOverblank" },
 	{(uint32_t)vcsEndOverblank, "vcsEndOverblank" },
-	{(uint32_t)vcsRead4, "vcsRead4" },
+	{(uint32_t)vcsRead4, "vcsRead4" }, // Legacy function to avoid breaking existing ELF bins.
+    {(uint32_t)vcsRead6, "vcsRead6" },
 	{(uint32_t)randint, "randint" },
 	{(uint32_t)vcsTxs2, "vcsTxs2" },
 	{(uint32_t)vcsJsr6, "vcsJsr6" },

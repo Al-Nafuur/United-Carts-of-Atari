@@ -18,10 +18,13 @@ extern "C" {
 #define ST_NTSC_2600      0
 #define ST_PAL_2600       1 
 #define ST_PAL60_2600     2 // Note: PAL60 is used by the UCA carts to convey the user preference
+#define ST_NTSC_7800      3
+#define ST_PAL_7800       4
 
 // feature flags
-#define FF_MULTI_CART     1 // Indicates elf is loaded by multicart and should allow exiting (return from main() function)
-
+#define FF_MULTI_CART     1 // Indicates elf is loaded by multicart and should allow exiting (return from elf_main() function)
+#define FF_CHAMELEON_CART 2 // Indicates running on Chameleon Cart and console is already initialized
+#define FF_REDUCED_HMOVE  4 // Indicates that cycle 73/74 hmoves will be reduced by 1 pixel (late model JRs often do this) 
 
 // Defines for VCS/2600 memory mapped registers
 #define VSYNC             0x00
@@ -111,7 +114,7 @@ extern const uint8_t ReverseByte[256]; // Reverses the order of the bits. 7..0 b
 // Used to define functions that will be copied to and run from RAM
 #define RAM_FUNC __attribute__((noinline, long_call, section(".RamFunc")))
 
-// Bus Stuffing - must load A, X, and Y prior to using Write3()
+// Bus Stuffing - must load A, X, and Y prior to using vcsWrite3() or vcsWrite4()
 void vcsLdaForBusStuff2();
 void vcsLdxForBusStuff2();
 void vcsLdyForBusStuff2();
@@ -144,7 +147,7 @@ void vcsCopyOverblankToRiotRam();
 void vcsStartOverblank();
 void vcsEndOverblank();
 
-uint8_t vcsRead4(uint16_t address);
+uint8_t vcsRead6(uint16_t address);
 int randint();
 
 // Stack operations for advanced kernels without the use of bus stuffing

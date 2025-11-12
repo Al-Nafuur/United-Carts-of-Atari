@@ -271,7 +271,7 @@ void vcsInitBusStuffing()
 				{
 					vcsJmp3();
 				}
-				uint8_t cx = vcsRead4(CXP0FB);	// Check collision register for stuff failures
+				uint8_t cx = vcsRead6(CXP0FB);	// Check collision register for stuff failures
 				vcsSta3(WSYNC);
 				if (k == 0)
 				{
@@ -449,6 +449,7 @@ uint8_t SnoopDataBus(uint16_t address)
 	return DATA_IN;
 }
 
+// Legacy function to avoid breaking existing ELF bins. Chameleon Cart requires vcsRead6.
 __attribute__((long_call, section(".RamFunc")))
 uint8_t vcsRead4(uint16_t address)
 {
@@ -456,6 +457,17 @@ uint8_t vcsRead4(uint16_t address)
 	InjectRomByte((uint8_t)(address & 0xff));
 	InjectRomByte((uint8_t)(address >> 8));
 	return SnoopDataBus(address);
+}
+
+// 6-cycle read function - required for Chameleon Cart compatibility
+__attribute__((long_call, section(".RamFunc")))
+uint8_t vcsRead6(uint16_t address)
+{
+    InjectRomByte(0xea);  // burn 2 cycles with NOP
+    InjectRomByte(0xad);  // then LDA absolute (4 cycles)
+    InjectRomByte((uint8_t)(address & 0xff));
+    InjectRomByte((uint8_t)(address >> 8));
+    return SnoopDataBus(address);
 }
 
 __attribute__((long_call, section(".RamFunc")))
