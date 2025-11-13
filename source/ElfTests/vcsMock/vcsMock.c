@@ -3,9 +3,6 @@
 void elf_main(uint32_t args);
 
 __attribute__((section(".vcsMock.const")))
-const uint8_t ColorLookup[256] = { 0 };
-
-__attribute__((section(".vcsMock.const")))
 const uint8_t ReverseByte[256] = { 0 };
 
 __attribute__((section(".vcsMock")))

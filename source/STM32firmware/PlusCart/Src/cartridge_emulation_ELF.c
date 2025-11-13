@@ -16,8 +16,6 @@
 uint8_t vcsRead4(uint16_t address);
 
 NameAddressMapEntry NameAddressMap[] = {
-	// Color lookup table is updated based on detected system. Keep at index 0
-	{(uint32_t)&Ntsc2600[0], "ColorLookup" },
 	// Low level bus access - handy for distributing prototype banking schemes without updating firmware
 	{(uint32_t)&ADDR_IDR, "ADDR_IDR" },
 	{(uint32_t)&DATA_IDR, "DATA_IDR" },
@@ -93,9 +91,6 @@ int launch_elf_file(const char* filename, uint32_t buffer_size, uint8_t* buffer)
 		mainArgs[MP_SYSTEM_TYPE] = ST_NTSC_2600;
 		break;
 	}
-
-	if(mainArgs[MP_SYSTEM_TYPE] == ST_PAL_2600 || mainArgs[MP_SYSTEM_TYPE] == ST_PAL60_2600)
-		NameAddressMap[0].address = (uint32_t)&Pal2600[0];
 
 	int usesBusStuffing;
 	uint32_t pMainAddress;

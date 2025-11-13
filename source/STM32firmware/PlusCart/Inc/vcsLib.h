@@ -100,15 +100,10 @@ extern "C" {
 #define T1024T            0x0297
 
 // For firmware use only
-extern const uint8_t Ntsc2600[256];
-extern const uint8_t Pal2600[256];
-extern const uint8_t Ntsc7800[256];
-extern const uint8_t Pal7800[256];
 void vcsLibInit();
 void vcsInitBusStuffing();
 
 // For firmware or game use
-extern const uint8_t ColorLookup[256];
 extern const uint8_t ReverseByte[256]; // Reverses the order of the bits. 7..0 becomes 0..7. Useful for PF0, PF2, and reflecting sprites in software.
 
 // Used to define functions that will be copied to and run from RAM
