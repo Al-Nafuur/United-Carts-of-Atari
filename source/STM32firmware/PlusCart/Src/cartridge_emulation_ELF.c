@@ -12,6 +12,8 @@
 #define NTSC_CLOCK 1193182UL
 #define PAL_CLOCK 1182298UL
 
+// Legacy function - forward declared for backward compatibility with existing ELF binaries
+uint8_t vcsRead4(uint16_t address);
 
 NameAddressMapEntry NameAddressMap[] = {
 	// Color lookup table is updated based on detected system. Keep at index 0
