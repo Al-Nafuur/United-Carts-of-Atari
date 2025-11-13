@@ -466,8 +466,9 @@ uint8_t vcsRead6(uint16_t address)
     InjectRomByte(0xad); 
     InjectRomByte((uint8_t)(address & 0xff));
     InjectRomByte((uint8_t)(address >> 8));
-    InjectRomByte(0xea);  // NOP (2 cycles) - gives us time to process the read value
-    return SnoopDataBus(address);
+    uint8_t value = SnoopDataBus(address);
+    vcsNop2(); // allows extra cycles to process read
+    return value;
 }
 
 __attribute__((long_call, section(".RamFunc")))
