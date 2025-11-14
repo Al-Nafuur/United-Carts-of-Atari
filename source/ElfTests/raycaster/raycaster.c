@@ -1,4 +1,4 @@
-#include "vcsLib.h"
+#include "../../STM32firmware/PlusCart/Inc/vcsLib.h"
 #include "assets.h"
 #include "overblank.h"
 

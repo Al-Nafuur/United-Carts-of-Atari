@@ -1,4 +1,4 @@
-#include "vcsLib.h"
+#include "../../STM32firmware/PlusCart/Inc/vcsLib.h"
 
 const uint8_t HexDigits[16 * 8] =
 {
