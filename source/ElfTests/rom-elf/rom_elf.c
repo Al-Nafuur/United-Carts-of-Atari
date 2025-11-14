@@ -1,4 +1,4 @@
-#include "vcsLib.h"
+#include "../../STM32firmware/PlusCart/Inc/vcsLib.h"
 #include "cartridge_io.h"
 
 // Value provided by linker when linking in 4k rom binary
