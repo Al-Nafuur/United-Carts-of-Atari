@@ -387,7 +387,7 @@ uint8_t vcsRead6(uint16_t address)
     InjectRomByte((uint8_t)(address & 0xff));
     InjectRomByte((uint8_t)(address >> 8));
     uint8_t value = SnoopDataBus(address);
-    vcsNop2(); // allows extra cycles to process read
+    InjectRomByte(0xea); // inject NOP to allow extra cycles to process read
     return value;
 }
 
