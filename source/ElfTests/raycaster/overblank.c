@@ -1,6 +1,6 @@
 #include "assets.h"
 #include "mathf32.h"
-#include "vcsLib.h"
+#include "../../STM32firmware/PlusCart/Inc/vcsLib.h"
 
 typedef struct
 {

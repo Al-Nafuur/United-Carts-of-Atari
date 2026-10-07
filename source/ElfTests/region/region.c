@@ -1,4 +1,4 @@
-#include "vcsLib.h"
+#include "../../STM32firmware/PlusCart/Inc/vcsLib.h"
 
 const uint8_t NTSC[32] =
 {
@@ -69,7 +69,7 @@ int elf_main(uint32_t* args)
 		// 30 lines of Overscan
 		for (int i = 0; i < 30; i++) {
 			vcsSta3(WSYNC);
-			uint8_t p0Button = vcsRead4(INPT4);
+			uint8_t p0Button = vcsRead6(INPT4);
 			if (0 == (p0Button & 0x80))
 			{
 				vcsJmp3();
