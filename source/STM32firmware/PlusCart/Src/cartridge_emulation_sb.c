@@ -8,7 +8,8 @@
 
 void emulate_SB_cartridge( const char* filename, uint32_t image_size, uint8_t* buffer, MENU_ENTRY *d  )
 {
-	cartridge_layout * layout = (cartridge_layout *) malloc( sizeof(  cartridge_layout ));
+	cartridge_layout layout_storage; // on the stack, released on every return path
+	cartridge_layout * layout = &layout_storage;
 
     if (!setup_cartridge_image(filename, image_size, buffer, layout, d, base_type_SB)) return;
 
@@ -49,6 +50,4 @@ void emulate_SB_cartridge( const char* filename, uint32_t image_size, uint8_t* b
 
 	}
 	exit_cartridge(addr, addr_prev);
-
-	free(layout);
 }

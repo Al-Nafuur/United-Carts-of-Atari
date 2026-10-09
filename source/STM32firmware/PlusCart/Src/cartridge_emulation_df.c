@@ -11,7 +11,8 @@
 
 void emulate_dfsc_cartridge(const char* filename, uint32_t image_size, uint8_t* buffer, MENU_ENTRY *d ) {
 
-	cartridge_layout * layout = (cartridge_layout *) malloc( sizeof(  cartridge_layout ));
+	cartridge_layout layout_storage; // on the stack, released on every return path
+	cartridge_layout * layout = &layout_storage;
     uint8_t* ram = buffer;
 
     if (!setup_cartridge_image(filename, image_size, buffer, layout, d, base_type_DFSC)) return;
@@ -66,12 +67,11 @@ void emulate_dfsc_cartridge(const char* filename, uint32_t image_size, uint8_t* 
 
     }
 	exit_cartridge(addr, addr_prev);
-
-	free(layout);
 }
 
 void emulate_df_cartridge(const char* filename, uint32_t image_size, uint8_t* buffer, MENU_ENTRY *d ) {
-	cartridge_layout * layout = (cartridge_layout *) malloc( sizeof(  cartridge_layout ));
+	cartridge_layout layout_storage; // on the stack, released on every return path
+	cartridge_layout * layout = &layout_storage;
 
     if (!setup_cartridge_image(filename, image_size, buffer, layout, d, base_type_DF)) return;
 
@@ -114,6 +114,4 @@ void emulate_df_cartridge(const char* filename, uint32_t image_size, uint8_t* bu
         }
     }
 	exit_cartridge(addr, addr_prev);
-
-	free(layout);
 }
