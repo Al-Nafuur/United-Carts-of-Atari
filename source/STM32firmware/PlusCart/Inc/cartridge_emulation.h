@@ -8,7 +8,9 @@
 #define RESET_ADDR addr = addr_prev = 0xffff;
 #define CCM_RAM ((uint8_t*)0x10000000)
 
+#ifndef SWCHA // also defined in vcsLib.h
 #define SWCHA          0x280
+#endif
 
 enum Transmission_State{
 	No_Transmission,
@@ -146,6 +148,9 @@ void emulate_standard_cartridge(int, bool, uint16_t, uint16_t, int);
 
 /* UA Bankswitching */
 void emulate_UA_cartridge();
+
+/* CM CompuMate Bankswitching */
+void emulate_CM_cartridge();
 
 /* FA (CBS RAM plus) and FA2 Bankswitching */
 void emulate_FA_FA2_cartridge(int, bool, uint16_t, uint16_t);

@@ -3,7 +3,9 @@
 
 #include <stdint.h>
 
+#ifndef SWCHB // also defined in vcsLib.h
 #define SWCHB          0x282
+#endif
 
 #ifdef HARDWARE_TYPE
  #if HARDWARE_TYPE == UNOCART
