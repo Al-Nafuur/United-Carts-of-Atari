@@ -188,7 +188,56 @@ void emulate_UA_cartridge()
 	exit_cartridge(addr, addr_prev);
 }
 
+/* CompuMate Banking
+ *
+ *
+ */
+void emulate_CM_cartridge()
+{
+	setup_cartridge_image_with_ram();
 
+	uint16_t addr, addr_prev = 0;
+	uint8_t data = 0, data_prev = 0;
+	unsigned char *bankPtr = &cart_rom[(0x3)*4*1024];
+	bool ram_disabled = true, ram_write = true;
+
+	if (!reboot_into_cartridge()) return;
+	__disable_irq();	// Disable interrupts
+
+	while (1) {
+		while ((addr = ADDR_IN) != addr_prev)
+			addr_prev = addr;
+		// got a stable address
+		if (addr & 0x1000) { // A12 high
+			if (ram_disabled || addr < 0x1800 ) { // normal rom access
+				DATA_OUT = bankPtr[addr&0xFFF];
+				SET_DATA_MODE_OUT
+				// wait for address bus to change
+				while (ADDR_IN == addr) ;
+				SET_DATA_MODE_IN
+			} else { // RAM access
+				if(ram_write) { // Write
+					while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+					cart_ram[addr&0x7FF] = data_prev;
+				} else { // Read
+					DATA_OUT = cart_ram[addr&0x7FF];
+					SET_DATA_MODE_OUT
+					// wait for address bus to change
+					while (ADDR_IN == addr) ;
+					SET_DATA_MODE_IN
+				}
+			}
+		} else if(addr == SWCHA) {
+			while (ADDR_IN == addr) { data_prev = data; data = DATA_IN; }
+			bankPtr = &cart_rom[(data_prev & 0x3)*4*1024];
+			ram_disabled = (data_prev & 0x10);
+			ram_write = (data_prev & 0x20);
+
+		}
+	}
+
+	exit_cartridge(addr, addr_prev);
+}
 
 /* FA (CBS RAM plus) Bankswitching
  * -------------------------------

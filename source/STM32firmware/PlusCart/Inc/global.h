@@ -150,6 +150,7 @@ enum cart_base_type{
 	base_type_0840,
 	base_type_CV,
 	base_type_EF,
+	base_type_CM,
 	base_type_F0,
 	base_type_FA,
 	base_type_FA2,
