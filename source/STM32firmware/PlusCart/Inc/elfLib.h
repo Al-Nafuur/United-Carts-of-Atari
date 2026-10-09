@@ -106,9 +106,12 @@ typedef struct NameAddressMapEntry {
 	char* name;
 } NameAddressMapEntry;
 
-extern NameAddressMapEntry NameAddressMap[43];
+extern NameAddressMapEntry NameAddressMap[];
+extern const uint32_t NameAddressMapCount;
 
 int isElf(uint32_t size, uint8_t* buffer);
+
+void elfSetTail(uint32_t splitOffset, uint8_t* tail);
 
 int initSectionsMeta(uint8_t* elfBuffer, SectionMetaEntry meta[], uint32_t nobitsLoadAddress);
 

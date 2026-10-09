@@ -18,6 +18,20 @@ int strCmp(const char* lname, const char* rname) {
 	return 1;
 }
 
+// ELF files bigger than the RAM buffer are split: file offsets from elfSplitOffset on
+// are not in the buffer but in elfTail (see launch_elf_file())
+static uint32_t elfSplitOffset = UINT32_MAX;
+static uint8_t* elfTail;
+
+void elfSetTail(uint32_t splitOffset, uint8_t* tail) {
+	elfSplitOffset = splitOffset;
+	elfTail = tail;
+}
+
+static uint8_t* elfAt(uint8_t* elfBuffer, uint32_t offset) {
+	return offset < elfSplitOffset ? &elfBuffer[offset] : &elfTail[offset - elfSplitOffset];
+}
+
 uint8_t* wordAlign(uint8_t* pointer) {
 	uint32_t bytesToAdd = ((uint32_t)pointer) & 3;
 	if (bytesToAdd != 0)
@@ -36,12 +50,12 @@ int initSectionsMeta(uint8_t* elfBuffer, SectionMetaEntry meta[], uint32_t nobit
 	meta[0].name = 0;
 	meta[0].relocation = 0;
 
-	SectionHeader* pStringSection = (SectionHeader*)&elfBuffer[elf->e_shoff + (elf->e_shstrndx * elf->e_shentsize)];
+	SectionHeader* pStringSection = (SectionHeader*)elfAt(elfBuffer, elf->e_shoff + (elf->e_shstrndx * elf->e_shentsize));
 	for (uint32_t i = 1; i < elf->e_shnum; i++)
 	{
-		SectionHeader* header = (SectionHeader*)&elfBuffer[elf->e_shoff + i * elf->e_shentsize];
+		SectionHeader* header = (SectionHeader*)elfAt(elfBuffer, elf->e_shoff + i * elf->e_shentsize);
 		meta[i].header = header;
-		meta[i].buffer = &elfBuffer[header->sh_offset];
+		meta[i].buffer = elfAt(elfBuffer, header->sh_offset);
 		meta[i].loadAddress = header->sh_type == SHT_PROGBITS ? (uint32_t)meta[i].buffer : 0;
 		if (header->sh_type == SHT_NOBITS)
 		{
@@ -49,7 +63,7 @@ int initSectionsMeta(uint8_t* elfBuffer, SectionMetaEntry meta[], uint32_t nobit
 			nobitsLoadAddress += meta[i].header->sh_size;
 			nobitsLoadAddress = (uint32_t)wordAlign((uint8_t*)nobitsLoadAddress);
 		}
-		meta[i].name = (char*)&elfBuffer[pStringSection->sh_offset + header->sh_name];
+		meta[i].name = (char*)elfAt(elfBuffer, pStringSection->sh_offset + header->sh_name);
 		meta[i].relocation = 0;
 	}
 
@@ -102,7 +116,7 @@ int loadElf(uint8_t* elfBuffer, uint32_t metaCount, SectionMetaEntry meta[], uin
 	ElfHeader* pHeader = (ElfHeader*)elfBuffer;
 
 	// Then iterate the sections and use the strings table to search for sections by name
-	SectionHeader* pSection = (SectionHeader*)&elfBuffer[pHeader->e_shoff];
+	SectionHeader* pSection = (SectionHeader*)elfAt(elfBuffer, pHeader->e_shoff);
 	for (int i = 1; i < pHeader->e_shnum; i++) // Skip the first section SHN_UNDEF
 	{
 		pSection++;
@@ -123,11 +137,11 @@ int loadElf(uint8_t* elfBuffer, uint32_t metaCount, SectionMetaEntry meta[], uin
 		return 0;
 	}
 
-	SectionHeader* pSymStringSection = (SectionHeader*)&elfBuffer[pHeader->e_shoff + (sizeof(SectionHeader) * symTableSectionHeader->sh_link)];
+	SectionHeader* pSymStringSection = (SectionHeader*)elfAt(elfBuffer, pHeader->e_shoff + (sizeof(SectionHeader) * symTableSectionHeader->sh_link));
 	for (uint32_t i = 0; i < symTableSectionHeader->sh_size; i += symTableSectionHeader->sh_entsize)
 	{
-		SymbolEntry* pSymbol = (SymbolEntry*)&elfBuffer[symTableSectionHeader->sh_offset + i];
-		char* name = (char*)&elfBuffer[pSymStringSection->sh_offset + pSymbol->st_name];
+		SymbolEntry* pSymbol = (SymbolEntry*)elfAt(elfBuffer, symTableSectionHeader->sh_offset + i);
+		char* name = (char*)elfAt(elfBuffer, pSymStringSection->sh_offset + pSymbol->st_name);
 		if (strCmp(name, "main") || strCmp(name, "elf_main"))
 		{
 			if (meta[pSymbol->st_shndx].header->sh_type == SHT_PROGBITS)
@@ -179,9 +193,9 @@ int relocateSection(
 	for (uint32_t i = 0; i < relSection->sh_size; i += relSection->sh_entsize)
 	{
 		uint8_t op2 = 0x90;
-		RelEntry* pReloc = (RelEntry*)&elfBuffer[relSection->sh_offset + i];
-		SymbolEntry* pSymbol = (SymbolEntry*)&elfBuffer[symTableSectionHeader->sh_offset + ((pReloc->info >> 4) & 0xfffffff0)];
-		char* name = (char*)&elfBuffer[pSymStringSection->sh_offset + pSymbol->st_name];
+		RelEntry* pReloc = (RelEntry*)elfAt(elfBuffer, relSection->sh_offset + i);
+		SymbolEntry* pSymbol = (SymbolEntry*)elfAt(elfBuffer, symTableSectionHeader->sh_offset + ((pReloc->info >> 4) & 0xfffffff0));
+		char* name = (char*)elfAt(elfBuffer, pSymStringSection->sh_offset + pSymbol->st_name);
 		switch (pReloc->info & 0xff) {
 		case R_ARM_TARGET1:
 		case R_ARM_ABS32:
@@ -193,7 +207,7 @@ int relocateSection(
 			}
 			else
 			{
-				for (int i = 0; i < sizeof(NameAddressMap) / sizeof(NameAddressMapEntry); i++)
+				for (int i = 0; i < NameAddressMapCount; i++)
 				{
 					if (strCmp(name, NameAddressMap[i].name))
 					{
@@ -220,7 +234,7 @@ int relocateSection(
 			}
 			else
 			{
-				for (int i = 0; i < sizeof(NameAddressMap) / sizeof(NameAddressMapEntry); i++)
+				for (int i = 0; i < NameAddressMapCount; i++)
 				{
 					if (strCmp(name, NameAddressMap[i].name))
 					{

@@ -403,6 +403,7 @@ void vcsStartOverblank()
 __attribute__((long_call, section(".RamFunc")))
 void vcsEndOverblank()
 {
+	YieldDataBus(0x00a9);
 	SetNextRomAddress(0x1fff);
 	InjectRomByte(0x00);
 	YieldDataBus(0x00ac);
@@ -637,5 +638,24 @@ void injectDmaData(int address, int count, const uint8_t* pBuffer)
 int randint()
 {
 	return rand();
+}
+
+// Non volatile storage - TODO: nothing is saved yet. Leaving the slot buffers
+// unchanged is what the API expects when no save data exists.
+void vcsInitNvStore(uint16_t size0, uint16_t size1, uint8_t* p0, uint8_t* p1)
+{
+}
+
+void vcsWriteNvChunk(bool index)
+{
+}
+
+void vcsProcessNvStoreEvents()
+{
+}
+
+bool vcsIsNvBusy()
+{
+	return false;
 }
 

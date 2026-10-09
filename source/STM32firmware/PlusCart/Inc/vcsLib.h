@@ -2,6 +2,7 @@
 #define VCSLIB_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -160,6 +161,12 @@ void vcsPlp4Ex(uint8_t data);
 void vcsJmpToRam3(uint16_t addr); // Transfer 6502 execution to 6502 RAM
 void vcsWaitForAddress(uint16_t address); // spin lock arm until 6502 accesses the specified address
 void injectDmaData(int address, int count, const uint8_t* pBuffer);
+
+// Stubs for non volatile storage with two save slots (sizes in 32 bit words)
+void vcsInitNvStore(uint16_t size0, uint16_t size1, uint8_t* p0, uint8_t* p1);
+void vcsWriteNvChunk(bool index);
+void vcsProcessNvStoreEvents();
+bool vcsIsNvBusy();
 
 // helper macro to generate a sleep of a specific number of cycles (must be > 1)
 #define vcsSleep(cycles) \
