@@ -111,6 +111,7 @@ const EXT_TO_CART_TYPE_MAP ext_to_cart_type_map[]__attribute__((section(".flash0
 	{"CV",   { base_type_CV,      false, false, false, false }},
 	{"EF",   { base_type_EF,      false, false, false, false }},
 	{"EFS",  { base_type_EF,      true,  false, false, false }},
+	{"CM",   { base_type_CM,      false, false, false, false }},
 	{"F0",   { base_type_F0,      false, false, false, false }},
 	{"FA",   { base_type_FA,      false, false, false, false }},
 	{"FA2",  { base_type_FA2,     false, false, false, false }},
@@ -1304,6 +1305,9 @@ void emulate_cartridge(CART_TYPE cart_type, MENU_ENTRY *d)
 	else if (cart_type.base_type == base_type_F0)
 		emulate_F0_cartridge();
 
+	else if (cart_type.base_type == base_type_CM)
+		emulate_CM_cartridge();
+
 	else if (cart_type.base_type == base_type_FA)
 		emulate_FA_FA2_cartridge(offset, cart_type.withPlusFunctions, 0x1FF8, 0x1FFA);
 
@@ -1352,7 +1356,7 @@ void emulate_cartridge(CART_TYPE cart_type, MENU_ENTRY *d)
 	}
 	else if (cart_type.base_type == base_type_ELF)
 	{
-		launch_elf_file(curPath, cart_size_bytes, buffer);
+		launch_elf_file(curPath, cart_size_bytes, buffer, d);
 	}
 
 #if USE_WIFI
