@@ -1,6 +1,11 @@
+// Bus emulation code: built with -O3 although the firmware default is -Os (128 KiB flash limit)
+#pragma GCC optimize ("O3")
+
 #include <stdint.h>
 #include <stdlib.h>
 
+// CMSIS before vcsLib.h: RESP1 would clash with SDIO_TypeDef (cartridge_io.h pulls it in for the UnoCart)
+#include "stm32f4xx.h"
 #include "vcsLib.h"
 #include "cartridge_io.h"
 
