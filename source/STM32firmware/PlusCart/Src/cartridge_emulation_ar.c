@@ -1,3 +1,6 @@
+// Bus emulation code: built with -O3 although the firmware default is -Os (128 KiB flash limit)
+#pragma GCC optimize ("O3")
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>

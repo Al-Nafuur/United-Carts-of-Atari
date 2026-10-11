@@ -8,6 +8,9 @@
 /*************************************************************************
  * Cartridge Emulation
  *************************************************************************/
+// Bus emulation code: built with -O3 although the firmware default is -Os (128 KiB flash limit)
+#pragma GCC optimize ("O3")
+
 #include <string.h>
 #include "cartridge_emulation.h"
 #include "cartridge_firmware.h"
