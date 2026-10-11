@@ -67,7 +67,7 @@ MEMORY
 	RAM	(xrw)		: ORIGIN = 0x20018000,	LENGTH = 32K
     VECTOR (rx) 	: ORIGIN = 0x8000000, LENGTH = 16K
     EEPROM (rx) 	: ORIGIN = 0x8004000, LENGTH = 16K
-    FLASH (rx)		: ORIGIN = 0x8008000, LENGTH = 1024K-32K
+    FLASH (rx)		: ORIGIN = 0x8008000, LENGTH = 96K	/* sectors 2-4 only: the firmware updater does not erase sector 5+ (offline ROMs) */
 }
 
 /* Sections */
