@@ -13,6 +13,7 @@
 #include "fatfs.h"
 #endif
 #include "flash.h"
+#include "stm32_udid.h"
 #include "vcsLib.h"
 #include "cartridge_emulation.h"
 #include "cartridge_emulation_ELF.h"
@@ -83,71 +84,69 @@ const uint32_t NameAddressMapCount = sizeof(NameAddressMap) / sizeof(NameAddress
 
 extern MENU_ENTRY menu_entries[NUM_MENU_ITEMS];
 
-// The menu entries in CCM RAM are not needed while an ELF runs, so .bss and the
-// rest of files bigger than the RAM buffer go there.
-#define ELF_CCM_END ((uint8_t*)&menu_entries[NUM_MENU_ITEMS])
+extern uint8_t _eccmram[]; // end of the firmware variables in CCM RAM (linker script)
 
-static uint32_t elf_file_request(uint8_t* dst, const char* filename, enum MENU_ENTRY_Type type,
-		uint32_t flash_base_address, uint32_t start, uint32_t length)
+// .bss may use all of CCM RAM. The menu entries are not needed while an ELF runs,
+// the few hundred bytes of menu state behind them are saved and restored on exit.
+#define CCM_MENU_ENTRIES_END ((uint8_t*)&menu_entries[NUM_MENU_ITEMS])
+#define CCM_END (CCM_RAM + CCM_RAM_SIZE * 1024U)
+
+// Files bigger than the RAM buffer are run from flash, like the big bank switching
+// ROMs. identify_cartridge() has already loaded the first BUFFER_SIZE KB to the
+// buffer, so they are flashed from there and only the rest is requested again.
+static uint8_t* elf_to_flash(const char* filename, uint32_t file_size, uint8_t* buffer, MENU_ENTRY* d)
 {
+	// d lives in CCM RAM, which may get overwritten below
+	enum MENU_ENTRY_Type type = d->type;
+	if (type != Cart_File && type != SD_Cart_File)
+		return (uint8_t*)(d->flash_base_address + TAR_HEADER_SIZE); // offline ROM, already in flash
+
+	if (user_settings.first_free_flash_sector < FLASH_SECTOR_5)
+		return 0;
+	uint8_t* flash = (uint8_t*)(DOWNLOAD_AREA_START_ADDRESS + 128U * 1024U * (uint32_t)(user_settings.first_free_flash_sector - 5));
+	if ((uint32_t)flash + file_size > FLASH_BASE + STM32F4_FLASH_SIZE * 1024U)
+		return 0;
+
+	const uint32_t buffered = BUFFER_SIZE * 1024U;
+	flash_erase_storage(user_settings.first_free_flash_sector);
+	flash_buffer_at(buffer, buffered, flash);
+
 	if (type == Cart_File)
 	{
 #if USE_WIFI
-		return esp8266_PlusStore_API_file_request(dst, (char*)filename, start, length);
-#endif
-	}
-	else if (type == SD_Cart_File)
-	{
-#if USE_SD_CARD
-		return sd_card_file_request(dst, filename, start, length);
+		flash_download_at((char*)filename, file_size - buffered, buffered, flash + buffered);
 #endif
 	}
 	else
-		return flash_file_request(dst, flash_base_address, start, length);
-
-	return 0;
+	{
+#if USE_SD_CARD
+		const uint32_t chunk_max = (uint32_t)(CCM_MENU_ENTRIES_END - CCM_RAM);
+		for (uint32_t done = buffered; done < file_size; )
+		{
+			uint32_t chunk = file_size - done > chunk_max ? chunk_max : file_size - done;
+			if (sd_card_file_request(CCM_RAM, filename, done, chunk) != chunk)
+				return 0;
+			flash_buffer_at(CCM_RAM, chunk, flash + done);
+			done += chunk;
+		}
+#endif
+	}
+	return flash;
 }
 
-// identify_cartridge() loads only the first BUFFER_SIZE KB of a file. All loadable
-// sections have to be in there, everything behind them (relocations, symbols,
-// section headers) is loaded to CCM RAM behind .bss.
-static bool load_elf_tail(const char* filename, uint32_t file_size, uint8_t* buffer, MENU_ENTRY* d)
+// Catches truncated files and failed downloads before anything gets relocated
+static bool elf_sections_valid(uint8_t* elf, uint32_t file_size)
 {
-	if (file_size <= BUFFER_SIZE * 1024U)
-	{
-		elfSetTail(UINT32_MAX, 0);
-		return true;
-	}
-
-	// d lives in CCM RAM, which gets overwritten below
-	enum MENU_ENTRY_Type type = d->type;
-	uint32_t flash_base_address = d->flash_base_address;
-
-	ElfHeader* header = (ElfHeader*)buffer;
-	uint32_t headers_size = (uint32_t)header->e_shnum * sizeof(SectionHeader);
-	SectionHeader* sections = (SectionHeader*)(ELF_CCM_END - ((headers_size + 3) & ~3U));
-	if (elf_file_request((uint8_t*)sections, filename, type, flash_base_address, header->e_shoff, headers_size) != headers_size)
+	ElfHeader* header = (ElfHeader*)elf;
+	if (header->e_shoff + header->e_shnum * sizeof(SectionHeader) > file_size)
 		return false;
 
-	uint32_t split = 0, bss_size = 0;
+	SectionHeader* sections = (SectionHeader*)&elf[header->e_shoff];
 	for (int i = 1; i < header->e_shnum; i++)
 	{
-		if (sections[i].sh_type == SHT_NOBITS)
-			bss_size += (sections[i].sh_size + 3) & ~3U;
-		else if ((sections[i].sh_flags & SHF_ALLOC) && sections[i].sh_offset + sections[i].sh_size > split)
-			split = sections[i].sh_offset + sections[i].sh_size;
+		if (sections[i].sh_type != SHT_NOBITS && (sections[i].sh_offset > file_size || sections[i].sh_size > file_size - sections[i].sh_offset))
+			return false;
 	}
-	split &= ~3U; // keeps the tail word aligned
-
-	uint8_t* tail = CCM_RAM + bss_size;
-	uint32_t tail_size = file_size - split;
-	if (split > BUFFER_SIZE * 1024U || tail + tail_size > ELF_CCM_END)
-		return false;
-
-	if (elf_file_request(tail, filename, type, flash_base_address, split, tail_size) != tail_size)
-		return false;
-
-	elfSetTail(split, tail);
 	return true;
 }
 
@@ -161,7 +160,14 @@ int launch_elf_file(const char* filename, uint32_t buffer_size, uint8_t* buffer,
 	};
 
 	// Still in the menu, the 6502 waits until control is transferred to the ROM
-	if (!load_elf_tail(filename, buffer_size, buffer, d))
+	uint8_t* elf = buffer;
+	uint8_t* ram = 0;
+	if (buffer_size > BUFFER_SIZE * 1024U)
+	{
+		elf = elf_to_flash(filename, buffer_size, buffer, d);
+		ram = buffer;
+	}
+	if (!elf || !elf_sections_valid(elf, buffer_size))
 		return 0;
 
 	// Transfer control back to ROM
@@ -182,19 +188,23 @@ int launch_elf_file(const char* filename, uint32_t buffer_size, uint8_t* buffer,
 		break;
 	}
 
+	uint8_t ccm_menu_state[_eccmram - CCM_MENU_ENTRIES_END];
+	memcpy(ccm_menu_state, CCM_MENU_ENTRIES_END, sizeof(ccm_menu_state));
+
 	int usesBusStuffing;
 	uint32_t pMainAddress;
-	uint32_t metaCount = ((ElfHeader*)buffer)->e_shnum;
+	uint32_t metaCount = ((ElfHeader*)elf)->e_shnum;
 	SectionMetaEntry* meta = malloc(sizeof(SectionMetaEntry) * metaCount);
-	if (!initSectionsMeta(buffer, meta, (uint32_t)CCM_RAM))
+	if (!meta || !initSectionsMeta(elf, meta, (uint32_t)CCM_RAM, (uint32_t)CCM_END, ram, BUFFER_SIZE * 1024U))
 	{
 		free(meta);
 		exit_cartridge(0x1100, 0x1000);
 		return 0;
 	}
-	if (!loadElf(buffer, metaCount, meta, &pMainAddress, &usesBusStuffing))
+	if (!loadElf(elf, metaCount, meta, &pMainAddress, &usesBusStuffing))
 	{
 		free(meta);
+		memcpy(CCM_MENU_ENTRIES_END, ccm_menu_state, sizeof(ccm_menu_state));
 		exit_cartridge(0x1100, 0x1000);
 		return 0;
 	}
@@ -213,6 +223,7 @@ int launch_elf_file(const char* filename, uint32_t buffer_size, uint8_t* buffer,
 	((void (*)())pMainAddress)(mainArgs);
 
 	// elf rom should have jumped to 0x1000 and put nop on bus
+	memcpy(CCM_MENU_ENTRIES_END, ccm_menu_state, sizeof(ccm_menu_state));
 	exit_cartridge(0x1100, 0x1000);
 
 	return 1;

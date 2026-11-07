@@ -111,9 +111,7 @@ extern const uint32_t NameAddressMapCount;
 
 int isElf(uint32_t size, uint8_t* buffer);
 
-void elfSetTail(uint32_t splitOffset, uint8_t* tail);
-
-int initSectionsMeta(uint8_t* elfBuffer, SectionMetaEntry meta[], uint32_t nobitsLoadAddress);
+int initSectionsMeta(uint8_t* elfBuffer, SectionMetaEntry meta[], uint32_t nobitsLoadAddress, uint32_t nobitsEnd, uint8_t* ramBuffer, uint32_t ramSize);
 
 int loadElf(uint8_t* elfBuffer, uint32_t metaCount, SectionMetaEntry meta[], uint32_t* pMainAddress, int* usesVcsWrite3);
 
